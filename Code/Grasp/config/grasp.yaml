@@ -1,0 +1,35 @@
+# null = NOT MEASURED. load_config() refuses to run until every null is filled
+# (plan/SHARED_PRIMITIVES_CHECKLIST.md: no unmeasured constants).
+connector_id: null
+housing:                      # rigid housing only, never the cable / strain relief
+  length_m: null              # tip face -> cable-side face
+  width_m: null               # across the jaw closing axis
+  height_m: null              # support surface -> top face when lying flat
+  grasp_zone_from_tip_m: null # [near, far] approved gripping band measured from the tip face
+  length_tol_m: null          # pose-fit acceptance: measured vs config
+  width_tol_m: null
+  height_tol_m: null
+  min_height_m: 0.002         # points below this above the support plane are ignored
+  min_points: 300
+  cluster_radius_m: 0.004
+  bin_m: 0.002                # width-profile bin along the long axis
+  min_bin_points: 5
+  wide_frac: 0.7              # bin counts as housing if lateral extent >= wide_frac * width
+  cable_probe_m: 0.015        # look this far past each run end for the cable
+  min_points_cable: 20
+gripper:                      # Gen3 Lite 2-finger; fingertip pad geometry to be measured
+  max_open_m: 0.085           # from HW7 config (gripper_max_width_m)
+  finger_width_m: null
+  finger_thickness_m: null
+  finger_length_m: null       # pad length above the TCP
+  finger_tip_below_tcp_m: null
+  close_tol_m: null           # |closed width - housing width| accepted by verify_grasp
+grasp:
+  n_offsets: 5                # samples inside the approved zone
+  contact_height_frac: 0.5    # pad contact height as fraction of housing height
+  open_margin_m: 0.006        # per-side clearance when open
+  housing_slack_m: 0.002      # points this close to the housing box are not obstacles
+  plane_clearance_m: 0.0015   # fingertip must stay this far above the support
+  max_collision_points: 3
+  standoff_m: 0.06            # pre-grasp distance along the approach
+  lift_m: 0.08

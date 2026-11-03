@@ -1,0 +1,101 @@
+# TEMPLATE ONLY — all missing calibration values intentionally null.
+# NEVER enable live contact from this template.
+schema_version: 1
+setup_revision: setup_r0
+status: UNCALIBRATED  # prevents physical execution
+connector:
+  id: null
+  plug_cad_file: null
+  socket_cad_file: null
+  plug_housing_xyz_m: null
+  socket_opening_xyz_m: null
+  clearance_xy_m: null
+  chamfer_geometry_file: null
+  insertion_depth_m: null
+  verified_seated_depth_m: null
+robot:
+  model: gen3_lite
+  dof_arm: 6
+  gripper: gen3_lite_2f
+  urdf_source: null
+  arm_joint_names: null
+  ros_joint_controller: null
+  ros_twist_controller: null
+  command_frame_id: null
+  joint_limits_rad: null
+camera:
+  model: null  # confirm D405
+  rgb_topic: null
+  depth_topic: null
+  optical_frame: null
+  rgb_width_px: null
+  rgb_height_px: null
+  fps: null
+  K: null  # 3x3, row-major
+  distortion: null
+  depth_scale_m_per_unit: null
+  T_EC: {xyz_m: null, quat_xyzw: null, uncertainty: null}
+markers:
+  family: null # color_blob / ArUco / AprilTag
+  positions_M_m: null  # id -> [x,y,z]
+  target_pixels_uv: null # id -> [u,v] at correct standoff
+  feature_confidence_min: null
+  feature_max_missing_frames: null
+frames:
+  socket_insertion_axis_in_S: [0, 0, 1] # CONVENTION ONLY; must validate physical direction
+  T_MS: {xyz_m: null, quat_xyzw: null}
+  T_BR: {xyz_m: null, quat_xyzw: null}
+  T_EP: {xyz_m: null, quat_xyzw: null, covariance: null}
+  T_BS_check: {xyz_m: null, quat_xyzw: null}
+waypoints:
+  home_joint_rad: null
+  pre_grasp_B: null
+  grasp_B: null
+  lift_clear_B: null
+  inspection_B: null
+  servo_start_B: null
+  servo_goal_B: null
+  first_contact_S: null
+  full_seat_S: null
+  retract_standoff_S: null
+search:
+  step_x_m: null
+  step_y_m: null
+  step_yaw_rad: null
+  max_abs_x_m: null
+  max_abs_y_m: null
+  max_abs_yaw_rad: null
+  max_attempts: null
+  max_total_time_s: null
+motion_limits:
+  max_free_linear_m_s: null
+  max_free_angular_rad_s: null
+  max_contact_axial_m_s: null
+  max_contact_lateral_m_s: null
+  max_acceleration_m_s2: null
+  max_axial_travel_m: null
+  watchdog_timeout_s: null
+  camera_stale_timeout_s: null
+verification:
+  type: null  # continuity / seating_switch / validated_other
+  ros_topic_or_device: null
+  success_value: null
+  stable_dwell_s: null
+  positive_control_passed: false
+  negative_control_passed: false
+safety:
+  supervisor_approved: false
+  e_stop_tested: false
+  clear_retract_path_tested: false
+  connector_safe_voltage_verified: false
+sim:
+  isaac_sim_version: null
+  isaac_lab_version: null
+  gpu_model: null
+  gpu_vram_gb: null
+  actuator_delay_s: null
+  contact_parameter_source: null
+  camera_noise_profile_path: null
+  policy_dt_s: null
+  num_envs_benchmarked: null
+  heldout_eval_seed_file: null
