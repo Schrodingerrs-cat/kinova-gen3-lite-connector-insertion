@@ -1,0 +1,21 @@
+{
+ "frame": "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/runs/20261107_141632/frame.npz",
+ "roi_px": [
+  380,
+  176,
+  512,
+  276
+ ],
+ "ok": false,
+ "reasons": [
+  "housing section only 6.0 mm long (need 10.0 mm)"
+ ],
+ "tip_known": null,
+ "raw_points": 117307,
+ "clean_points": 54643,
+ "housing_LWH_mm": null,
+ "housing_center_base_mm": null,
+ "n_grasps": 0,
+ "best_grasp_tcp_base_mm": null,
+ "best_grasp_open_width_mm": null
+}

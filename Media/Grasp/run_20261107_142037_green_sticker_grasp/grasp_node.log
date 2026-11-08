@@ -1,0 +1,7 @@
+/home/aryans-cat/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+1794079231.319182 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+[INFO] [1794079231.560491184] [grasp_node]: grasp_node ready (dry_run=False)
+[INFO] [1794079253.467645711] [grasp_node]: candidate 0 (0 mm, flip +1): pre-grasp: no near-current IK (or below the table); candidate 1 (0 mm, flip -1): ok
+[INFO] [1794079260.296183899] [grasp_node]: gripper stopped at 0.812 (empty >= 0.790), ~0.4 mm, expected 13.4 mm: closed on nothing
+[ERROR] [1794079262.358650413] [grasp_node]: execute: grasp NOT held: gripper closed on nothing

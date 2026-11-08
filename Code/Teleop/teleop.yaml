@@ -1,0 +1,12 @@
+# Settings of the keyboard teleop (same values as Code/Grasp/config/grasp.yaml, sources there).
+gripper:
+  tcp_in_tool_xyz_m: [0.0, 0.0, 0.035]                 # HW7 tip_offset_measured.json (touch on paper)
+  tcp_in_tool_quat_xyzw: [0.0, 0.0, -0.7071068, 0.7071068]
+  close_cmd: 0.81                                      # finger joint (rad), fully closed
+  close_effort: 30.0
+scan:
+  table_z_m: -0.041                                    # table height in the base frame; the tool point may not go below this minus 5 mm
+  home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]   # HW7 scan_joints.json 'config 2' (keys 0 / H)
+motion:
+  joint_speed_deg_s: 10
+  line_speed_mps: 0.04

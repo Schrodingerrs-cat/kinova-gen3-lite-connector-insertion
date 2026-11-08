@@ -1,0 +1,14 @@
+{
+ "ok": false,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 522 / 404): grasping the middle, in-hand direction ambiguous",
+  "housing too short for the finger width after tip / cable-end keepouts"
+ ],
+ "n_grasps": 0,
+ "rejected": [],
+ "dims_LWH_m": [
+  0.02778754453504094,
+  0.02194455294492807,
+  0.02003584254812742
+ ]
+}

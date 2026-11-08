@@ -1,0 +1,30 @@
+{
+ "frame": "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/runs/20261107_124622/frame.npz",
+ "roi_px": [
+  351,
+  268,
+  368,
+  294
+ ],
+ "ok": false,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 398 / 564): grasping the middle, in-hand direction ambiguous",
+  "no grasp survives scoring (insertion face free / reachable / robust to pose error)"
+ ],
+ "tip_known": false,
+ "raw_points": 67787,
+ "clean_points": 41778,
+ "housing_LWH_mm": [
+  16.4,
+  40.3,
+  38.1
+ ],
+ "housing_center_base_mm": [
+  271.8,
+  14.9,
+  1.6
+ ],
+ "n_grasps": 0,
+ "best_grasp_tcp_base_mm": null,
+ "best_grasp_open_width_mm": null
+}

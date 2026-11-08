@@ -1,0 +1,4 @@
+# grasp_node log of this attempt was overwritten when the node restarted; these lines are the exact service responses / log lines seen in the session
+execute (dry run): DRY RUN, nothing moved. candidate 0 (15 mm, flip +1): ok
+[grasp_node] gripper stopped at 0.800 (empty >= 0.790), ~1.0 mm, expected 21.2 mm: gripper closed on nothing
+[grasp_node] execute: grasp NOT verified: gripper closed on nothing

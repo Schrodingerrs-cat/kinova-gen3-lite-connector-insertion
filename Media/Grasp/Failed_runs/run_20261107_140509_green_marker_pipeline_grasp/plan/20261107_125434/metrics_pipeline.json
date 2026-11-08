@@ -1,0 +1,33 @@
+{
+ "frame": "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/runs/20261107_125434/frame.npz",
+ "roi_px": [
+  305,
+  105,
+  415,
+  250
+ ],
+ "ok": true,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 223 / 215): grasping the middle, in-hand direction ambiguous"
+ ],
+ "tip_known": false,
+ "raw_points": 127534,
+ "clean_points": 29997,
+ "housing_LWH_mm": [
+  25.4,
+  17.7,
+  7.4
+ ],
+ "housing_center_base_mm": [
+  336.1,
+  50.4,
+  -37.8
+ ],
+ "n_grasps": 6,
+ "best_grasp_tcp_base_mm": [
+  335.8,
+  51.1,
+  -37.8
+ ],
+ "best_grasp_open_width_mm": 41.7
+}

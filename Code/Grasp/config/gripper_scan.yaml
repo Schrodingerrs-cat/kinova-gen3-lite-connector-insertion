@@ -1,0 +1,13 @@
+# written by /grasp/scan_gripper 2026-11-03 18:43 from 4 openings; tip z in tool frame 0.0239 m (HW7 touch value 0.0350)
+finger_length_m: 0.0251
+finger_thickness_m: 0.0077
+finger_width_m: 0.006
+position_to_width_m:
+- - 0.008
+  - 0.1404
+- - 0.191
+  - 0.1117
+- - 0.59
+  - 0.0369
+- - 0.771
+  - 0.0004

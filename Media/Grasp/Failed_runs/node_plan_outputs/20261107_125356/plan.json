@@ -1,0 +1,10 @@
+{
+ "ok": false,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 0 / 2): grasping the middle, in-hand direction ambiguous",
+  "housing section only 8.8 mm long (need 10.0 mm)"
+ ],
+ "n_grasps": 0,
+ "rejected": [],
+ "dims_LWH_m": null
+}

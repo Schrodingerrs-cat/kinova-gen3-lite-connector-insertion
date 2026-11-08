@@ -1,0 +1,14 @@
+{
+ "started": "2026-11-07T14:05:10",
+ "grasp_requested": true,
+ "stages": {
+  "scan": {
+   "ok": true,
+   "seconds": 145.0,
+   "message": "scan 20261107_140510: 15 views (skipped []), 2274440 fused points, 7122 green points; ICP corrections vs earlier views: median 6.0 mm, max 15.6 mm"
+  }
+ },
+ "gates": [],
+ "outcome": "INCOMPLETE",
+ "seconds_total": 171.8
+}

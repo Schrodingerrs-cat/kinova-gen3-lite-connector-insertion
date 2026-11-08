@@ -1,0 +1,5 @@
+# excerpt of grasp_node log for this attempt
+[INFO] [1793745695.612922441] [grasp_node]: grasp_node ready (dry_run=False)
+[INFO] [1793745730.505433511] [grasp_node]: candidate 0 (22 mm, flip +1): ok
+[INFO] [1793745754.613539290] [grasp_node]: gripper stopped at 0.800 (empty >= 0.790), ~1.0 mm, expected 23.2 mm: gripper closed on nothing
+[ERROR] [1793745756.084202681] [grasp_node]: execute: grasp NOT verified: gripper closed on nothing

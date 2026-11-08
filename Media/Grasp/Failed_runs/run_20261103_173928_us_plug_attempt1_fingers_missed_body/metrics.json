@@ -1,0 +1,21 @@
+{
+ "status": "FAILED",
+ "executed_pipeline": "pre-cleaning (30.0x21.2x21.8 mm housing at plan time)",
+ "roi_px": [
+  380,
+  150,
+  475,
+  250
+ ],
+ "camera_height_over_table_m": 0.18,
+ "planned_open_width_mm": 33.2,
+ "moveit_plan_ok": true,
+ "moveit_execution_error": null,
+ "gripper_stop_position": 0.8,
+ "gripper_empty_threshold": 0.79,
+ "verified_by_gripper_stop": false,
+ "verified_by_vision": "NOT MEASURED",
+ "plug_displaced_after_attempt": true,
+ "video": "NONE RECORDED",
+ "note": "re-analysis with the current pipeline is in metrics_pipeline.json and plots/"
+}

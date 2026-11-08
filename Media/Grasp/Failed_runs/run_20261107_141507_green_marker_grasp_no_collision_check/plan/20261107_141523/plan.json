@@ -1,0 +1,44 @@
+{
+ "ok": false,
+ "reasons": [
+  "no grasp survives scoring (insertion face free / reachable / robust to pose error)"
+ ],
+ "n_grasps": 0,
+ "rejected": [
+  [
+   0.007122728356477321,
+   1,
+   "fails in 30% of pose-error samples"
+  ],
+  [
+   0.007122728356477321,
+   -1,
+   "fails in 30% of pose-error samples"
+  ],
+  [
+   0.006842046267357991,
+   1,
+   "fails in 30% of pose-error samples"
+  ],
+  [
+   0.006842046267357991,
+   -1,
+   "fails in 30% of pose-error samples"
+  ],
+  [
+   0.00656136417823866,
+   1,
+   "fails in 35% of pose-error samples"
+  ],
+  [
+   0.00656136417823866,
+   -1,
+   "fails in 35% of pose-error samples"
+  ]
+ ],
+ "dims_LWH_m": [
+  0.014461040509253315,
+  0.008153202453635747,
+  0.039031969544485345
+ ]
+}

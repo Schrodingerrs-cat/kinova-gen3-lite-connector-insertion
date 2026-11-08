@@ -1,0 +1,98 @@
+{
+ "grasp_yaml": {
+  "cloud": {
+   "voxel_m": 0.001,
+   "outlier_radius_m": 0.003,
+   "outlier_min_nb": 4,
+   "edge_jump_m": 0.003
+  },
+  "housing": {
+   "plane_ring_m": 0.06,
+   "table_gap_m": 0.01,
+   "crop_radius_m": 0.06,
+   "min_height_m": 0.002,
+   "max_height_m": 0.04,
+   "core_frac": 0.5,
+   "min_points": 40,
+   "cluster_radius_m": 0.0025,
+   "bin_m": 0.0015,
+   "min_bin_points": 3,
+   "thick_ratio": 1.4,
+   "min_length_m": 0.01,
+   "cable_probe_m": 0.012,
+   "min_points_cable": 15,
+   "tip_keepout_m": 0.003,
+   "cable_end_keepout_frac": 0.3,
+   "ambiguous_keepout_frac": 0.2
+  },
+  "gripper": {
+   "max_open_m": 0.085,
+   "finger_width_m": 0.012,
+   "finger_thickness_m": 0.004,
+   "finger_length_m": 0.03,
+   "finger_tip_below_tcp_m": 0.0,
+   "close_tol_m": 0.003,
+   "tcp_in_tool_xyz_m": [
+    0.0,
+    0.0,
+    0.035
+   ],
+   "tcp_in_tool_quat_xyzw": [
+    0.0,
+    0.0,
+    -0.7071068,
+    0.7071068
+   ],
+   "close_cmd": 0.81,
+   "close_effort": 30.0,
+   "position_to_width_m": [
+    [
+     0.0,
+     0.085
+    ],
+    [
+     0.81,
+     0.0
+    ]
+   ],
+   "empty_frac": 0.975
+  },
+  "camera": {
+   "hand_eye_xyz_m": [
+    -0.0080293,
+    -0.0495603,
+    -0.0909769
+   ],
+   "hand_eye_quat_xyzw": [
+    0.0097493,
+    -0.0046708,
+    -0.0127007,
+    0.9998609
+   ]
+  },
+  "grasp": {
+   "n_offsets": 5,
+   "contact_height_frac": 0.5,
+   "open_margin_m": 0.012,
+   "housing_slack_m": 0.002,
+   "plane_clearance_m": 0.0015,
+   "max_collision_points": 3,
+   "standoff_m": 0.06,
+   "lift_m": 0.08
+  }
+ },
+ "node_params": {
+  "dry_run": false,
+  "vel_scale": 0.1,
+  "acc_scale": 0.1,
+  "depth_scale": 0.001
+ },
+ "hand_eye_source": "HW7 calibration/hand_eye.json (same robot, same camera; not re-verified)",
+ "tcp_source": "HW7 tip_offset_measured.json 0.035 m",
+ "placeholders": [
+  "finger_width_m",
+  "finger_thickness_m",
+  "finger_length_m",
+  "position_to_width_m (straight line open/closed)"
+ ]
+}

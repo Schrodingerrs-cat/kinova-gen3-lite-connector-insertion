@@ -1,0 +1,33 @@
+{
+ "frame": "runs/20261103_173928/frame.npz",
+ "roi_px": [
+  380,
+  150,
+  475,
+  250
+ ],
+ "ok": true,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 251 / 415): grasping the middle, in-hand direction ambiguous"
+ ],
+ "tip_known": false,
+ "raw_points": 113231,
+ "clean_points": 24963,
+ "housing_LWH_mm": [
+  32.9,
+  21.0,
+  21.2
+ ],
+ "housing_center_base_mm": [
+  366.3,
+  37.3,
+  -30.4
+ ],
+ "n_grasps": 10,
+ "best_grasp_tcp_base_mm": [
+  364.8,
+  36.0,
+  -30.5
+ ],
+ "best_grasp_open_width_mm": 45.0
+}

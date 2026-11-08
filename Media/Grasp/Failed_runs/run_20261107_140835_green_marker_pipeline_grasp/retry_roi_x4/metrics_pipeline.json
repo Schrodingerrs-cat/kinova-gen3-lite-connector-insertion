@@ -1,0 +1,29 @@
+{
+ "frame": "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/runs/20261107_141216/frame.npz",
+ "roi_px": [
+  380,
+  177,
+  512,
+  273
+ ],
+ "ok": false,
+ "reasons": [
+  "all grasp candidates rejected"
+ ],
+ "tip_known": true,
+ "raw_points": 116683,
+ "clean_points": 54207,
+ "housing_LWH_mm": [
+  14.2,
+  8.3,
+  38.6
+ ],
+ "housing_center_base_mm": [
+  251.9,
+  -29.7,
+  8.3
+ ],
+ "n_grasps": 0,
+ "best_grasp_tcp_base_mm": null,
+ "best_grasp_open_width_mm": null
+}

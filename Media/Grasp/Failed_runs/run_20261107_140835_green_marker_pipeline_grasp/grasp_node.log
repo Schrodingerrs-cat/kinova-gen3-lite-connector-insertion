@@ -1,0 +1,21 @@
+/home/aryans-cat/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+1794078509.854187 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+[INFO] [1794078510.126477019] [grasp_node]: grasp_node ready (dry_run=False)
+/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py:259: RuntimeWarning: All-NaN slice encountered
+  depth = np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)
+[INFO] [1794078519.750550039] [grasp_node]: scan view 1/15 captured
+[INFO] [1794078523.279613036] [grasp_node]: scan view 2/15 captured
+[INFO] [1794078529.451393060] [grasp_node]: scan view 3/15 captured
+[INFO] [1794078533.928529669] [grasp_node]: scan view 4/15 captured
+[INFO] [1794078538.565434220] [grasp_node]: scan view 5/15 captured
+[INFO] [1794078542.630341194] [grasp_node]: scan view 6/15 captured
+[INFO] [1794078553.394722263] [grasp_node]: scan view 7/15 captured
+[INFO] [1794078557.510212141] [grasp_node]: scan view 8/15 captured
+[INFO] [1794078565.842633072] [grasp_node]: scan view 9/15 captured
+[INFO] [1794078572.706605342] [grasp_node]: scan view 10/15 captured
+[INFO] [1794078581.280239870] [grasp_node]: scan view 11/15 captured
+[INFO] [1794078584.697659195] [grasp_node]: scan view 12/15 captured
+[INFO] [1794078593.671679087] [grasp_node]: scan view 13/15 captured
+[INFO] [1794078598.306666347] [grasp_node]: scan view 14/15 captured
+[ERROR] [1794078663.124683423] [grasp_node]: green_plan: no grasp: no grasp survives scoring (insertion face free / reachable / robust to pose error)

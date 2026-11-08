@@ -1,0 +1,42 @@
+# Settings of the calibration tools. null = NOT MEASURED: the tool that needs it refuses to run until you fill it in.
+camera:                       # current hand-eye (tool_frame -> camera optical frame), HW7 calibration/hand_eye.json; what the grasp pipeline uses today
+  hand_eye_xyz_m: [-0.0080293, -0.0495603, -0.0909769]
+  hand_eye_quat_xyzw: [0.0097493, -0.0046708, -0.0127007, 0.9998609]
+scene:
+  table_z_m: -0.041           # table height in the base frame (fitted on the real table in 3 runs, 2026-11-03)
+  home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]   # HW7 scan_joints.json 'config 2'
+  look_at: [0.40, 0.0]        # tilted views look toward this base-frame x, y
+  region: [0.22, 0.55, -0.25, 0.25]   # base-frame x0, x1, y0, y1 of the table patch used to fit the plane (keep it clear of objects)
+motion:
+  joint_speed_deg_s: 10
+  line_speed_mps: 0.04
+  max_joint_dev_deg: 80       # a view's joints may differ this much from the start pose (no wrist flips)
+gripper:
+  tcp_in_tool_xyz_m: [0.0, 0.0, 0.035]
+  tcp_in_tool_quat_xyzw: [0.0, 0.0, -0.7071068, 0.7071068]
+  close_cmd: 0.81
+calib_scan:                   # calibration scan over the EMPTY table: views [x, y, camera height (, tilt deg (, yaw deg))]
+  frames_per_view: 3
+  views:
+    - [0.30, -0.15, 0.30]
+    - [0.30,  0.00, 0.30]
+    - [0.30,  0.15, 0.30]
+    - [0.40,  0.15, 0.30]
+    - [0.40,  0.00, 0.30]
+    - [0.40, -0.15, 0.30]
+    - [0.40,  0.00, 0.22]
+    - [0.35,  0.10, 0.22]
+    - [0.35, -0.10, 0.22]
+    - [0.35,  0.00, 0.28, 0,  45]
+    - [0.35,  0.00, 0.28, 0, -45]
+    - [0.38,  0.15, 0.22, 35]
+    - [0.38, -0.15, 0.22, 35]
+    - [0.32, -0.15, 0.25, 25]
+    - [0.27,  0.00, 0.26, 25]
+aruco:                        # hand-eye calibration marker: print it, stick it FLAT on the table, do not move it during the capture
+  dictionary: DICT_4X4_50
+  marker_id: 0
+  marker_size_m: null         # side of the BLACK square, measured with a ruler (m)
+chessboard:                   # intrinsics check
+  inner_corners: [9, 6]       # columns, rows of INNER corners
+  square_size_m: null         # side of one square, measured (m)

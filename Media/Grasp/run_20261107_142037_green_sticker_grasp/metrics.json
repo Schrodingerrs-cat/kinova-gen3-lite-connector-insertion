@@ -1,0 +1,39 @@
+{
+ "started": "2026-11-07T14:20:38",
+ "grasp_requested": true,
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 4.4,
+   "message": "at home (was 43 deg away)"
+  },
+  "green": {
+   "ok": true,
+   "seconds": 3.8,
+   "message": "merged scan 20261107_140836: table tilt 4.5 deg (107621 inliers), 143 above-table clusters, green clusters [6322, 30, 24, 18, 15]; target (green centroid) [257.0, -25.0, 4.0] mm. Orientation of the merged patch is NOT used (registration smear)"
+  },
+  "view": {
+   "ok": true,
+   "seconds": 5.4,
+   "message": "camera over [ 0.257 -0.025  0.004] at 180 mm"
+  },
+  "green_grasp": {
+   "ok": true,
+   "seconds": 0.4,
+   "message": "sticker median (256.6, -28.9, 7.6) mm, 458 pts; housing footprint 24.7 x 13.4 mm; jaw axis (-0.21, 0.98); opening 37.4 mm; TCP (256.6, -28.9, -0.4) mm (run 20261107_142052)"
+  },
+  "allow_grasp": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "grasp motion ENABLED (needs dry_run:=false too)"
+  },
+  "execute": {
+   "ok": false,
+   "seconds": 9.0,
+   "message": "grasp NOT held: gripper closed on nothing"
+  }
+ },
+ "gates": [],
+ "outcome": "GRASP_FAILED: grasp NOT held: gripper closed on nothing",
+ "seconds_total": 24.4
+}

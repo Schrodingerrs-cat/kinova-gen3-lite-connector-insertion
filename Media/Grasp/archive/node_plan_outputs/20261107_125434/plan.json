@@ -1,0 +1,13 @@
+{
+ "ok": true,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 223 / 215): grasping the middle, in-hand direction ambiguous"
+ ],
+ "n_grasps": 6,
+ "rejected": [],
+ "dims_LWH_m": [
+  0.025362207985777846,
+  0.01767874316962518,
+  0.007367225427679841
+ ]
+}

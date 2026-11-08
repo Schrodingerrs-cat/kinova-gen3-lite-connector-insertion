@@ -1,0 +1,7 @@
+[   0.1 s] arm is 42 deg from home: going home first
+[   4.5 s] home -> OK: at home (was 42 deg away)
+[   8.3 s] green -> OK: merged scan 20261107_140836: table tilt 4.5 deg (107621 inliers), 143 above-table clusters, green clusters [6322, 30, 24, 18, 15]; target (green centroid) [257.0, -25.0, 4.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[  13.7 s] view -> OK: camera over [ 0.257 -0.025  0.004] at 180 mm
+[  15.8 s] green_plan -> FAILED: no grasp: no grasp survives scoring (insertion face free / reachable / robust to pose error)
+[  18.3 s] gate plan found a grasp                                      FAIL  n_grasps=0
+[  18.4 s] outcome: STOPPED_BEFORE_GRASP: plan failed

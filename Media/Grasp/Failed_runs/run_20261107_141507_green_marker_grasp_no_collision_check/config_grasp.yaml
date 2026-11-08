@@ -1,0 +1,123 @@
+# null = NOT MEASURED. load_config() refuses to run until every null is filled
+# (plan/SHARED_PRIMITIVES_CHECKLIST.md: no unmeasured constants).
+# null = NOT MEASURED. load_config() refuses to run until every null is filled.
+# No connector dimensions are needed: the housing is measured from the depth data.
+cloud:                        # stage 1: clean cloud (all sizes in metres, independent of connector size)
+  voxel_m: 0.0008             # one averaged point per voxel (was 1 mm: finer on 2026-11-07)
+  outlier_radius_m: 0.003     # a point needs outlier_min_nb neighbours within this radius
+  outlier_min_nb: 4
+  edge_jump_m: 0.003          # depth discontinuity (3x3) above which a pixel is dropped
+green:                        # grasp markers: two green planes on the sides of the connector head. HSV measured on the real head 2026-11-07: H 93, S 219, V 138
+  h: [80, 105]                # OpenCV hue range (0-179)
+  s_min: 140                  # handwriting on the label strip is the same hue but paler / flat on the table (removed by table RANSAC)
+  v_min: 60
+  edge_jump_m: 0.004
+  voxel_m: 0.0005             # green cloud is small: 0.5 mm
+  outlier_radius_m: 0.002
+  outlier_min_nb: 3
+  table_thresh_m: 0.003       # RANSAC inlier distance for the table plane
+  min_above_table_m: 0.003    # object = points this far above the table
+  max_above_table_m: 0.08
+  cluster_eps_m: 0.006        # DBSCAN on the above-table points (3 mm voxel)
+  cluster_min_pts: 20
+  green_eps_m: 0.003          # DBSCAN on the green points
+  green_min_pts: 15
+  normal_knn: 15
+  max_nz: 0.6                 # marker plane points: normal this horizontal (vertical-ish faces)
+  min_plane_points: 40
+  roi_scale: 4.0              # close-view ROI = green blob box x this (the planner needs the whole housing in the central half of the ROI)
+housing:                      # stages 2-3: segmentation and measurement; not connector-specific
+  plane_ring_m: 0.06          # support plane is fitted on table points this close to the object
+  table_gap_m: 0.010          # ... but not closer than this (smeared object borders)
+  crop_radius_m: 0.06         # only points this close to the ROI are profiled (curved cables)
+  min_height_m: 0.002         # points below this above the support plane are not object
+  max_height_m: 0.04          # points above this are not a connector head (gripper fingers hover ~5 cm up)
+  core_frac: 0.5              # housing = points at least this fraction of the object's 95th-percentile height
+  min_points: 40              # voxels
+  cluster_radius_m: 0.0025
+  bin_m: 0.0015               # profile bin along the long axis
+  min_bin_points: 3
+  thick_ratio: 1.4            # a tall tail thinner than housing/thick_ratio is cable
+  min_length_m: 0.010         # shortest housing accepted
+  cable_probe_m: 0.012        # look this far past each housing end for the cable
+  min_points_cable: 15
+  tip_keepout_m: 0.003        # keep pads this far from the tip edge
+  cable_end_keepout_frac: 0.3 # keep the grasp out of this fraction of the length next to the cable
+  ambiguous_keepout_frac: 0.2 # keepout at BOTH ends when the tip cannot be told from the cable
+gripper:                      # Gen3 Lite 2-finger; fingertip pad geometry to be measured
+  max_open_m: 0.085           # from HW7 config (gripper_max_width_m)
+  finger_width_m: null        # from the gripper scan (config/gripper_scan.yaml)
+  finger_thickness_m: null    # from the gripper scan
+  finger_length_m: null       # visible finger length above the TCP, from the gripper scan
+  finger_tip_below_tcp_m: 0.0 # TCP is defined AT the fingertip ends (HW7 touch measurement)
+  tcp_in_tool_xyz_m: [0.0, 0.0, 0.035]  # HW7 calibration/tip_offset_measured.json (touch on paper)
+  tcp_in_tool_quat_xyzw: [0.0, 0.0, -0.7071068, 0.7071068]  # z_G=tool z (approach), y_G=tool x (jaw axis, per HW7 grasp_plan)
+  close_cmd: 0.81             # HW7 GRIP_CLOSED: fully closed, empty (0 = open)
+  close_effort: 30.0          # HW7 value; lower it if the housing deforms
+  position_to_width_m: null   # [[gripper_pos, jaw_gap_m], ...] from the gripper scan
+  empty_frac: 0.975           # HW7: settled position above this fraction of close_cmd = closed on nothing
+camera:
+  hand_eye_xyz_m: [-0.0080293, -0.0495603, -0.0909769]  # HW7 calibration/hand_eye.json; re-verify if the camera was remounted
+  hand_eye_quat_xyzw: [0.0097493, -0.0046708, -0.0127007, 0.9998609]
+grasp:
+  n_offsets: 5                # samples inside the approved zone
+  contact_height_frac: 0.5    # pad contact height as fraction of housing height
+  open_margin_m: 0.012        # per-side clearance when open (hand-eye error is ~10 mm)
+  housing_slack_m: 0.002      # points this close to the housing box are not obstacles
+  plane_clearance_m: 0.0015   # fingertip must stay this far above the support
+  max_collision_points: 1000000   # finger-volume collision check OFF (user decision 2026-11-07, "there is no collision"); was 3
+  standoff_m: 0.06            # pre-grasp distance along the approach
+  lift_m: 0.08
+optimizer:                    # docs/Strategy.md: Q = weighted terms in [0,1]; robust = mean - kappa*std over pose-error samples
+  weights: {contact: 1.0, insertion: 1.0, clearance: 1.0, reach: 1.0}   # reach term only used when an IK check is given
+  flat_scale: 0.05            # contact = exp(-flatness / flat_scale)
+  protrusion_target_frac: 0.3 # insertion = 1 when the pads leave this fraction of the length free at the tip
+  min_protrusion_m: 0.003     # hard: pads leave at least this much of the insertion face free
+  clearance_margins_m: [0.0, 0.002, 0.004, 0.006]   # finger boxes inflated by each; clearance = fraction still collision free
+  sigma_axis_m: 0.003         # housing pose error, 1 sigma. FROM scan-fusion residuals (1.5-2.7 mm); replace by repeat-scan covariance
+  sigma_lateral_m: 0.003
+  sigma_yaw_deg: 3.0
+  n_samples: 40
+  n_shortlist: 6              # Monte Carlo only on the best nominal grasps
+  kappa: 1.0
+  max_fail_rate: 0.1          # hard: reject grasps failing more often than this
+  seed: 0
+motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py)
+  joint_speed_deg_s: 10       # largest joint, joint-space moves (HW7 used 8-10)
+  line_speed_mps: 0.04        # descent / lift (HW7 lift_up 0.05)
+scan:                         # predefined workspace scan (/grasp/scan): 15 views, checked reachable from home (IK) 2026-11-07
+  table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
+  home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here
+  max_joint_dev_deg: 80       # a view/pre-grasp joint solution may differ this much per joint from where the arm starts (no wrist spinning)
+  frames_per_view: 3          # depth frames per view, median-combined
+  gripper_positions: [0.0, 0.2, 0.4, 0.6, 0.78]   # /grasp/scan_gripper sweep (gripper moves, arm does not)
+  look_at: [0.40, 0.0]        # oblique views tip the camera toward this base-frame x, y (workspace centre)
+  views:                      # [x, y, camera height above table (, tilt deg (, yaw deg))]; tilt turns the camera toward look_at, yaw spins it about base z
+    - [0.35,  0.00, 0.28]     # straight down, different positions
+    - [0.30, -0.12, 0.28]
+    - [0.30,  0.12, 0.28]
+    - [0.42,  0.12, 0.28]
+    - [0.42, -0.12, 0.28]
+    - [0.35,  0.00, 0.28, 0,  45]   # straight down, yawed
+    - [0.35,  0.00, 0.28, 0, -45]
+    - [0.38,  0.15, 0.22, 35]       # tilted, from the +y side
+    - [0.48,  0.10, 0.22, 35]       # tilted, far side
+    - [0.45,  0.05, 0.22, 45,  30]
+    - [0.45, -0.05, 0.22, 45, -30]
+    - [0.38, -0.15, 0.22, 35]       # tilted, from the -y side
+    - [0.32, -0.15, 0.25, 25]
+    - [0.27,  0.00, 0.26, 25]       # tilted, near side (gentler: steeper has no IK from home)
+    - [0.28,  0.06, 0.26, 25]
+heads:                        # analytic head LOCATOR on the fused scan (/grasp/find, /grasp/pick)
+  cell_m: 0.003               # top-view height map cell
+  ground_window_m: 0.15       # local ground = low percentile over this window (larger than any head)
+  ground_percentile: 15
+  min_head_height_m: 0.008    # a head stands at least this far above the local ground (cable body and tape do not)
+  max_head_height_m: 0.04     # taller is not a connector head (arm, fingers, fixtures)
+  min_area_m2: 0.00015        # blob footprint limits (1.5 cm2 .. 60 cm2)
+  max_area_m2: 0.006
+  region: [0.18, 0.58, -0.32, 0.32]   # base-frame x0, x1, y0, y1 where heads are looked for (the workspace)
+  min_length_m: 0.012         # sanity limits on the CLOSE-VIEW measurement before any grasp is executed
+  max_length_m: 0.09
+  max_width_m: 0.07
+  min_height_m: 0.006

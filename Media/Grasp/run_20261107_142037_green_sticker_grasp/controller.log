@@ -1,0 +1,8 @@
+[   0.1 s] arm is 43 deg from home: going home first
+[   4.5 s] home -> OK: at home (was 43 deg away)
+[   8.3 s] green -> OK: merged scan 20261107_140836: table tilt 4.5 deg (107621 inliers), 143 above-table clusters, green clusters [6322, 30, 24, 18, 15]; target (green centroid) [257.0, -25.0, 4.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[  13.7 s] view -> OK: camera over [ 0.257 -0.025  0.004] at 180 mm
+[  15.2 s] green_grasp -> OK: sticker median (256.6, -28.9, 7.6) mm, 458 pts; housing footprint 24.7 x 13.4 mm; jaw axis (-0.21, 0.98); opening 37.4 mm; TCP (256.6, -28.9, -0.4) mm (run 20261107_142052)
+[  15.4 s] allow_grasp -> OK: grasp motion ENABLED (needs dry_run:=false too)
+[  24.4 s] execute -> FAILED: grasp NOT held: gripper closed on nothing
+[  24.6 s] outcome: GRASP_FAILED: grasp NOT held: gripper closed on nothing

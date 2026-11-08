@@ -1,0 +1,64 @@
+{
+ "ok": false,
+ "reasons": [
+  "all grasp candidates rejected"
+ ],
+ "n_grasps": 0,
+ "rejected": [
+  [
+   0.006469919383727391,
+   1,
+   "82 obstacle points in finger volume"
+  ],
+  [
+   0.006469919383727391,
+   -1,
+   "82 obstacle points in finger volume"
+  ],
+  [
+   0.006704879075591086,
+   1,
+   "84 obstacle points in finger volume"
+  ],
+  [
+   0.006704879075591086,
+   -1,
+   "84 obstacle points in finger volume"
+  ],
+  [
+   0.006234959691863696,
+   1,
+   "73 obstacle points in finger volume"
+  ],
+  [
+   0.006234959691863696,
+   -1,
+   "73 obstacle points in finger volume"
+  ],
+  [
+   0.006,
+   1,
+   "66 obstacle points in finger volume"
+  ],
+  [
+   0.006,
+   -1,
+   "66 obstacle points in finger volume"
+  ],
+  [
+   0.006939838767454781,
+   1,
+   "86 obstacle points in finger volume"
+  ],
+  [
+   0.006939838767454781,
+   -1,
+   "86 obstacle points in finger volume"
+  ]
+ ],
+ "dims_LWH_m": [
+  0.014199769667792544,
+  0.008333182300139212,
+  0.03861439886973812
+ ]
+}

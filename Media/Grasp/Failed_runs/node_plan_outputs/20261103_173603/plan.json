@@ -1,0 +1,13 @@
+{
+ "ok": false,
+ "reasons": [
+  "housing too short for the finger width after tip / cable-end keepouts"
+ ],
+ "n_grasps": 0,
+ "rejected": [],
+ "dims_LWH_m": [
+  0.01794212460801184,
+  0.046430001017042324,
+  0.017728095900029883
+ ]
+}

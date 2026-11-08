@@ -1,0 +1,9 @@
+{
+ "ok": false,
+ "reasons": [
+  "housing section only 9.8 mm long (need 12.0 mm)"
+ ],
+ "n_grasps": 0,
+ "rejected": [],
+ "dims_LWH_m": null
+}

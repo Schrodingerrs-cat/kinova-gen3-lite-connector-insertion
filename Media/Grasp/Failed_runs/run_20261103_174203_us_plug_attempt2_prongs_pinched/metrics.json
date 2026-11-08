@@ -1,0 +1,21 @@
+{
+ "status": "FAILED",
+ "executed_pipeline": "pre-cleaning (39.8x23.2x24.1 mm housing at plan time)",
+ "roi_px": [
+  321,
+  116,
+  563,
+  358
+ ],
+ "camera_height_over_table_m": 0.18,
+ "planned_open_width_mm": 47.0,
+ "open_margin_per_side_mm": 12,
+ "moveit_plan_ok": true,
+ "moveit_execution_error": null,
+ "gripper_stop_position": 0.8,
+ "gripper_empty_threshold": 0.79,
+ "verified_by_gripper_stop": false,
+ "verified_by_vision": "NOT MEASURED (frame after lift shows prongs between fingers; body not visible)",
+ "video": "NONE RECORDED",
+ "note": "re-analysis with the current pipeline is in metrics_pipeline.json and plots/"
+}

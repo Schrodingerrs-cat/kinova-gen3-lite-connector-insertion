@@ -1,0 +1,6 @@
+[ 135.9 s] scan -> OK: scan 20261107_140836: 14 views (skipped [8]), 2199045 fused points, 6642 green points; ICP corrections vs earlier views: median 5.2 mm, max 15.7 mm
+[ 139.9 s] green -> OK: merged scan 20261107_140836: table tilt 4.5 deg (107621 inliers), 143 above-table clusters, green clusters [6322, 30, 24, 18, 15]; target (green centroid) [257.0, -25.0, 4.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[ 145.3 s] view -> OK: camera over [ 0.257 -0.025  0.004] at 180 mm
+[ 146.9 s] green_plan -> FAILED: no grasp: no grasp survives scoring (insertion face free / reachable / robust to pose error)
+[ 149.0 s] gate plan found a grasp                                      FAIL  n_grasps=0
+[ 149.1 s] outcome: STOPPED_BEFORE_GRASP: plan failed

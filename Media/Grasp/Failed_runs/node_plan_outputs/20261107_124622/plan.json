@@ -1,0 +1,45 @@
+{
+ "ok": false,
+ "reasons": [
+  "tip/cable end not distinguishable (points past the ends: 398 / 564): grasping the middle, in-hand direction ambiguous",
+  "no grasp survives scoring (insertion face free / reachable / robust to pose error)"
+ ],
+ "n_grasps": 0,
+ "rejected": [
+  [
+   0.008222908420811442,
+   1,
+   "fails in 40% of pose-error samples"
+  ],
+  [
+   0.008222908420811442,
+   -1,
+   "fails in 40% of pose-error samples"
+  ],
+  [
+   0.00725603589456801,
+   1,
+   "fails in 35% of pose-error samples"
+  ],
+  [
+   0.00725603589456801,
+   -1,
+   "fails in 35% of pose-error samples"
+  ],
+  [
+   0.006289163368324577,
+   1,
+   "fails in 40% of pose-error samples"
+  ],
+  [
+   0.006289163368324577,
+   -1,
+   "fails in 40% of pose-error samples"
+  ]
+ ],
+ "dims_LWH_m": [
+  0.016445816841622884,
+  0.040314541258841735,
+  0.03812815530301697
+ ]
+}

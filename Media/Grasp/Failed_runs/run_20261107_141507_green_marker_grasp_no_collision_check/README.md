@@ -1,0 +1,3 @@
+# run_20261107_141507 (FAILED at planning; no grasp attempted)
+Same scan as run_20261107_140835 (`--skip-scan`, scan 20261107_140836). Change: `grasp.max_collision_points` 3 -> 1,000,000 (finger-volume collision check OFF, user decision "there is no collision"), gates logged but not blocking (`--no-gates`).
+Result: plan FAILED, `no grasp survives scoring`: all 6 candidates rejected by the optimizer, `fails in 30-35% of pose-error samples` (limit `optimizer.max_fail_rate` 0.1). Housing measured 14.5 x 8.2 x 39.0 mm. No grasp motion. Evidence: `plan/`, `controller.log`, `metrics.json`, `videos/`, `trajectory.csv`. Status FAILED, see `failure_analysis.md`.

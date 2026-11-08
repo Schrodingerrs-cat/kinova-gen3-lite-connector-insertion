@@ -1,0 +1,53 @@
+/home/aryans-cat/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+1794078303.544596 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+[INFO] [1794078303.745225155] [grasp_node]: grasp_node ready (dry_run=False)
+/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py:259: RuntimeWarning: All-NaN slice encountered
+  depth = np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)
+[INFO] [1794078314.002461446] [grasp_node]: scan view 1/15 captured
+[INFO] [1794078317.599343910] [grasp_node]: scan view 2/15 captured
+[INFO] [1794078323.776165588] [grasp_node]: scan view 3/15 captured
+[INFO] [1794078328.257438224] [grasp_node]: scan view 4/15 captured
+[INFO] [1794078332.929386868] [grasp_node]: scan view 5/15 captured
+[INFO] [1794078336.952502486] [grasp_node]: scan view 6/15 captured
+[INFO] [1794078347.825721782] [grasp_node]: scan view 7/15 captured
+[INFO] [1794078351.940487227] [grasp_node]: scan view 8/15 captured
+[INFO] [1794078360.909757394] [grasp_node]: scan view 9/15 captured
+[INFO] [1794078365.725338262] [grasp_node]: scan view 10/15 captured
+[INFO] [1794078372.522187201] [grasp_node]: scan view 11/15 captured
+[INFO] [1794078381.080399734] [grasp_node]: scan view 12/15 captured
+[INFO] [1794078384.493546444] [grasp_node]: scan view 13/15 captured
+[INFO] [1794078393.511344701] [grasp_node]: scan view 14/15 captured
+[INFO] [1794078398.173333870] [grasp_node]: scan view 15/15 captured
+Traceback (most recent call last):
+  File "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py", line 157, in handler
+    resp.message, resp.success = fn(), True
+TypeError: 'NoneType' object is not callable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py", line 566, in <module>
+    main()
+  File "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py", line 560, in main
+    ex.spin()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 294, in spin
+    self.spin_once()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 806, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 803, in _spin_once_impl
+    future.result()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 105, in result
+    raise self.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 254, in __call__
+    self._handler.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 447, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 401, in _execute_service
+    response = await await_or_execute(srv.callback, request, srv.srv_type.Response())
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 107, in await_or_execute
+    return callback(*args)
+  File "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py", line 159, in handler
+    self.get_logger().error("%s: %s" % (fn.__name__, e))
+AttributeError: 'NoneType' object has no attribute '__name__'. Did you mean: '__ne__'?
+terminate called without an active exception

@@ -1,0 +1,64 @@
+{
+ "ok": false,
+ "reasons": [
+  "no grasp survives scoring (insertion face free / reachable / robust to pose error)"
+ ],
+ "n_grasps": 0,
+ "rejected": [
+  [
+   0.006913515217470355,
+   1,
+   "20 obstacle points in finger volume"
+  ],
+  [
+   0.006913515217470355,
+   -1,
+   "20 obstacle points in finger volume"
+  ],
+  [
+   0.006456757608735177,
+   1,
+   "8 obstacle points in finger volume"
+  ],
+  [
+   0.006456757608735177,
+   -1,
+   "8 obstacle points in finger volume"
+  ],
+  [
+   0.006228378804367589,
+   1,
+   "6 obstacle points in finger volume"
+  ],
+  [
+   0.006228378804367589,
+   -1,
+   "6 obstacle points in finger volume"
+  ],
+  [
+   0.006685136413102767,
+   1,
+   "14 obstacle points in finger volume"
+  ],
+  [
+   0.006685136413102767,
+   -1,
+   "14 obstacle points in finger volume"
+  ],
+  [
+   0.006,
+   1,
+   "fails in 40% of pose-error samples"
+  ],
+  [
+   0.006,
+   -1,
+   "fails in 40% of pose-error samples"
+  ]
+ ],
+ "dims_LWH_m": [
+  0.014162164596386223,
+  0.008172092149502796,
+  0.03910569698920341
+ ]
+}

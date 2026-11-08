@@ -1,0 +1,31 @@
+{
+ "frame": "runs/20261103_174203/frame.npz",
+ "roi_px": [
+  321,
+  116,
+  563,
+  358
+ ],
+ "ok": true,
+ "reasons": [],
+ "tip_known": true,
+ "raw_points": 227205,
+ "clean_points": 56039,
+ "housing_LWH_mm": [
+  41.9,
+  22.3,
+  24.1
+ ],
+ "housing_center_base_mm": [
+  419.2,
+  99.3,
+  -30.0
+ ],
+ "n_grasps": 10,
+ "best_grasp_tcp_base_mm": [
+  417.2,
+  98.0,
+  -30.1
+ ],
+ "best_grasp_open_width_mm": 46.3
+}

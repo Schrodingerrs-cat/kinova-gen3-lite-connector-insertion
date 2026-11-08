@@ -1,0 +1,2 @@
+[ 145.1 s] scan -> OK: scan 20261107_140510: 15 views (skipped []), 2274440 fused points, 7122 green points; ICP corrections vs earlier views: median 6.0 mm, max 15.6 mm
+[ 172.0 s] outcome: INCOMPLETE
