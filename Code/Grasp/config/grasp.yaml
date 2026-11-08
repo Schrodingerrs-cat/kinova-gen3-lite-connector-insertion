@@ -1,18 +1,18 @@
 # null = NOT MEASURED. load_config() refuses to run until every null is filled
 # (plan/SHARED_PRIMITIVES_CHECKLIST.md: no unmeasured constants).
 # null = NOT MEASURED. load_config() refuses to run until every null is filled (the gripper ones come from /grasp/scan_gripper).
-# No connector dimensions are configured: position / axes / width come from the green sticker and the image. Every stage is explained in PIPELINE.md.
+# No connector dimensions are configured: position / axes / width come from the marker sticker and the image. Every stage is explained in PIPELINE.md.
 cloud:                        # stage 1: clean cloud (all sizes in metres, independent of connector size)
   voxel_m: 0.0008             # one averaged point per voxel (was 1 mm: finer on 2026-11-07)
   outlier_radius_m: 0.003     # a point needs outlier_min_nb neighbours within this radius
   outlier_min_nb: 4
   edge_jump_m: 0.003          # depth discontinuity (3x3) above which a pixel is dropped
-green:                        # the green sticker on the head's top face (colour thresholding in the image). HSV measured on the real head 2026-11-07: H 93, S 219, V 138
+color_marker:                        # the marker sticker on the head's top face (colour thresholding in the image). HSV measured on the real head 2026-11-07: H 93, S 219, V 138
   h: [80, 105]                # OpenCV hue range (0-179)
   s_min: 140                  # handwriting on the label strip is the same hue but paler / flat on the table (removed by table RANSAC)
   v_min: 60
   edge_jump_m: 0.004
-  voxel_m: 0.0005             # green cloud is small: 0.5 mm
+  voxel_m: 0.0005             # marker cloud is small: 0.5 mm
   outlier_radius_m: 0.002
   outlier_min_nb: 3
   table_thresh_m: 0.003       # RANSAC inlier distance for the table plane
@@ -20,18 +20,18 @@ green:                        # the green sticker on the head's top face (colour
   max_above_table_m: 0.08
   cluster_eps_m: 0.006        # DBSCAN on the above-table points (3 mm voxel)
   cluster_min_pts: 20
-  green_eps_m: 0.003          # DBSCAN on the green points
-  green_min_pts: 15
+  marker_eps_m: 0.003          # DBSCAN on the marker points
+  marker_min_pts: 15
   normal_knn: 15
   max_nz: 0.6                 # marker plane points: normal this horizontal (vertical-ish faces)
   min_plane_points: 40
-  dark_v: 70                  # housing = pixels darker than this (HSV value) or green, connected to the sticker
+  dark_v: 70                  # housing = pixels darker than this (HSV value) or marker-coloured, connected to the sticker
   footprint_radius_m: 0.022   # only pixels this close to the sticker are considered housing (keeps the cable and bolts out)
   grasp_drop_m: 0.008         # fingertips this far BELOW the sticker top face. CHOSEN constant (not measured): the depth of the head sides is unreliable
   head_band_m: [0.060, 0.060]  # image mode: head points kept this far below / above the sticker height (wide on purpose: the dark body is real data)
   candidate_search: true      # head / cloud mode: true = search (families x yaws x pad positions, ranked), false = ONE closed-form grasp, no ranking
   contact_faces: edge_prior   # cloud mode: which side faces the pads touch: edge_prior (use jaw_edge) | larger (jaw along the SHORTER extent: pads on the wider faces) | smaller
-  extent_source: sticker      # cloud mode: sizes / axes for that choice from the green sticker rectangle (green only) | footprint (dark + green outline of the head in the image)
+  extent_source: sticker      # cloud mode: sizes / axes for that choice from the marker sticker rectangle (marker only) | footprint (dark + marker outline of the head in the image)
   jaw_edge: long              # cloud mode: jaws close along the sticker's LONG edge (true when the sticker is applied with its long edge across the head)
   yaw_steps_deg: [-10, 0, 10] # cloud mode: jaw yaw offsets searched around each edge direction
   yaw_penalty: 0.3            # cloud + head mode: cost of a 45 deg yaw offset (a yaw offset must win by clear evidence, not by noise)

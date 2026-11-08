@@ -1,6 +1,6 @@
-"""Green grasp markers: colour mask -> green point cloud -> table removal -> clusters -> the two marker planes -> grasp.
+"""Colour-marker grasp: colour thresholding in the image (any colour, see `color_marker.h / s_min / v_min`) -> marker point cloud -> table removal -> clusters -> the two marker planes -> grasp.
 
-The grasp is searched ONLY on the green points (the two marked side planes of the connector head).
+The grasp is searched ONLY on the marker points (the two marked side planes of the connector head).
 """
 import cv2
 import numpy as np
@@ -10,20 +10,22 @@ from sklearn.cluster import DBSCAN, KMeans
 from .cloud import remove_outliers, voxel_downsample
 
 
-def green_mask(bgr, g):
-    """Bool mask of green marker pixels (OpenCV HSV: g['h'] range, saturation and value minimums)."""
+def marker_mask(bgr, g):
+    """Bool mask of colour marker pixels (OpenCV HSV: g['h'] range, saturation and value minimums)."""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-    m = (hsv[..., 0] >= g["h"][0]) & (hsv[..., 0] <= g["h"][1]) & (hsv[..., 1] >= g["s_min"]) & (hsv[..., 2] >= g["v_min"])
+    h0, h1 = g["h"]  # OpenCV hue 0-179; a range that wraps past 179 (red) is written with h0 > h1, e.g. [170, 10]
+    hue = (hsv[..., 0] >= h0) & (hsv[..., 0] <= h1) if h0 <= h1 else (hsv[..., 0] >= h0) | (hsv[..., 0] <= h1)
+    m = hue & (hsv[..., 1] >= g["s_min"]) & (hsv[..., 2] >= g["v_min"])
     return cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)).astype(bool)
 
 
-def green_points(depth, bgr, K, T_BC, g):
-    """Green pixels -> cleaned base-frame points. Flying pixels are removed on the FULL depth before the mask is applied."""
+def marker_points(depth, bgr, K, T_BC, g):
+    """Marker-coloured pixels -> cleaned base-frame points. Flying pixels are removed on the FULL depth before the mask is applied."""
     valid = np.isfinite(depth) & (depth > 0)
     hi = maximum_filter(np.where(valid, depth, 0.0), 3)
     lo = minimum_filter(np.where(valid, depth, np.inf), 3)
     valid &= (hi - lo) <= g["edge_jump_m"]
-    vv, uu = np.nonzero(valid & green_mask(bgr, g))
+    vv, uu = np.nonzero(valid & marker_mask(bgr, g))
     z = depth[vv, uu].astype(float)
     pc = np.stack([(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z], 1)
     pb = pc @ T_BC[:3, :3].T + T_BC[:3, 3]
@@ -79,10 +81,10 @@ def fit_plane(P):
 
 
 def marker_planes(G, g):
-    """Split the green points into the two marker planes with KMeans(k=2) on their horizontal normals.
+    """Split the marker points into the two marker planes with KMeans(k=2) on their horizontal normals.
     Returns [(points, centroid, normal), (points, centroid, normal)] with the normals pointing away from each other, or None."""
     N = normals(G, g["normal_knn"])
-    N = N * np.where(np.einsum("ij,ij->i", N, G - G.mean(0)) < 0, -1.0, 1.0)[:, None]  # outward from the green centre
+    N = N * np.where(np.einsum("ij,ij->i", N, G - G.mean(0)) < 0, -1.0, 1.0)[:, None]  # outward from the marker centre
     side = np.abs(N[:, 2]) < g["max_nz"]  # vertical-ish faces only
     if side.sum() < 2 * g["min_plane_points"]:
         return None
@@ -103,8 +105,8 @@ def marker_planes(G, g):
     return [(P1, c1, n1), (P2, c2, n2)]
 
 
-def green_frame(C):
-    """Frame of one green patch from PCA: long axis along it, jaw axis across it, normal = patch plane normal (up)."""
+def marker_frame(C):
+    """Frame of one marker patch from PCA: long axis along it, jaw axis across it, normal = patch plane normal (up)."""
     c = C.mean(0)
     long_, mid, n = np.linalg.svd(C - c, full_matrices=False)[2]
     n = n if n[2] > 0 else -n
@@ -125,8 +127,8 @@ def largest_blob(mask, min_px):
 
 
 def analyze_scan(P, G, cfg):
-    """Merged-scan stages: table RANSAC -> above-table object points + clusters -> green clusters on the object -> frame of the largest."""
-    g, tz = cfg["green"], cfg["scan"]["table_z_m"]
+    """Merged-scan stages: table RANSAC -> above-table object points + clusters -> marker clusters on the object -> frame of the largest."""
+    g, tz = cfg["color_marker"], cfg["scan"]["table_z_m"]
     band = P[np.abs(P[:, 2] - tz) < 0.03]
     sub = band[np.random.default_rng(0).choice(len(band), min(150000, len(band)), replace=False)]
     n, d, n_inl = ransac_plane(sub, g["table_thresh_m"])
@@ -136,27 +138,27 @@ def analyze_scan(P, G, cfg):
     obj, _ = voxel_downsample(P[inbox & (h > g["min_above_table_m"]) & (h < g["max_above_table_m"])], np.zeros(int((inbox & (h > g["min_above_table_m"]) & (h < g["max_above_table_m"])).sum()), bool), 0.003)
     hg = G @ n + d
     Ga = G[(hg > g["min_above_table_m"]) & (hg < g["max_above_table_m"])]
-    glab = dbscan(Ga, g["green_eps_m"], g["green_min_pts"])
+    glab = dbscan(Ga, g["marker_eps_m"], g["marker_min_pts"])
     clusters = sorted((Ga[glab == k] for k in set(glab) - {-1}), key=len, reverse=True)
     return dict(table_n=n, table_d=d, table_inliers=n_inl, object_points=obj, object_labels=dbscan(obj, g["cluster_eps_m"], g["cluster_min_pts"]),
-                green_above=Ga, green_labels=glab, green_clusters=clusters, frame=green_frame(clusters[0]) if clusters else None)
+                marker_above=Ga, marker_labels=glab, marker_clusters=clusters, frame=marker_frame(clusters[0]) if clusters else None)
 
 
 def head_mask(bgr, K, T_BC, c, g):
-    """Image-space segmentation of the head: dark or green pixels connected to the sticker, within footprint_radius_m of it.
+    """Image-space segmentation of the head: dark or marker pixels connected to the sticker, within footprint_radius_m of it.
     c = sticker centroid in the base frame. Returns (bool mask, depth of c in the camera frame)."""
     cam = np.linalg.inv(T_BC) @ np.r_[c, 1]
     Z0 = cam[2]
     u0, v0 = K[0, 0] * cam[0] / Z0 + K[0, 2], K[1, 1] * cam[1] / Z0 + K[1, 2]
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-    body = (hsv[..., 2] < g["dark_v"]) | green_mask(bgr, g)
+    body = (hsv[..., 2] < g["dark_v"]) | marker_mask(bgr, g)
     vv, uu = np.mgrid[0:bgr.shape[0], 0:bgr.shape[1]]
     body &= np.hypot(uu - u0, vv - v0) < g["footprint_radius_m"] * K[0, 0] / Z0
     body = cv2.morphologyEx(body.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     _, lab = cv2.connectedComponents(body)
     k = lab[int(round(v0)), int(round(u0))]
     if k == 0:
-        raise RuntimeError("no housing pixels around the green sticker")
+        raise RuntimeError("no housing pixels around the marker sticker")
     return lab == k, Z0
 
 
@@ -177,7 +179,7 @@ def head_points(depth, bgr, K, T_BC, c, g):
 
 
 def housing_footprint(bgr, depth, K, T_BC, c, g):
-    """Top-face footprint of the dark housing around the green sticker (colour image, back-projected at the sticker's depth).
+    """Top-face footprint of the dark housing around the marker sticker (colour image, back-projected at the sticker's depth).
     c = sticker centroid in the base frame. Returns dict(long_axis, jaw_axis (unit xy in base), length_m, width_m, n_px)."""
     mask, Z0 = head_mask(bgr, K, T_BC, c, g)
     vs, us = np.nonzero(mask)
@@ -234,15 +236,15 @@ def synthesize_head_grasps(P, G, c, g, finger_w, max_open, margin, drop, search=
 
 
 def sticker_rect(bgr, K, T_BC, c, g):
-    """Cloud mode: edge-based geometry of the green sticker from the IMAGE only. Min-area rectangle of the green blob at the sticker; its 4 corners are
+    """Cloud mode: edge-based geometry of the marker sticker from the IMAGE only. Min-area rectangle of the marker blob at the sticker; its 4 corners are
     intersected with the horizontal plane z = c[2] (sticker height from the 3D median). The 3D sticker points themselves are NOT used for axes: on the glossy
     head their PCA / plane are distorted. Returns dict(long_axis, short_axis (unit xy), long_m, short_m, center_xy, fill)."""
     cam = np.linalg.inv(T_BC) @ np.r_[c, 1]
     u0, v0 = K[0, 0] * cam[0] / cam[2] + K[0, 2], K[1, 1] * cam[1] / cam[2] + K[1, 2]
-    _, lab = cv2.connectedComponents(green_mask(bgr, g).astype(np.uint8))
+    _, lab = cv2.connectedComponents(marker_mask(bgr, g).astype(np.uint8))
     k = lab[int(round(v0)), int(round(u0))]
     if k == 0:
-        raise RuntimeError("no green blob at the sticker position")
+        raise RuntimeError("no marker blob at the sticker position")
     vs, us = np.nonzero(lab == k)
     rect = cv2.minAreaRect(np.stack([us, vs], 1).astype(np.float32))
     corners = cv2.boxPoints(rect)
@@ -258,7 +260,7 @@ def sticker_rect(bgr, K, T_BC, c, g):
 
 
 def sticker_candidates(rect, c, g, finger_w, max_open, margin, drop, search=True):
-    """Cloud mode: grasp candidates on the green region. rect = dict(long_axis, short_axis, long_m, short_m, center_xy): the sticker rectangle from the image, or
+    """Cloud mode: grasp candidates on the marker region. rect = dict(long_axis, short_axis, long_m, short_m, center_xy): the sticker rectangle from the image, or
     (extent_source: footprint) the head outline with the sticker centre. Jaws close along the LONG or SHORT edge of rect; the pads then touch the side faces
     perpendicular to the jaw, whose horizontal width is the OTHER extent (face_width_m). Which family is preferred (cost 0, the other 0.5):
       contact_faces edge_prior -> g['jaw_edge'] (a convention),  larger -> jaw along the SHORTER extent (pads on the wider faces),  smaller -> the opposite.

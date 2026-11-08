@@ -1,21 +1,21 @@
-"""Synthetic checks of the green-marker stages (geometry only, not hardware evidence)."""
+"""Synthetic checks of the colour-marker stages (geometry only, not hardware evidence)."""
 import pathlib, sys
 import cv2
 import numpy as np
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from housing_grasp.config import load_config  # noqa: E402
-from housing_grasp.green import dbscan, green_mask, marker_planes, ransac_plane  # noqa: E402
+from housing_grasp.color_marker import dbscan, marker_mask, marker_planes, ransac_plane  # noqa: E402
 
-G = load_config(str(pathlib.Path(__file__).resolve().parents[1] / "config" / "grasp.yaml"), allow_unscanned=True)["green"]
+G = load_config(str(pathlib.Path(__file__).resolve().parents[1] / "config" / "grasp.yaml"), allow_unscanned=True)["color_marker"]
 
 
-def test_mask_takes_head_green_not_wood_or_white():
+def test_mask_takes_the_marker_colour_not_wood_or_white():
     img = np.zeros((40, 40, 3), np.uint8)
     img[:] = (60, 110, 190)                    # wood, BGR
-    img[5:15, 5:15] = (200, 200, 20)           # teal/green (H~90, S high)
+    img[5:15, 5:15] = (200, 200, 20)           # a teal marker colour (H~90, S high)
     img[25:35, 25:35] = (250, 250, 245)        # white
-    m = green_mask(img, G)
+    m = marker_mask(img, G)
     assert m[5:15, 5:15].mean() > 0.9 and not m[25:35, 25:35].any() and not m[20:24, 0:4].any()
 
 
@@ -43,11 +43,11 @@ def test_dbscan_separates_blobs():
     assert len(set(dbscan(P, 0.006, 15)) - {-1}) == 2
 
 
-def test_green_frame_of_a_flat_patch():
-    from housing_grasp.green import green_frame, largest_blob
+def test_marker_frame_of_a_flat_patch():
+    from housing_grasp.color_marker import marker_frame, largest_blob
     rng = np.random.default_rng(4)
     C = np.c_[rng.uniform(-0.015, 0.015, 3000), rng.uniform(-0.006, 0.006, 3000), rng.normal(0.01, 0.0001, 3000)]
-    f = green_frame(C)
+    f = marker_frame(C)
     assert abs(f["normal"][2]) > 0.99 and abs(abs(f["long_axis"][0]) - 1) < 0.02 and abs(f["length_m"] - 0.03) < 0.002 and abs(f["width_m"] - 0.012) < 0.002
     m = np.zeros((50, 50), bool); m[10:20, 30:40] = True; m[40:42, 5:7] = True
     assert largest_blob(m, 20) == (30, 10, 40, 20) and largest_blob(m, 500) is None
@@ -68,9 +68,9 @@ def _synthetic_head(tilt_z=0.0):
 
 
 def test_image_mode_finds_jaw_axis_width_and_height_of_a_synthetic_head():
-    from housing_grasp.green import green_points, head_points, synthesize_head_grasps
+    from housing_grasp.color_marker import marker_points, head_points, synthesize_head_grasps
     img, depth, K, T = _synthetic_head()
-    G_ = green_points(depth, img, K, T, G)
+    G_ = marker_points(depth, img, K, T, G)
     c = np.median(G_, 0)
     P = head_points(depth, img, K, T, c, G)
     cands = synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008)
@@ -84,7 +84,7 @@ def test_image_mode_finds_jaw_axis_width_and_height_of_a_synthetic_head():
 
 
 def test_image_mode_drops_candidates_where_the_height_changes():
-    from housing_grasp.green import synthesize_head_grasps
+    from housing_grasp.color_marker import synthesize_head_grasps
     rng = np.random.default_rng(5)
     P = np.c_[rng.uniform(-0.012, 0.012, 4000), rng.uniform(-0.0065, 0.0065, 4000), np.zeros(4000)]
     P[:, 2] = np.where(P[:, 0] > 0.0, 0.015, 0.015 + 0.02 * (-P[:, 0] / 0.012))   # flat for x > 0, ramp for x < 0
@@ -114,9 +114,9 @@ def _sticker_image(angle_deg=0.0):
 
 
 def test_cloud_mode_axes_come_from_the_image_edges_and_candidates_are_searched():
-    from housing_grasp.green import green_points, sticker_candidates, sticker_rect
+    from housing_grasp.color_marker import marker_points, sticker_candidates, sticker_rect
     img, depth, K, T = _sticker_image()
-    G_ = green_points(depth, img, K, T, G); c = np.median(G_, 0)
+    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0)
     rect = sticker_rect(img, K, T, c, G)
     assert abs(rect["long_m"] - 0.0125) < 0.0012 and abs(rect["short_m"] - 0.0095) < 0.0012 and abs(rect["long_axis"][1]) > 0.98
     cands = sticker_candidates(rect, c, G, 0.006, 0.085, 0.012, 0.008)
@@ -127,9 +127,9 @@ def test_cloud_mode_axes_come_from_the_image_edges_and_candidates_are_searched()
 
 
 def test_cloud_mode_follows_a_rotated_sticker():
-    from housing_grasp.green import green_points, sticker_candidates, sticker_rect
+    from housing_grasp.color_marker import marker_points, sticker_candidates, sticker_rect
     img, depth, K, T = _sticker_image(angle_deg=30.0)
-    G_ = green_points(depth, img, K, T, G); c = np.median(G_, 0)
+    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0)
     rect = sticker_rect(img, K, T, c, G)
     ang = np.degrees(np.arccos(min(1.0, abs(rect["long_axis"] @ np.array([0.0, 1.0])))))   # long edge was along y before the rotation
     assert abs(ang - 30.0) < 4.0
@@ -138,9 +138,9 @@ def test_cloud_mode_follows_a_rotated_sticker():
 
 
 def test_candidate_search_switch_off_gives_one_closed_form_grasp_on_gives_many():
-    from housing_grasp.green import green_points, sticker_candidates, sticker_rect
+    from housing_grasp.color_marker import marker_points, sticker_candidates, sticker_rect
     img, depth, K, T = _sticker_image()
-    G_ = green_points(depth, img, K, T, G); c = np.median(G_, 0); rect = sticker_rect(img, K, T, c, G)
+    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0); rect = sticker_rect(img, K, T, c, G)
     on = sticker_candidates(rect, c, G, 0.006, 0.085, 0.012, 0.008, search=True)
     off = sticker_candidates(rect, c, G, 0.006, 0.085, 0.012, 0.008, search=False)
     assert len(off) == 1 and len(on) > 10
@@ -149,7 +149,7 @@ def test_candidate_search_switch_off_gives_one_closed_form_grasp_on_gives_many()
 
 
 def test_contact_faces_rule_chooses_which_pair_of_faces_the_pads_touch():
-    from housing_grasp.green import sticker_candidates
+    from housing_grasp.color_marker import sticker_candidates
     rect = dict(long_axis=np.array([0.0, 1.0]), short_axis=np.array([1.0, 0.0]), long_m=0.0247, short_m=0.0134, center_xy=np.zeros(2))
     c = np.array([0, 0, 0.01])
     pick = lambda faces, edge="long": sticker_candidates(rect, c, dict(G, contact_faces=faces, jaw_edge=edge), 0.006, 0.085, 0.012, 0.008, search=False)[0]
@@ -160,17 +160,29 @@ def test_contact_faces_rule_chooses_which_pair_of_faces_the_pads_touch():
 
 
 def test_head_mode_search_switch():
-    from housing_grasp.green import green_points, head_points, synthesize_head_grasps
+    from housing_grasp.color_marker import marker_points, head_points, synthesize_head_grasps
     img, depth, K, T = _synthetic_head()
-    G_ = green_points(depth, img, K, T, G); c = np.median(G_, 0); P = head_points(depth, img, K, T, c, G)
+    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0); P = head_points(depth, img, K, T, c, G)
     assert len(synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008, search=False)) == 1
     assert len(synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008, search=True)) > 1
 
 
 def test_head_mode_search_includes_yaw_and_off_gives_one():
-    from housing_grasp.green import green_points, head_points, synthesize_head_grasps
+    from housing_grasp.color_marker import marker_points, head_points, synthesize_head_grasps
     img, depth, K, T = _synthetic_head()
-    G_ = green_points(depth, img, K, T, G); c = np.median(G_, 0); P = head_points(depth, img, K, T, c, G)
+    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0); P = head_points(depth, img, K, T, c, G)
     on = synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008, search=True)
     assert {q["yaw_deg"] for q in on} == set(float(y) for y in G["yaw_steps_deg"]) and len(on) >= 10
     assert on[0]["yaw_deg"] == 0 and [q["cost"] for q in on] == sorted(q["cost"] for q in on)
+
+
+def test_marker_colour_is_a_setting_including_a_hue_range_that_wraps_for_red():
+    from housing_grasp.color_marker import marker_mask
+    img = np.zeros((40, 40, 3), np.uint8); img[:] = (60, 110, 190)          # wood
+    img[5:15, 5:15] = (30, 30, 220)                                          # red (hue ~0)
+    img[5:15, 25:35] = (220, 40, 40)                                         # blue (hue ~120)
+    red = marker_mask(img, dict(G, h=[170, 10]))                             # wraps past 179
+    assert red[5:15, 5:15].mean() > 0.9 and not red[5:15, 25:35].any() and not red[20:24, 0:4].any()
+    blue = marker_mask(img, dict(G, h=[110, 130]))
+    assert blue[5:15, 25:35].mean() > 0.9 and not blue[5:15, 5:15].any()
+    assert marker_mask(img, G)[5:15, 5:15].sum() == 0                        # the default (teal) does not pick red or blue

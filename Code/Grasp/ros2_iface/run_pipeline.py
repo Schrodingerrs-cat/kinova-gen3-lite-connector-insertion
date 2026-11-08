@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Green-marker pipeline end to end, with data collection into a Media/Grasp run folder.
+"""Colour-marker pipeline end to end, with data collection into a Media/Grasp run folder.
 
-python3 ros2_iface/run_green_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode sticker|head|cloud]
+python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode sticker|head|cloud]
 
-home -> scan 15 views (colour) -> merge + ICP -> table RANSAC, clusters, green clusters (coarse target)
-     -> camera over the target -> green-sticker grasp (close view) -> [--grasp] execute (+ wrist-camera hold check).
+home -> scan 15 views (colour) -> merge + ICP -> table RANSAC, clusters, marker clusters (coarse target)
+     -> camera over the target -> marker-sticker grasp (close view) -> [--grasp] execute (+ wrist-camera hold check).
 Records camera video + joint trajectory the whole time. Needs the stack and the grasp node (dry_run:=false) running.
 """
 import argparse
@@ -33,7 +33,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("run_dir")
 ap.add_argument("--grasp", action="store_true")
 ap.add_argument("--skip-scan", action="store_true")
-ap.add_argument("--mode", choices=("sticker", "head", "cloud"), default="sticker", help="sticker = sticker + colour footprint (default); head = head cloud + candidates; cloud = green region only + candidate search")
+ap.add_argument("--mode", choices=("sticker", "head", "cloud"), default="sticker", help="sticker = sticker + colour footprint (default); head = head cloud + candidates; cloud = marker region only + candidate search")
 args = ap.parse_args()
 RUN = pathlib.Path(args.run_dir)
 for sub in ("screenshots", "videos", "plots"):
@@ -50,7 +50,7 @@ def log(msg):
 
 
 rclpy.init()
-robot = Robot("green_pipeline", background=True)
+robot = Robot("pipeline", background=True)
 assert robot.wait_ready(10), "no driver / controller"
 rec = subprocess.Popen([sys.executable, str(HERE / "record.py"), str(RUN)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 CLI = {}
@@ -94,17 +94,17 @@ try:
     if not args.skip_scan:
         ok, _ = call("scan", 1500)
         assert ok, "scan failed"
-    scan_dir = newest("scans/*/green_cloud.npy").parent
-    ok, _ = call("green", 300)
-    assert ok, "coarse green stage failed"
+    scan_dir = newest("scans/*/marker_cloud.npy").parent
+    ok, _ = call("color_target", 300)
+    assert ok, "coarse colour-target stage failed"
     ok, _ = call("view", 300)
     assert ok, "camera could not go over the target"
     time.sleep(1.0)
     snap("03_close_view")
-    ok, _ = call(dict(sticker="green_grasp", head="head_grasp", cloud="cloud_grasp")[args.mode], 300)
+    ok, _ = call(dict(sticker="sticker_grasp", head="head_grasp", cloud="cloud_grasp")[args.mode], 300)
     snap("04_after_grasp_plan")
     if not ok:
-        metrics["outcome"] = "STOPPED_BEFORE_GRASP: green grasp could not be computed"
+        metrics["outcome"] = "STOPPED_BEFORE_GRASP: sticker grasp could not be computed"
     elif not args.grasp:
         metrics["outcome"] = "PERCEPTION_ONLY: grasp computed, not requested"
     else:
@@ -120,7 +120,7 @@ finally:
     metrics["seconds_total"] = round(time.time() - T0, 1)
     rec.send_signal(signal.SIGTERM)
     rec.wait(timeout=20)
-    sc, rn = newest("scans/*/green_cloud.npy"), newest("runs/2*/plan.json")
+    sc, rn = newest("scans/*/marker_cloud.npy"), newest("runs/2*/plan.json")
     if sc is not None and not args.skip_scan:
         shutil.copytree(sc.parent, RUN / "scan" / sc.parent.name, dirs_exist_ok=True)
     elif sc is not None:

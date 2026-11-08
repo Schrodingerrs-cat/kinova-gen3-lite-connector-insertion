@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""ROS 2 node, main pipeline: colour scan -> green marker -> camera over it -> green-sticker grasp -> pick.
+"""ROS 2 node, main pipeline: colour scan -> colour marker -> camera over it -> marker-sticker grasp -> pick.
 Motion path = HW7's (arm.py): MoveIt only answers IK / line paths, trajectories go to the controller.
 
 Services (std_srvs/Trigger):
-  /grasp/pick          the whole pipeline: scan -> green -> view -> green_grasp -> execute
+  /grasp/pick          the whole pipeline: scan -> color_target -> view -> sticker_grasp -> execute
   /grasp/scan_gripper  once, arm over empty table: sweep the gripper, scan the fingers -> config/gripper_scan.yaml
   /grasp/home          joint move to scan.home_joints_deg
-  /grasp/scan          15 camera poses over the workspace (colour + depth) -> merged cloud + green cloud (ICP, voxel)
-  /grasp/green         merged scan: table RANSAC, above-table clusters, green clusters -> coarse target (green centroid)
+  /grasp/scan          15 camera poses over the workspace (colour + depth) -> merged cloud + marker cloud (ICP, voxel)
+  /grasp/color_target  merged scan: table RANSAC, above-table clusters, marker clusters -> coarse target (marker centroid)
   /grasp/view          camera straight over that target at `view_height_m`
-  /grasp/green_grasp   close view: green sticker + colour footprint of the housing -> grasp (jaw across the body, approach down)
+  /grasp/sticker_grasp   close view: marker sticker + colour footprint of the housing -> grasp (jaw across the body, approach down)
   /grasp/head_grasp    IMAGE MODE: head segmented in the image, only those pixels lifted to a head cloud, ranked candidates synthesized on it
-                       (param grasp_mode:=head makes /grasp/pick use it instead of green_grasp)
-  /grasp/cloud_grasp   CLOUD MODE: green region only (sticker axes from the image edges, position from the green 3D points), candidate search + ranking
+                       (param grasp_mode:=head makes /grasp/pick use it instead of sticker_grasp)
+  /grasp/cloud_grasp   CLOUD MODE: marker region only (sticker axes from the image edges, position from the marker 3D points), candidate search + ranking
                        (grasp_mode:=cloud)
   /grasp/allow_grasp   explicit enable; until called, /grasp/execute only checks the motion
   /grasp/execute       pre-grasp -> straight descent -> close -> lift -> held check (finger reading OR wrist camera)
@@ -49,8 +49,8 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the nod
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
 from housing_grasp.config import load_config  # noqa: E402
-from housing_grasp.green import analyze_scan, green_mask, green_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, synthesize_head_grasps  # noqa: E402
-from housing_grasp.green_report import report_cloud_candidates, report_green, report_green_grasp, report_head_grasp  # noqa: E402
+from housing_grasp.color_marker import analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, synthesize_head_grasps  # noqa: E402
+from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_sticker_grasp, report_head_grasp  # noqa: E402
 from housing_grasp.gripper import finger_points, grasp_held, measure_fingers, summarize  # noqa: E402
 from housing_grasp.scan import fuse_clouds, view_cloud, view_poses  # noqa: E402
 from arm import Arm  # noqa: E402
@@ -88,7 +88,7 @@ class GraspNode(Node):
                               ("max_candidates", 4), ("allow_grasp", False), ("grasp_mode", "sticker"),
                               ("max_plan_age_s", 60.0), ("view_height_m", 0.18)):
             self.declare_parameter(name, default)
-        # candidate_search: "config" (use green.candidate_search) | on | off; ROS reads on/off as booleans, so the parameter must accept both types
+        # candidate_search: "config" (use color_marker.candidate_search) | on | off; ROS reads on/off as booleans, so the parameter must accept both types
         self.declare_parameter("candidate_search", "config", ParameterDescriptor(dynamic_typing=True))
         self.cfg = load_config(self.get_parameter("config").value, allow_unscanned=True)  # refuses unmeasured values
         gp, cam = self.cfg["gripper"], self.cfg["camera"]
@@ -107,8 +107,8 @@ class GraspNode(Node):
         self.pub_cluster = self.create_publisher(PointCloud2, "/grasp/housing_cloud", LATCHED)
         self.pub_marks = self.create_publisher(MarkerArray, "/grasp/markers", LATCHED)
         self.pub_fused = self.create_publisher(PointCloud2, "/grasp/scan_cloud", LATCHED)
-        self.pub_green = self.create_publisher(PointCloud2, "/grasp/green_cloud", LATCHED)
-        self.scan_dir = self.green_pts = self.last_run = None
+        self.pub_marker = self.create_publisher(PointCloud2, "/grasp/marker_cloud", LATCHED)
+        self.scan_dir = self.marker_pts = self.last_run = None
         self.tfbuf = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tfbuf, self)
         # tcp must stay above the table floor (measured table height minus 5 mm)
@@ -118,8 +118,8 @@ class GraspNode(Node):
         self.create_subscription(String, "/grasp/proposal", self._on_proposal, LATCHED, callback_group=cb)
         for name, fn in (("pick", self.pick), ("scan_gripper", self.scan_gripper), ("scan", self.scan),
                          ("view", self.view), ("execute", self.execute), ("home", self.home),
-                         ("execute_proposal", self.execute_proposal), ("green", self.green),
-                         ("allow_grasp", self.allow_grasp), ("green_grasp", self.green_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp)):
+                         ("execute_proposal", self.execute_proposal), ("color_target", self.color_target),
+                         ("allow_grasp", self.allow_grasp), ("sticker_grasp", self.sticker_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp)):
             self.create_service(Trigger, f"/grasp/{name}", self._srv(fn), callback_group=cb)
         self.lock = threading.Lock()
         self.get_logger().info("grasp_node ready (dry_run=%s)" % self.get_parameter("dry_run").value)
@@ -256,28 +256,28 @@ class GraspNode(Node):
         self.arm.go_joints(self.home_q)  # back to the start pose
         if len(views) < 2:
             raise RuntimeError("fewer than 2 views captured, skipped %s" % skipped)
-        clouds, greens = [], []
+        clouds, markers = [], []
         for k in views:
             v = np.load(out / ("view_%02d.npz" % k))
             clouds.append(view_cloud(v["depth"], v["K"], v["T_BC"], self.cfg["cloud"]))
-            greens.append(green_points(v["depth"], v["color"], v["K"], v["T_BC"], self.cfg["green"]))
+            markers.append(marker_points(v["depth"], v["color"], v["K"], v["T_BC"], self.cfg["color_marker"]))
         fused, info = fuse_clouds(clouds, voxel_m=self.cfg["cloud"]["voxel_m"])
-        green = merge_views(greens, info, self.cfg["green"]["voxel_m"])  # same ICP corrections as the full cloud
+        marker = merge_views(markers, info, self.cfg["color_marker"]["voxel_m"])  # same ICP corrections as the full cloud
         np.save(out / "fused_cloud.npy", fused.astype(np.float32))
-        np.save(out / "green_cloud.npy", green.astype(np.float32))
-        self.scan_dir, self.green_pts = out, green
-        self.pub_green.publish(self._cloud(green))
+        np.save(out / "marker_cloud.npy", color_marker.astype(np.float32))
+        self.scan_dir, self.marker_pts = out, marker
+        self.pub_marker.publish(self._cloud(marker))
         (out / "fusion.json").write_text(json.dumps(dict(views=views, skipped=skipped, per_view=info), indent=1))
         self.fused = fused
         self.pub_fused.publish(self._cloud(fused))
         shifts = [i["shift_mm"] for i in info[1:]]
-        return "scan %s: %d views (skipped %s), %d fused points, %d green points; ICP corrections vs earlier views: median %.1f mm, max %.1f mm" % (
-            out.name, len(views), skipped, len(fused), len(green), np.median(shifts), np.max(shifts))
+        return "scan %s: %d views (skipped %s), %d fused points, %d marker points; ICP corrections vs earlier views: median %.1f mm, max %.1f mm" % (
+            out.name, len(views), skipped, len(fused), len(marker), np.median(shifts), np.max(shifts))
 
     def view(self):
-        """Camera straight over the green target set by /grasp/green, view_height_m above it (home orientation)."""
+        """Camera straight over the colour-marker target set by /grasp/color_target, view_height_m above it (home orientation)."""
         if self.target is None:
-            raise RuntimeError("no target: run /grasp/green first")
+            raise RuntimeError("no target: run /grasp/color_target first")
         _, _, T_BT, T_BC = self._frame()
         return self._camera_over(self.target, T_BT, T_BC)
 
@@ -298,10 +298,10 @@ class GraspNode(Node):
         return "camera over %s at %.0f mm" % (np.round(P, 3), self.get_parameter("view_height_m").value * 1e3)
 
     def pick(self):
-        """MAIN PIPELINE: scan (colour) -> merge/ICP + table RANSAC + green clusters (coarse target) -> camera over it
-        -> green-sticker grasp -> execute. Motion needs dry_run:=false AND /grasp/allow_grasp (otherwise execute only checks)."""
-        grasp = dict(sticker=self.green_grasp, head=self.head_grasp, cloud=self.cloud_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
-        return " | ".join([self.scan(), self.green(), self.view(), grasp(), self.execute()])
+        """MAIN PIPELINE: scan (colour) -> merge/ICP + table RANSAC + marker clusters (coarse target) -> camera over it
+        -> marker-sticker grasp -> execute. Motion needs dry_run:=false AND /grasp/allow_grasp (otherwise execute only checks)."""
+        grasp = dict(sticker=self.sticker_grasp, head=self.head_grasp, cloud=self.cloud_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
+        return " | ".join([self.scan(), self.color_target(), self.view(), grasp(), self.execute()])
 
     def _object_in_hand(self):
         """Wrist camera hold check (HW7 rule, same camera mount), valid after the lift: the held object stays close to the lens
@@ -323,35 +323,35 @@ class GraspNode(Node):
         return "%s: depth between the fingertips %.3f m, table in the lower corners %.3f m (rule: tips < %.2f m and table - tips > %.2f m)" % (
             "OBJECT IN HAND" if seen else "nothing between the tips", tips, table, self.cfg["hold_check"]["tip_max_m"], self.cfg["hold_check"]["margin_m"])
 
-    # ---------- green marker stages ----------
-    def green(self):
-        """Coarse stage on the merged colour scan: table RANSAC, above-table clusters, green clusters. Sets the view target."""
-        d = self.scan_dir or sorted((WORK / "scans").glob("*/green_cloud.npy"))[-1].parent
-        P, G = np.load(d / "fused_cloud.npy").astype(float), np.load(d / "green_cloud.npy").astype(float)
+    # ---------- colour marker stages ----------
+    def color_target(self):
+        """Coarse stage on the merged colour scan: table RANSAC, above-table clusters, marker clusters. Sets the view target."""
+        d = self.scan_dir or sorted((WORK / "scans").glob("*/marker_cloud.npy"))[-1].parent
+        P, G = np.load(d / "fused_cloud.npy").astype(float), np.load(d / "marker_cloud.npy").astype(float)
         r = analyze_scan(P, G, self.cfg)
         if r["frame"] is None:
-            raise RuntimeError("no green marker above the table in the merged scan %s" % d.name)
+            raise RuntimeError("no colour marker above the table in the merged scan %s" % d.name)
         f = r["frame"]
-        report_green(d / "plots", P, r)
-        (d / "green_analysis.json").write_text(json.dumps(dict(
+        report_color_target(d / "plots", P, r)
+        (d / "color_analysis.json").write_text(json.dumps(dict(
             scan=d.name, table_normal=r["table_n"], table_d=r["table_d"], table_inliers=r["table_inliers"],
-            object_clusters=int(len(set(r["object_labels"]) - {-1})), green_cluster_points=[len(c) for c in r["green_clusters"]],
+            object_clusters=int(len(set(r["object_labels"]) - {-1})), marker_cluster_points=[len(c) for c in r["marker_clusters"]],
             frame=f), indent=1, default=lambda o: np.asarray(o).tolist()))
         self.target = f["centroid"]  # view() goes over this point
         self.pub_scene.publish(self._cloud(r["object_points"]))
-        self.pub_cluster.publish(self._cloud(r["green_clusters"][0]))
-        return "merged scan %s: table tilt %.1f deg (%d inliers), %d above-table clusters, green clusters %s; target (green centroid) %s mm. Orientation of the merged patch is NOT used (registration smear)" % (
+        self.pub_cluster.publish(self._cloud(r["marker_clusters"][0]))
+        return "merged scan %s: table tilt %.1f deg (%d inliers), %d above-table clusters, marker clusters %s; target (marker centroid) %s mm. Orientation of the merged patch is NOT used (registration smear)" % (
             d.name, np.degrees(np.arccos(r["table_n"][2])), r["table_inliers"], len(set(r["object_labels"]) - {-1}),
-            [len(c) for c in r["green_clusters"]], np.round(f["centroid"] * 1e3, 0).tolist())
+            [len(c) for c in r["marker_clusters"]], np.round(f["centroid"] * 1e3, 0).tolist())
 
-    def green_grasp(self):
-        """Grasp straight from the green sticker (user decision 2026-11-07): no depth-measured housing, no collision / optimizer checks.
+    def sticker_grasp(self):
+        """Grasp straight from the marker sticker (user decision 2026-11-07): no depth-measured housing, no collision / optimizer checks.
         Jaw axis across the housing footprint seen in the colour image, TCP `grasp_drop_m` below the sticker top, approach straight down."""
         depth, K, _, T_BC = self._frame()
-        color, g, gc = self._color_bgr(), self.cfg["green"], self.cfg["grasp"]
-        gp = green_points(depth, color, K, T_BC, g)
+        color, g, gc = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"]
+        gp = marker_points(depth, color, K, T_BC, g)
         if len(gp) < 100:
-            raise RuntimeError("only %d green points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
+            raise RuntimeError("only %d marker points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
         c = np.median(gp, 0)  # median: depth streaks on the glossy head would pull a mean
         fp = housing_footprint(color, depth, K, T_BC, c, g)
         jaw = np.r_[fp["jaw_axis"], 0.0]
@@ -373,31 +373,31 @@ class GraspNode(Node):
         run.mkdir(parents=True, exist_ok=True)
         self.last_run = run
         (run / "plan.json").write_text(json.dumps(dict(
-            ok=True, method="green_sticker", sticker_centroid_median_m=c, n_green_points=len(gp), footprint=fp, jaw_axis=jaw, open_width_m=open_w,
+            ok=True, method="sticker", sticker_centroid_median_m=c, n_marker_points=len(gp), footprint=fp, jaw_axis=jaw, open_width_m=open_w,
             tcp_m=p, grasp_drop_m=g["grasp_drop_m"], grasps=[dict(flip=q["flip"], T_BG=q["T_BG"]) for q in grasps]), indent=1, default=lambda o: np.asarray(o).tolist()))
-        np.save(run / "green_close_points.npy", gp.astype(np.float32))
+        np.save(run / "marker_close_points.npy", gp.astype(np.float32))
         np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
-        report_green_grasp(run / "plots", gp, fp, c, p, jaw, open_w)
+        report_sticker_grasp(run / "plots", gp, fp, c, p, jaw, open_w)
         self._publish(self.last)
         return "sticker median (%.1f, %.1f, %.1f) mm, %d pts; housing footprint %.1f x %.1f mm; jaw axis (%.2f, %.2f); opening %.1f mm; TCP (%.1f, %.1f, %.1f) mm (run %s)" % (
             *(c * 1e3), len(gp), fp["length_m"] * 1e3, fp["width_m"] * 1e3, jaw[0], jaw[1], open_w * 1e3, *(p * 1e3), run.name)
 
     def _search_on(self):
-        """Candidate search switch: node param candidate_search (config | on | off); 'config' = green.candidate_search."""
+        """Candidate search switch: node param candidate_search (config | on | off); 'config' = color_marker.candidate_search."""
         p = self.get_parameter("candidate_search").value
         if p == "config":
-            return self.cfg["green"]["candidate_search"]
+            return self.cfg["color_marker"]["candidate_search"]
         return p if isinstance(p, bool) else str(p).lower() in ("on", "true", "search")
 
     def head_grasp(self):
-        """IMAGE MODE: the head is segmented in the image (green + dark pixels connected to the sticker), ONLY those pixels are lifted to 3D with their
+        """IMAGE MODE: the head is segmented in the image (marker + dark pixels connected to the sticker), ONLY those pixels are lifted to 3D with their
         own depth, then antipodal candidates are synthesized on that head cloud (jaw across the head, several pad positions, opening from the measured
         width). Ranked best first; /grasp/execute tries them in order."""
         depth, K, _, T_BC = self._frame()
-        color, g, gc, gr = self._color_bgr(), self.cfg["green"], self.cfg["grasp"], self.cfg["gripper"]
-        gp = green_points(depth, color, K, T_BC, g)
+        color, g, gc, gr = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"], self.cfg["gripper"]
+        gp = marker_points(depth, color, K, T_BC, g)
         if len(gp) < 100:
-            raise RuntimeError("only %d green points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
+            raise RuntimeError("only %d marker points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
         c = np.median(gp, 0)
         P = head_points(depth, color, K, T_BC, c, g)
         if len(P) < g["min_head_points"]:
@@ -412,10 +412,10 @@ class GraspNode(Node):
         run.mkdir(parents=True, exist_ok=True)
         self.last_run = run
         (run / "plan.json").write_text(json.dumps(dict(
-            ok=True, method="head_image_mode", candidate_search=search, height_rule=g["head_height_rule"], sticker_centroid_median_m=c, n_green_points=len(gp), n_head_points=len(P),
+            ok=True, method="head_image_mode", candidate_search=search, height_rule=g["head_height_rule"], sticker_centroid_median_m=c, n_marker_points=len(gp), n_head_points=len(P),
             candidates=cands, grasps=[dict(flip=q["flip"], T_BG=q["T_BG"], cost=q["cost"]) for q in grasps]), indent=1, default=lambda o: np.asarray(o).tolist()))
         np.save(run / "head_points.npy", P.astype(np.float32))
-        np.save(run / "green_close_points.npy", gp.astype(np.float32))
+        np.save(run / "marker_close_points.npy", gp.astype(np.float32))
         np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
         report_head_grasp(run / "plots", P, gp, cands)
         self._publish(self.last)
@@ -424,16 +424,16 @@ class GraspNode(Node):
             "ON" if search else "OFF", g["head_height_rule"], len(P), len(cands), b["offset_m"] * 1e3, b["yaw_deg"], *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
 
     def cloud_grasp(self):
-        """CLOUD MODE (green region only, no black body): the green pixels are the region of interest. Sticker position and height from the green 3D points
-        (median); sticker axes and size from the green blob's edges in the image; then a candidate SEARCH (jaw edge x yaw offsets x pad positions x flips),
+        """CLOUD MODE (marker region only, no black body): the marker pixels are the region of interest. Sticker position and height from the marker 3D points
+        (median); sticker axes and size from the marker blob's edges in the image; then a candidate SEARCH (jaw edge x yaw offsets x pad positions x flips),
         ranked. /grasp/execute tries them in rank order (first one with a feasible IK chain)."""
         depth, K, _, T_BC = self._frame()
-        color, g, gc, gr = self._color_bgr(), self.cfg["green"], self.cfg["grasp"], self.cfg["gripper"]
-        gp = green_points(depth, color, K, T_BC, g)
+        color, g, gc, gr = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"], self.cfg["gripper"]
+        gp = marker_points(depth, color, K, T_BC, g)
         if len(gp) < 100:
-            raise RuntimeError("only %d green points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
+            raise RuntimeError("only %d marker points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
         c = np.median(gp, 0)
-        gp = gp[np.linalg.norm(gp[:, :2] - c[:2], axis=1) < g["footprint_radius_m"]]  # stray green specks elsewhere on the table are not the sticker
+        gp = gp[np.linalg.norm(gp[:, :2] - c[:2], axis=1) < g["footprint_radius_m"]]  # stray marker specks elsewhere on the table are not the sticker
         rect = sticker_rect(color, K, T_BC, c, g)
         search, eff = self._search_on(), rect
         if g["extent_source"] == "footprint":  # axes and sizes from the head outline in the image (uses the dark body), centre from the sticker
@@ -448,10 +448,10 @@ class GraspNode(Node):
         run.mkdir(parents=True, exist_ok=True)
         self.last_run = run
         (run / "plan.json").write_text(json.dumps(dict(
-            ok=True, method="green_cloud_candidates", candidate_search=search, contact_faces=g["contact_faces"], extent_source=g["extent_source"], sticker_centroid_median_m=c,
-            n_green_points=len(gp), sticker_rect=rect, extents_used=eff, jaw_edge=g["jaw_edge"],
+            ok=True, method="marker_cloud_candidates", candidate_search=search, contact_faces=g["contact_faces"], extent_source=g["extent_source"], sticker_centroid_median_m=c,
+            n_marker_points=len(gp), sticker_rect=rect, extents_used=eff, jaw_edge=g["jaw_edge"],
             n_candidates=len(cands), candidates=cands[:30]), indent=1, default=lambda o: np.asarray(o).tolist()))
-        np.save(run / "green_close_points.npy", gp.astype(np.float32))
+        np.save(run / "marker_close_points.npy", gp.astype(np.float32))
         np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
         report_cloud_candidates(run / "plots", gp, rect, cands)
         self._publish(self.last)

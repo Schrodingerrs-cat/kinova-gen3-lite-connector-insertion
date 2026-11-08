@@ -210,7 +210,7 @@ Visualization Manager:
       Max Intensity: 4096
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: 3 GREEN markers (grasp search region)
+      Name: 3 Colour-marker cloud (grasp search region)
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
@@ -222,7 +222,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /grasp/green_cloud
+        Value: /grasp/marker_cloud
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
