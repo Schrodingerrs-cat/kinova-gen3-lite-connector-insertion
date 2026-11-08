@@ -61,8 +61,7 @@ Write clean, minimal, readable, and auditable code.
 5. **No premature engineering.** Do not introduce frameworks, extensibility mechanisms, or elaborate design patterns for hypothetical future requirements.
 6. **Scientific transparency.** Keep the implementation close to the underlying mathematical formulation so that the controller logic is easy to inspect and verify.
 7. **No unnecessary code.** Remove abandoned experiments, dead code, redundant logic, and debugging clutter from the final implementation, while preserving relevant experimental evidence separately.
-8. **Comments only where needed.** Keep comments short and understandable in caveman language, so the code is not messy and has mroe comments than teh code itself.
-
+8. **Comments only where needed.** Keep comments short and understandable in caveman language, so the code is not messy and has mroe comments than teh code itself. Very few comments, or short comments always
 **The objective is code that I can open, understand, verify, and audit without having to reverse-engineer unnecessary complexity.**
 
 ### Guiding Principle
@@ -164,7 +163,7 @@ A graph is acceptable only if it is:
 
 ## Status
 
-Planning stage: **no code, build, lint or test setup yet.** `Code/Grasp/` and `Code/IBVS/` hold only placeholder READMEs (grasp synthesis code goes in `Code/Grasp/`). Do not invent commands before they exist; update this file as code lands.
+Grasp front end implemented in `Code/Grasp/` (see its README: layout, run commands, tests `python3 -m pytest tests -q`); verified on synthetic scenes and offline on real frames only, two real picks did not give a verified grasp (`Media/Grasp/`). IBVS (`Code/IBVS/`, see its README) has the control law, search, guards, state machine and ROS node implemented and unit-tested on synthetic data only; it has NOT been run on the arm and its config is all null. Task B has no code yet. Do not invent commands for it before they exist. Grasp runs are documented under `Media/Grasp/` with the same layout/rules as `Media/RULES.md`.
 
 Layout:
 - `source/proposal.pdf`: RBE 595 Final Project Report, Part 1 (intro, literature review).

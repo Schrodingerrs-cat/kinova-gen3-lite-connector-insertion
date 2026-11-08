@@ -1,0 +1,78 @@
+# null = NOT MEASURED. load_config() refuses the sections a run needs while any value in them is null
+# (plan/SHARED_PRIMITIVES_CHECKLIST.md: no unmeasured constants). Fill from calibration, never guess.
+status: UNCALIBRATED          # contact runs refuse this; set to CALIBRATED only after G0-G2 evidence exists
+setup_revision: setup_r0
+robot:
+  twist_topic: null           # picknik_twist_controller takes geometry_msgs/Twist; confirm the topic with ros2 control list_controllers
+  twist_controller: null      # controller name for switch_controller (e.g. the one from ros2 control list_controllers)
+  traj_controller: null
+  command_frame: null         # "tool" or "camera": frame the Twist is expressed in; validate with the one-axis free-space test
+  workspace_box_B_m: null     # [xmin, xmax, ymin, ymax, zmin, zmax] tool origin in base_link
+camera:
+  K: null                     # 3x3 row-major, from calibration
+  distortion: null            # 5 coeffs
+  T_EC_xyz_m: null            # camera optical frame in tool frame (hand-eye)
+  T_EC_quat_xyzw: null
+markers:
+  aruco_dict: null            # e.g. DICT_4X4_50
+  ids: null                   # marker ids used as features, 4 corners each
+  side_m: null                # printed marker side
+  target_pixels: null         # id -> 4 corners [[u,v]x4] captured at the safe pre-contact servo goal (s*)
+  min_side_px: null
+  max_jump_px: null           # corner jump between frames above this = bad detection
+  min_valid_markers: null
+  max_missing_frames: null
+ibvs:
+  socket_axes_in_C: null      # 3x3, columns x_S, y_S, z_S expressed in camera frame; measured. z_S points INTO the socket
+  lambda_gain: null
+  damping: null
+  max_cond: null              # Jacobian condition limit
+  max_lin_m_s: null
+  max_yaw_rad_s: null
+  max_acc: null               # slew limit, per second, same units as the velocity caps
+  tol_px: null                # rms pixel error
+  converge_frames: null
+  timeout_s: null
+  depth_min_m: null           # valid D405 range at the servo standoff
+  depth_max_m: null
+guards:
+  camera_stale_s: null
+  joint_stale_s: null
+axial:
+  step_m: null
+  max_travel_m: null
+  min_progress_frac: null     # measured/commanded travel below this = stalled
+  speed_m_s: null
+search:
+  step_x_m: null
+  step_y_m: null
+  step_yaw_rad: null
+  max_abs_x_m: null
+  max_abs_y_m: null
+  max_abs_yaw_rad: null
+  sigma_xy_m: null
+  sigma_yaw_rad: null
+  max_attempts: null
+  max_total_time_s: null
+motion:
+  retract_m: null             # back along -z_S to the search standoff
+  joint_speed_deg_s: null
+  max_joint_dev_deg: null     # IK solution may not move any joint further than this from the current one
+verification:
+  topic: null                 # std_msgs/Bool from the seating sensor
+  success_value: null
+  stable_dwell_s: null
+  stale_s: null
+  positive_control_passed: false
+  negative_control_passed: false
+safety:
+  supervisor_approved: false
+  e_stop_tested: false
+  clear_retract_path_tested: false
+waypoints:                    # joint configs (deg) taught and checked free of contact
+  pre_grasp_deg: null
+  grasp_deg: null
+  lift_deg: null
+  inspection_deg: null
+  grip_close_cmd: null        # gripper command position that closes on the housing
+  grip_empty_frac: null       # settled position above this fraction of grip_close_cmd = closed on nothing
