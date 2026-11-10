@@ -1,0 +1,16 @@
+[   0.1 s] arm is 95 deg from home: going home first
+[   9.7 s] home -> OK: at home (was 95 deg away)
+[ 107.5 s] outcome: INCOMPLETE
+[   0.1 s] arm is 31 deg from home: going home first
+[   3.3 s] home -> OK: at home (was 31 deg away)
+[  31.6 s] scan -> FAILED: no new depth frames
+[  31.6 s] ERROR: AssertionError: scan failed
+[  31.7 s] outcome: ERROR: AssertionError: scan failed
+[   0.1 s] arm is 33 deg from home: going home first
+[   3.5 s] home -> OK: at home (was 33 deg away)
+[ 400.4 s] outcome: INCOMPLETE
+[   0.1 s] arm is 56 deg from home: going home first
+[   5.9 s] home -> OK: at home (was 56 deg away)
+[ 152.7 s] scan -> FAILED: name 'color_marker' is not defined
+[ 152.7 s] ERROR: AssertionError: scan failed
+[ 152.8 s] outcome: ERROR: AssertionError: scan failed

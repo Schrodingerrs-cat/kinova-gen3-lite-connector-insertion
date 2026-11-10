@@ -54,3 +54,13 @@ Earlier the head mode's hard flatness filter left ONE candidate (search ON = OFF
 | cloud | ON | 30 | 0 / 0 | 11 deg | (-0.6, -0.4, 0.0) |
 | cloud | OFF | 1 | 0 / 0 | 11 deg | same |
 The first run with `yaw_penalty` 0.1 ranked a -10 deg yaw first (13 deg from the grasp that worked) on a 0.015 difference in width evenness, i.e. noise; `yaw_penalty` is now 0.3 so a yaw offset must win by clear evidence. Offline only; never executed on the arm.
+
+## Addendum 5 (2026-11-09): grid search in the image mode, no on/off switch (same frame, offline)
+The head mode now generates its candidates from the head cloud (`grid_grasp_search`, `PIPELINE.md` 5.2): 268 grid points (1 mm) x 36 yaws (5 deg) = 9648 candidates, 2118 valid. The jaw-centre filter removed 7529; the opening, contact and finger-collision filters removed none on this frame, so those three are untested on real data (the collision filter is covered by a synthetic test only).
+| | grasp that worked | grid search, best |
+|---|---|---|
+| TCP (mm) | (256.6, -28.9, -0.4) | (256.7, -29.1, -0.4) |
+| jaw yaw | 102 deg | 105 deg |
+| gap / opening | 13.4 / 37.4 mm | 12.0 / 36.0 mm |
+Figures in `plots_grid_search/`: 3D normals, outline normals, all candidates, grasp points in 3D, candidate counts, best cost per yaw.
+Found while building it: scoring the contacts with the 3D PCA normals put the best yaw at 130 deg, 28 deg off the working grasp (antipodal score 0.41 for every yaw), because the head cloud's depth ramps from -5 to +39 mm and the normals follow the ramp. Horizontal outline normals fix that (best 105 deg, antipodal 0.77). A per-window sticker height moved the TCP z to +8.8 mm, 9 mm above the working grasp, so the sticker median height is used. A narrow-gap term (`w_width`) was added because nothing else prefers the 12 mm direction over the 25 mm direction on a clean box. Offline only; never executed on the arm.

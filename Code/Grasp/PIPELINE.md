@@ -10,8 +10,7 @@ home -> SCAN 15 views (colour + depth) -> merge, ICP, voxel -> COLOUR MARKER coa
 | switch | values | where |
 |---|---|---|
 | grasp mode | `sticker` (default) / `head` / `cloud` | `run_pipeline.py --mode ...`, node param `grasp_mode:=...` for `/grasp/pick` |
-| candidate search (head AND cloud modes; the sticker mode has none by design) | on / off | `color_marker.candidate_search` in the config, or node param `candidate_search:=on|off|config` (restart the node to change) |
-| head mode: surface height changes | `penalize` (ranked lower, stays in the search) / `drop` | `color_marker.head_height_rule` |
+| candidate search (CLOUD mode only; the head mode always runs its grid search, no switch; the sticker mode has none) | on / off | `color_marker.candidate_search` in the config, or node param `candidate_search:=on|off|config` (restart the node to change) |
 | which side faces the pads touch (cloud mode) | `edge_prior` / `larger` / `smaller` | `color_marker.contact_faces` |
 | where those sizes come from (cloud mode) | `sticker` (marker only) / `footprint` (dark + marker outline) | `color_marker.extent_source` |
 | which sticker edge the jaws follow (`edge_prior`) | `long` / `short` | `color_marker.jaw_edge` |
@@ -57,10 +56,15 @@ Common first steps (all modes): latest aligned depth + colour; marker pixels -> 
 
 ### 5.2 `head` mode, the IMAGE method (`/grasp/head_grasp`) [offline]
 - Same outline mask, but ONLY those pixels are lifted to 3D with their OWN depth (no flying-pixel filter, `head_band_m` +-60 mm around the sticker height, voxel 0.5 mm, outliers removed): the head cloud. Needs `min_head_points` (200).
-- **Candidate search (`candidate_search: true`)**: jaw axis = PCA minor axis of the head cloud's xy footprint, searched over yaw offsets `yaw_steps_deg` (-10, 0, +10) x `n_offsets` (5) pad positions along the head within +-`offset_span_m` (6 mm) of the sticker x 2 flips. For each: pad window = points within +-finger_width/2 along the head; width = 2nd-98th percentile extent across the jaw; opening = width + 2 margins; TCP height = median sticker z inside the window - drop.
-- Cost = unevenness of the width over 3 sub-windows of the pad / width + 0.1 x |offset| / head length + `yaw_penalty` x |yaw| / 45 (+ the height term below). `head_height_rule: penalize` (default): positions where the surface height changes are ranked LOWER (cost += `height_penalty` x |grasp height - sticker height| / `max_z_spread_m`) but stay in the search; `drop`: removed when more than `max_z_spread_m` from the best.
-- **Search OFF**: ONE candidate (pad position at the sticker, yaw 0).
-- Real frame of the working grasp: search ON gives 9 candidates (the 3 yaws at the sticker first, the shallow positions on the rising surface last), search OFF gives 1; the best of the ON list equals the single OFF grasp (jaw 3 deg from the grasp that worked, TCP within 0.7 mm). With `drop` the ON list has 3.
+- **Grid search (always on, no switch)**, `grid_grasp_search` in `color_marker.py`:
+  1. Grid: jaw centres every `grid_m` (1 mm) over the head's xy extent, kept where the head cloud is.
+  2. Yaw: every `yaw_step_deg` (5 deg) over 180 deg at each grid point (jaw axis b, pad strip along a).
+  3. Pad window: head points within +-finger_width/2 along a. Gap = 2nd-98th percentile extent along b. The jaw centre must sit within `center_tol_m` (1.5 mm) of the middle of the gap. Opening = gap + 2 x `open_margin_m`, must be <= `max_open_m`. Window needs `min_window_points`.
+  4. Contacts: a band of `contact_band_m` (1.5 mm) at each end of the gap, >= 3 points each.
+  5. Finger collision: both finger boxes (finger thickness x finger width, from the fingertip up `finger_box_h_m`) may hold at most `max_finger_hits` non-head scene points (`scene_points`: every depth pixel outside the head mask within footprint radius + 25 mm).
+  6. Cost = `w_anti` x (1 - antipodal) + `w_even` x width unevenness + `w_center` x distance to the sticker / 10 mm + `w_contact` x (1 - contact / best) + `w_width` x gap / 20 mm. Antipodal = mean of (outline normal . jaw direction) over the two contact bands. The outline normals are horizontal and outward (min-variance direction of each point's xy neighbourhood, `outline_normals`): the 3D PCA normals on this head follow the depth ramp, not the walls, and scored the best yaw 28 deg off the working one (antipodal 0.41 vs 0.77).
+  7. TCP height = sticker median height - `grasp_drop_m` (a per-window height is not used: the 3D sticker points ramp 27 mm over 11 mm). Best `max_candidates_kept` (200) go to the execute list, both jaw flips each; all valid ones are plotted.
+- Real frame of the working grasp (`Media/Grasp/run_20261107_image_mode_offline_validation/plots_grid_search/`): 268 grid points x 36 yaws = 9648 generated, 2118 valid (7529 dropped because the jaw centre was not in the middle of the head gap; the opening, contact and collision filters removed none on this frame). Best: yaw 105 deg (the working grasp is 102 deg), TCP (256.7, -29.1, -0.4) mm vs (256.6, -28.9, -0.4), gap 12.0 mm, opening 36.0 mm vs 37.4. Offline only, never executed on the arm.
 
 ### 5.3 `cloud` mode (`/grasp/cloud_grasp`): marker region only [offline]
 - The black body is not used (unless `extent_source: footprint`). Marker points further than `footprint_radius_m` from the median (stray specks) are dropped.

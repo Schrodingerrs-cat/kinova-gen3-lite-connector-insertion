@@ -1,6 +1,12 @@
 """Plots of the merged-scan colour-marker stages (matplotlib, no display needed)."""
+import os
+
 import matplotlib
+import mpl_toolkits
 import numpy as np
+
+mpl_toolkits.__path__.insert(0, os.path.join(os.path.dirname(os.path.dirname(matplotlib.__file__)), "mpl_toolkits"))  # the system mpl_toolkits (3.5) shadows the pip matplotlib's; 3D plots need the matching one
+from mpl_toolkits.mplot3d import Axes3D  # noqa: E402,F401
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -69,19 +75,77 @@ def report_sticker_grasp(out, gp, fp, c, p, jaw, open_w):
     fig.tight_layout(); fig.savefig(out / "01_sticker_grasp_topview.png", dpi=100); plt.close(fig)
 
 
-def report_head_grasp(out, P, G, cands):
-    """Image mode, top view: head-only cloud (image mask lifted with its own depth), marker sticker points, candidate jaw lines (best in red)."""
+def report_grid_search(out, P, N3, N2, G, c, cands, stats, finger_w, top=1):
+    """Image mode grid search. Figures (mm): 01 head cloud with 3D normals, 02 head outline normals (top view, used for the pad contacts), 03 every valid candidate
+    (jaw line at its centre, colour = cost) with the best opening, 04 grasp points in 3D (object, centroid, grasp points), 05 candidate counts per step, 06 best cost per yaw."""
+    from matplotlib.collections import LineCollection
     out.mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7.5, 7))
-    ax.scatter(P[:, 0] * 1e3, P[:, 1] * 1e3, s=4, c=P[:, 2] * 1e3, cmap="viridis", label="head pixels lifted with their own depth (%d), colour = z" % len(P))
-    ax.scatter(G[:, 0] * 1e3, G[:, 1] * 1e3, s=2, c="limegreen", label="marker sticker (%d)" % len(G))
-    for k, q in enumerate(cands):
-        a, b = q["p"][:2] * 1e3 - q["jaw"][:2] * q["open_width_m"] * 500, q["p"][:2] * 1e3 + q["jaw"][:2] * q["open_width_m"] * 500
-        ax.plot([a[0], b[0]], [a[1], b[1]], color="red" if k == 0 else "orange", lw=2 if k == 0 else 1, label="candidate %d: opening %.0f mm, TCP z %.1f mm" % (k, q["open_width_m"] * 1e3, q["p"][2] * 1e3))
-        ax.annotate(str(k), q["p"][:2] * 1e3, color="k", fontsize=11, xytext=(4, 4), textcoords="offset points")
-    ax.set_xlabel("base x (mm)"); ax.set_ylabel("base y (mm)"); ax.set_aspect("equal"); ax.legend(fontsize=7, loc="upper right")
-    ax.set_title("Image mode: head segmented in the image, grasp candidates on its cloud")
-    fig.tight_layout(); fig.savefig(out / "01_head_image_mode_grasp_topview.png", dpi=100); plt.close(fig)
+    best = cands[0]
+    jb, pb = best["jaw"][:2], best["p"]
+    contacts = np.array([pb[:2] + s * jb * best["width_m"] / 2 for s in (-1, 1)])
+    sub = np.arange(0, len(P), max(1, len(P) // 120))
+    S = 1e3
+
+    fig = plt.figure(figsize=(8, 7)); ax = fig.add_subplot(projection="3d")
+    ax.scatter(*(P.T * S), s=3, c="tab:green", alpha=0.35, label="head cloud (%d points)" % len(P))
+    ax.quiver(*(P[sub].T * S), *(N3[sub].T * 4.0), color="tab:blue", linewidth=0.8, label="3D normals (PCA of 15 neighbours, pointing outward)")
+    ax.set_xlabel("x (mm)"); ax.set_ylabel("y (mm)"); ax.set_zlabel("z (mm)"); ax.legend(fontsize=8, loc="upper left")
+    ax.set_title("Head cloud and 3D surface normals (every %dth point drawn)" % (len(P) // len(sub)))
+    fig.tight_layout(); fig.savefig(out / "01_head_cloud_normals_3d.png", dpi=110); plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(7.5, 6.5))
+    ax.scatter(P[:, 0] * S, P[:, 1] * S, s=4, c="tab:green", alpha=0.35, label="head cloud (top view)")
+    ax.quiver(P[sub, 0] * S, P[sub, 1] * S, N2[sub, 0], N2[sub, 1], color="tab:blue", angles="xy", scale=22, width=0.003, label="outline normals (horizontal, outward)")
+    ax.set_xlabel("base x (mm)"); ax.set_ylabel("base y (mm)"); ax.set_aspect("equal"); ax.legend(fontsize=8, loc="upper right")
+    ax.set_title("Head outline normals used to score the pad contacts")
+    fig.tight_layout(); fig.savefig(out / "02_head_outline_normals_topview.png", dpi=110); plt.close(fig)
+
+    ctr = np.array([q["p"][:2] for q in cands]) * S
+    cost = np.array([q["cost"] for q in cands])
+    fig, ax = plt.subplots(figsize=(8, 6.5))
+    ax.scatter(P[:, 0] * S, P[:, 1] * S, s=3, c="lightgrey", label="head cloud")
+    sc = ax.scatter(ctr[:, 0], ctr[:, 1], s=7, c=cost, cmap="viridis_r", label="candidate jaw centres (%d)" % len(cands))
+    plt.colorbar(sc, ax=ax, label="cost (lower is better)", fraction=0.046)
+    for q in cands[:60]:   # the best 60 as jaw-gap lines
+        h = q["jaw"][:2] * q["width_m"] * S / 2
+        ax.plot(*np.stack([q["p"][:2] * S - h, q["p"][:2] * S + h]).T, color="black", lw=0.4, alpha=0.5)
+    ax.plot(*contacts.T * S, "-", color="red", lw=2.5, label="best: gap %.1f mm (opening %.1f mm), yaw %.0f deg" % (best["width_m"] * S, best["open_width_m"] * S, best["yaw_deg"]))
+    ax.plot(*contacts.T * S, "s", color="red", ms=8)
+    ax.plot(c[0] * S, c[1] * S, "*", color="gold", mec="k", ms=14, label="sticker median")
+    ax.set_xlabel("base x (mm)"); ax.set_ylabel("base y (mm)"); ax.set_aspect("equal"); ax.legend(fontsize=8, loc="upper right")
+    ax.set_title("%d valid grasp candidates from the grid search (best 60 gaps as lines)" % len(cands))
+    fig.tight_layout(); fig.savefig(out / "03_grasp_candidates_topview.png", dpi=110); plt.close(fig)
+
+    fig = plt.figure(figsize=(8, 7)); ax = fig.add_subplot(projection="3d")
+    ax.scatter(*(P.T * S), s=3, c="tab:green", alpha=0.5, label="object")
+    ax.scatter(*(P.mean(0) * S), s=140, c="gold", edgecolors="k", label="centroid")
+    gp3 = np.c_[contacts, np.full(2, pb[2])] * S
+    ax.scatter(*gp3.T, s=160, c="red", edgecolors="k", label="grasp points (pad contacts of the best candidate)")
+    ax.plot(*gp3.T, color="red", lw=1.5)
+    ax.set_xlabel("x (mm)"); ax.set_ylabel("y (mm)"); ax.set_zlabel("z (mm)"); ax.legend(fontsize=8, loc="upper left")
+    ax.set_title("Head cloud, centroid and the best grasp points")
+    fig.tight_layout(); fig.savefig(out / "04_grasp_points_3d.png", dpi=110); plt.close(fig)
+
+    steps = [("generated\n(grid x yaw)", stats["generated"]), ("enough points\nin pad window", stats["generated"] - stats["few_points"]),
+             ("jaw centred in\nthe head gap", stats["generated"] - stats["few_points"] - stats["centre_off"]),
+             ("opening fits\nthe gripper", stats["generated"] - stats["few_points"] - stats["centre_off"] - stats["too_wide"]),
+             ("both pads have\ncontact points", stats["generated"] - stats["few_points"] - stats["centre_off"] - stats["too_wide"] - stats["no_contact"]),
+             ("fingers free\n(valid)", stats["valid"])]
+    fig, ax = plt.subplots(figsize=(9, 5))
+    bars = ax.bar(range(len(steps)), [v for _, v in steps], color="tab:blue")
+    ax.bar_label(bars, fontsize=9)
+    ax.set_xticks(range(len(steps))); ax.set_xticklabels([n for n, _ in steps], fontsize=8); ax.set_ylabel("candidates")
+    ax.set_title("Candidates left after each filter")
+    fig.tight_layout(); fig.savefig(out / "05_candidate_counts.png", dpi=110); plt.close(fig)
+
+    yaws = sorted({q["yaw_deg"] for q in cands})
+    ybest = [min(q["cost"] for q in cands if q["yaw_deg"] == y) for y in yaws]
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(yaws, ybest, "o-", color="tab:blue", ms=4)
+    ax.plot(best["yaw_deg"], best["cost"], "o", color="red", ms=9, label="best candidate (yaw %.0f deg)" % best["yaw_deg"])
+    ax.set_xlabel("jaw yaw in the base frame (deg, 0 = along x)"); ax.set_ylabel("lowest cost at that yaw"); ax.legend(fontsize=9)
+    ax.set_title("Best cost for every jaw yaw")
+    fig.tight_layout(); fig.savefig(out / "06_best_cost_per_yaw.png", dpi=110); plt.close(fig)
 
 
 def report_cloud_candidates(out, G, rect, cands, top=8):

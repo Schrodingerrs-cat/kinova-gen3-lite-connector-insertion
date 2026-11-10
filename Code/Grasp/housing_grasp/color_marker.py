@@ -191,48 +191,100 @@ def housing_footprint(bgr, depth, K, T_BC, c, g):
     return dict(long_axis=ax[0], jaw_axis=ax[1], length_m=ext[0], width_m=ext[1], n_px=int(len(us)), center_xy=m)
 
 
-def synthesize_head_grasps(P, G, c, g, finger_w, max_open, margin, drop, search=True):
-    """Image mode: antipodal grasp candidates on the head-only cloud P (base frame). Jaw axis = across the head (PCA of the xy footprint: the pads close on
-    the two long sides), searched over yaw offsets g['yaw_steps_deg'] and g['n_offsets'] pad positions along the head within +- g['offset_span_m'] of the
-    sticker. For each: pad window = head points within +- finger_w/2 along the head; width = 2nd-98th percentile extent across the jaw; opening = width + 2 margins;
-    TCP `drop` below the sticker height G inside the window. Cost = unevenness of the width along the pad (parallel faces are best) + 0.1 x position offset
-    + yaw_penalty x |yaw| / 45 + (height_rule penalize) height_penalty x |grasp height - sticker height| / max_z_spread_m.
-    height_rule: penalize = positions where the surface height changes are ranked lower; drop = removed when more than max_z_spread_m from the best.
-    search=False: ONE candidate (pad position at the sticker, yaw 0). Returns candidates best first:
-    dict(p, jaw (unit 3-vector, horizontal), width_m, open_width_m, cost, offset_m, yaw_deg, z_top_m)."""
-    m = P[:, :2].mean(0)
-    a0, b0 = np.linalg.svd(P[:, :2] - m, full_matrices=False)[2]
-    out = []
-    for yaw in (g["yaw_steps_deg"] if search else [0]):
-        r = np.radians(yaw)
-        rot = lambda v: np.array([np.cos(r) * v[0] - np.sin(r) * v[1], np.sin(r) * v[0] + np.cos(r) * v[1]])
-        a, b = rot(a0), rot(b0)
-        s, t = (P[:, :2] - m) @ a, (P[:, :2] - m) @ b
-        lo, hi = np.percentile(s, [2, 98])
-        s_c = (c[:2] - m) @ a
-        for off in (np.linspace(-g["offset_span_m"], g["offset_span_m"], g["n_offsets"]) if search else [0.0]):
-            s0 = s_c + off
-            win = np.abs(s - s0) <= finger_w / 2
-            if not (lo + finger_w / 2 <= s0 <= hi - finger_w / 2) or win.sum() < g["min_window_points"]:
-                continue
-            tw = t[win]
-            widths = [np.subtract(*np.percentile(tw[k], [98, 2])) for k in np.array_split(np.argsort(s[win]), 3)]
-            t_lo, t_hi = np.percentile(tw, [2, 98])
-            width = float(t_hi - t_lo)
-            if width + 2 * margin > max_open:
-                continue
-            gw = np.abs((G[:, :2] - m) @ a - s0) <= finger_w / 2
-            z_top = float(np.median(G[gw, 2])) if gw.sum() >= 5 else float(c[2])
-            cost = np.std(widths) / width + 0.1 * abs(off) / (hi - lo) + g["yaw_penalty"] * abs(yaw) / 45.0
-            if g["head_height_rule"] == "penalize":
-                cost += g["height_penalty"] * abs(z_top - c[2]) / g["max_z_spread_m"]
-            out.append(dict(p=np.r_[m + a * s0 + b * (t_lo + t_hi) / 2, z_top - drop], jaw=np.r_[b, 0.0], width_m=width, open_width_m=width + 2 * margin,
-                            cost=float(cost), offset_m=float(off), yaw_deg=float(yaw), z_top_m=z_top))
-    out = sorted(out, key=lambda d: d["cost"])
-    if g["head_height_rule"] == "drop" and out:
-        out = [q for q in out if abs(q["p"][2] - out[0]["p"][2]) <= g["max_z_spread_m"]]
-    return out
+def oriented_normals(P, k=15):
+    """PCA normals of the cloud, flipped to point away from the cloud centre (top face up, side walls outward)."""
+    n = normals(P, k)
+    return np.where(((P - P.mean(0)) * n).sum(1, keepdims=True) < 0, -n, n)
 
+
+def outline_normals(P, k=25):
+    """Horizontal (xy) outward normals of the head outline: min-variance direction of each point's xy neighbourhood (a half-disc at the edge), pointing away from
+    the cloud centre. Returned as 3-vectors with z = 0. Used for the pad contacts, because the 3D normals on this head follow the depth ramp, not the walls."""
+    from scipy.spatial import cKDTree
+    xy = P[:, :2]
+    idx = cKDTree(xy).query(xy, k=min(k, len(xy)))[1]
+    nb = xy[idx] - xy[idx].mean(1, keepdims=True)
+    n = np.linalg.svd(nb, full_matrices=False)[2][:, 1, :]
+    n = np.where(((xy - xy.mean(0)) * n).sum(1, keepdims=True) < 0, -n, n)
+    return np.c_[n, np.zeros(len(n))]
+
+
+def scene_points(depth, bgr, K, T_BC, c, g):
+    """Non-head points around the head for the finger-collision test: every depth pixel outside the head mask within footprint_radius_m + 25 mm of c (base frame)."""
+    mask, _ = head_mask(bgr, K, T_BC, c, g)
+    vv, uu = np.nonzero(np.isfinite(depth) & (depth > 0) & ~mask)
+    z = depth[vv, uu].astype(float)
+    pb = np.stack([(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z], 1) @ T_BC[:3, :3].T + T_BC[:3, 3]
+    return pb[np.linalg.norm(pb[:, :2] - c[:2], axis=1) < g["footprint_radius_m"] + 0.025]
+
+
+def grid_grasp_search(P, N, S, G, c, g, finger_w, finger_t, max_open, margin, drop):
+    """Image mode grasp search from the head cloud P (base frame, N = outward normals, S = non-head scene points, G = sticker points, c = sticker median).
+    1. Grid: every g['grid_m'] over the head's xy extent, kept where the head cloud is (jaw centre).
+    2. Yaw: every g['yaw_step_deg'] over 180 deg at each grid point (jaw axis b, pad strip along a).
+    3. Pad window: head points within +- finger_w/2 along a. Jaw gap = 2nd..98th percentile extent along b; jaw centre must sit within g['center_tol_m'] of the
+       middle of that gap; opening = width + 2 margins <= max_open.
+    4. Filters: >= g['min_window_points'] points; contact bands (g['contact_band_m'] at each end) hold >= 3 points; both finger boxes (finger_t x finger_w, from the
+       tip z up g['finger_box_h_m']) hit <= g['max_finger_hits'] scene points.
+    5. Cost = w_anti x (1 - antipodal) + w_even x width unevenness + w_center x distance to the sticker / 10 mm + w_contact x (1 - contact / best contact) + w_width x width / 20 mm (a narrow gap holds the part more securely), where
+       antipodal = mean of (outward normal of each contact band . its jaw direction), contact = min points of the two bands.
+    Returns (candidates best first, stats). Candidate: dict(p, jaw (horizontal unit 3-vector), width_m, open_width_m, cost, offset_m (distance from the sticker),
+    yaw_deg, z_top_m = sticker median height, anti, even, contact, hits). stats: counts after every step."""
+    from scipy.spatial import cKDTree
+    xy, tree = P[:, :2], cKDTree(P[:, :2])
+    gx, gy = np.meshgrid(np.arange(xy[:, 0].min(), xy[:, 0].max() + 1e-9, g["grid_m"]), np.arange(xy[:, 1].min(), xy[:, 1].max() + 1e-9, g["grid_m"]))
+    grid = np.c_[gx.ravel(), gy.ravel()]
+    grid = grid[tree.query(grid)[0] < g["grid_m"]]
+    yaws = np.deg2rad(np.arange(0.0, 180.0, g["yaw_step_deg"]))
+    A, B = np.stack([-np.sin(yaws), np.cos(yaws)], 1), np.stack([np.cos(yaws), np.sin(yaws)], 1)   # pad-strip axis a, jaw axis b per yaw
+    st = dict(grid_points=len(grid), yaws=len(yaws), generated=len(grid) * len(yaws), few_points=0, centre_off=0, too_wide=0, no_contact=0, collision=0)
+    out = []
+    for q in grid:
+        rel = xy - q
+        Sa, Tb = rel @ A.T, rel @ B.T
+        srel = S[:, :2] - q
+        Sa_s, Tb_s = srel @ A.T, srel @ B.T
+        for k in range(len(yaws)):
+            win = np.abs(Sa[:, k]) <= finger_w / 2
+            if win.sum() < g["min_window_points"]:
+                st["few_points"] += 1
+                continue
+            t = Tb[win, k]
+            lo, hi = np.percentile(t, [2, 98])
+            if abs(lo + hi) / 2 > g["center_tol_m"]:
+                st["centre_off"] += 1
+                continue
+            width = float(hi - lo)
+            if width + 2 * margin > max_open:
+                st["too_wide"] += 1
+                continue
+            idx = np.nonzero(win)[0]
+            left, right = idx[t < lo + g["contact_band_m"]], idx[t > hi - g["contact_band_m"]]
+            if len(left) < 3 or len(right) < 3:
+                st["no_contact"] += 1
+                continue
+            b = B[k]
+            anti = 0.5 * (np.clip(-(N[left, :2] @ b), 0, 1).mean() + np.clip(N[right, :2] @ b, 0, 1).mean())
+            z_top = float(c[2])   # sticker median height: the 3D sticker points ramp ~27 mm over 11 mm (depth artefact), a per-window height would move the TCP with the window
+            z_tcp = z_top - drop
+            ow = width + 2 * margin
+            sw = np.abs(Sa_s[:, k]) <= finger_w / 2
+            sz = S[:, 2]
+            box = sw & (np.abs(Tb_s[:, k]) >= ow / 2) & (np.abs(Tb_s[:, k]) <= ow / 2 + finger_t) & (sz >= z_tcp) & (sz <= z_tcp + g["finger_box_h_m"])
+            if box.sum() > g["max_finger_hits"]:
+                st["collision"] += 1
+                continue
+            order = np.argsort(Sa[win, k])
+            even = float(np.std([np.subtract(*np.percentile(t[o], [98, 2])) for o in np.array_split(order, 3)]) / width)
+            mid = np.array([q[0] + b[0] * (lo + hi) / 2, q[1] + b[1] * (lo + hi) / 2])
+            out.append(dict(p=np.r_[mid, z_tcp], jaw=np.r_[b, 0.0], width_m=width, open_width_m=ow, offset_m=float(np.linalg.norm(mid - c[:2])),
+                            yaw_deg=float(np.rad2deg(yaws[k])), z_top_m=z_top, anti=float(anti), even=even, contact=int(min(len(left), len(right))), hits=int(box.sum())))
+    st["valid"] = len(out)
+    if out:
+        cmax = max(q["contact"] for q in out)
+        for q in out:
+            q["cost"] = float(g["w_anti"] * (1 - q["anti"]) + g["w_even"] * q["even"] + g["w_center"] * q["offset_m"] / 0.010 + g["w_contact"] * (1 - q["contact"] / cmax) + g["w_width"] * q["width_m"] / 0.020)
+    return sorted(out, key=lambda d: d["cost"]), st
 
 
 def sticker_rect(bgr, K, T_BC, c, g):

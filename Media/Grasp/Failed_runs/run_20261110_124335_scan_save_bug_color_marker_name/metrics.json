@@ -1,0 +1,18 @@
+{
+ "started": "2026-11-10T12:57:37",
+ "grasp_requested": false,
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 5.8,
+   "message": "at home (was 56 deg away)"
+  },
+  "scan": {
+   "ok": false,
+   "seconds": 146.8,
+   "message": "name 'color_marker' is not defined"
+  }
+ },
+ "outcome": "ERROR: AssertionError: scan failed",
+ "seconds_total": 152.8
+}

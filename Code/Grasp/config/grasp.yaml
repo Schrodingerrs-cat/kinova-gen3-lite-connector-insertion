@@ -29,18 +29,27 @@ color_marker:                        # the marker sticker on the head's top face
   footprint_radius_m: 0.022   # only pixels this close to the sticker are considered housing (keeps the cable and bolts out)
   grasp_drop_m: 0.008         # fingertips this far BELOW the sticker top face. CHOSEN constant (not measured): the depth of the head sides is unreliable
   head_band_m: [0.060, 0.060]  # image mode: head points kept this far below / above the sticker height (wide on purpose: the dark body is real data)
-  candidate_search: true      # head / cloud mode: true = search (families x yaws x pad positions, ranked), false = ONE closed-form grasp, no ranking
+  candidate_search: true      # CLOUD mode only: true = search (families x yaws x pad positions, ranked), false = ONE closed-form grasp. The image (head) mode always runs its grid search
+  n_offsets: 5                # cloud mode: pad positions along the sticker edge
+  offset_span_m: 0.006        # ... spread +- this around the sticker centre
   contact_faces: edge_prior   # cloud mode: which side faces the pads touch: edge_prior (use jaw_edge) | larger (jaw along the SHORTER extent: pads on the wider faces) | smaller
   extent_source: sticker      # cloud mode: sizes / axes for that choice from the marker sticker rectangle (marker only) | footprint (dark + marker outline of the head in the image)
   jaw_edge: long              # cloud mode: jaws close along the sticker's LONG edge (true when the sticker is applied with its long edge across the head)
   yaw_steps_deg: [-10, 0, 10] # cloud mode: jaw yaw offsets searched around each edge direction
-  yaw_penalty: 0.3            # cloud + head mode: cost of a 45 deg yaw offset (a yaw offset must win by clear evidence, not by noise)
-  head_height_rule: penalize  # image mode: positions where the surface height changes: penalize (ranked lower, still in the search) | drop (removed)
-  max_z_spread_m: 0.004       # image mode: height difference that counts as one unit of penalty (penalize) or the limit (drop)
-  height_penalty: 0.15        # image mode: cost per max_z_spread_m of height difference (penalize)
-  n_offsets: 5                # image mode: pad positions along the head, centred on the sticker
-  offset_span_m: 0.006        # ... spread +- this around the sticker
+  yaw_penalty: 0.3            # cloud mode: cost of a 45 deg yaw offset (a yaw offset must win by clear evidence, not by noise)
   min_window_points: 30       # image mode: a pad window needs at least this many head points
+  grid_m: 0.001               # image mode grid search: jaw-centre grid spacing over the head
+  yaw_step_deg: 5             # ... jaw yaw step over 180 deg at every grid point
+  center_tol_m: 0.0015        # ... the jaw centre must be this close to the middle of the head gap
+  contact_band_m: 0.0015      # ... contact band at each end of the gap (points that touch the pads)
+  finger_box_h_m: 0.012       # ... finger box height above the fingertip for the collision test
+  max_finger_hits: 8          # ... scene (non-head) points allowed inside a finger box
+  w_anti: 1.0                 # ... cost weights: antipodal normals, width evenness, distance to the sticker (per 10 mm), contact points, gap width
+  w_even: 1.0
+  w_center: 0.5
+  w_contact: 0.5
+  w_width: 0.5                # ... and the jaw gap width (per 20 mm): the grasp prefers the narrower gap
+  max_candidates_kept: 200    # image mode: best N candidates go to the plan / execute list (all valid ones are plotted)
   min_head_points: 200        # image mode: head cloud needs at least this many points
 gripper:                      # Gen3 Lite 2-finger; fingertip pad geometry to be measured
   max_open_m: 0.085           # from HW7 config (gripper_max_width_m)

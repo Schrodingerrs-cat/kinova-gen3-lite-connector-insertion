@@ -1,6 +1,6 @@
 # Grasp pipeline (Task A): colour marker on the cable head -> grasp
 
-Every stage, switch, parameter and limit is described in [`PIPELINE.md`](PIPELINE.md).
+Every stage, switch, parameter and limit is described in [`PIPELINE.md`](PIPELINE.md). Terminal-by-terminal commands to test every mode and combination: [`TESTING.md`](TESTING.md).
 
 A teal-marker sticker on the TOP face of the connector head marks the grasp. No connector dimensions are configured: the housing width is
 measured from the colour image around the sticker. The earlier depth-based housing planner and optimizer are archived in
@@ -34,7 +34,7 @@ source ros_env.sh
 ```bash
 ./run_ros.sh dry_run:=false          # arm link check (sudo only if the USB link is not up), arm driver, D405 camera (point cloud on), MoveIt, grasp node, and TWO RViz windows
 ./run_ros.sh                          # same but dry run: every motion is only checked, nothing moves
-./run_ros.sh dry_run:=false candidate_search:=off grasp_mode:=head   # optional: candidate search on|off|config, mode of /grasp/pick: sticker|head|cloud
+./run_ros.sh dry_run:=false grasp_mode:=head   # optional: mode of /grasp/pick: sticker|head|cloud (cloud mode also takes candidate_search:=on|off|config)
 ```
 The two RViz windows: `grasp.rviz` (robot model + camera image display) and `grasp_clouds.rviz` (fused scan, marker cloud, cleaned scene, segmented head, grasp markers). Add `rviz:=false` for no RViz.
 
@@ -51,7 +51,7 @@ QT_QPA_PLATFORM=xcb rviz2 -d ros2_iface/grasp_clouds.rviz    # point clouds and 
 **Terminal 4: run the pipeline** (needs terminal 1 up and the arm near home). With full data collection (video, joint trajectory, logs, scan, plots into `Media/Grasp/<run>/`):
 ```bash
 python3 ros2_iface/smoke_test.py            # first: joints, TF, action servers, camera, IK (never moves)
-python3 ros2_iface/run_pipeline.py $PWD/../../Media/Grasp/run_$(date +%Y%m%d_%H%M%S)_<description> --grasp
+python3 ros2_iface/run_pipeline.py $PWD/../../Media/Grasp/run_$(date +%Y%m%d_%H%M%S)_mytest --grasp
 python3 ros2_iface/run_pipeline.py RUN_DIR --mode head|cloud       # other grasp modes (default: sticker)
 python3 ros2_iface/run_pipeline.py RUN_DIR                         # no --grasp: perception only, computes the grasp, never moves to it
 python3 ros2_iface/run_pipeline.py RUN_DIR --grasp --skip-scan     # reuse the last scan (saves ~2.5 min)
@@ -64,7 +64,7 @@ Other tools: keyboard jog of the arm `Code/Teleop/run.sh` (do not run it while t
 
 ## Three grasp modes (same scan, same coarse target, same execute; choose with `run_pipeline.py --mode ...` or `grasp_mode:=...` for `/grasp/pick`)
 - **sticker** (default, the one that worked on the arm): close view -> marker sticker pixels lifted to 3D, MEDIAN = grasp point; the housing outline (dark + marker pixels connected to the sticker) is back-projected at the sticker depth -> jaw axis across the body, width. One grasp point, two candidates (jaw flipped), no search.
-- **head** = the IMAGE method (`--mode head`, `/grasp/head_grasp`): the same segmentation, but ONLY the head pixels are lifted to a head cloud with their OWN depth, then a candidate SEARCH runs on it: jaw across the head (PCA), 3 yaw offsets x 5 pad positions around the sticker x 2 flips, opening from the measured width, TCP 8 mm below the sticker height; positions where the surface height changes are ranked lower (`color_marker.head_height_rule: penalize`, or `drop`). Search on/off: `color_marker.candidate_search` or `-p candidate_search:=on|off`.
+- **head** = the IMAGE method (`--mode head`, `/grasp/head_grasp`): the same segmentation, but ONLY the head pixels are lifted to a head cloud with their OWN depth, then a GRID SEARCH (no on/off switch) generates thousands of candidates from that cloud: jaw centres every 1 mm x yaw every 5 deg, pad window and gap from the cloud, finger-collision test against the non-head scene points, cost from outline normals, width evenness, centring, contact and gap width. Details: `PIPELINE.md` section 5.2.
 - **cloud** (`--mode cloud`, `/grasp/cloud_grasp`; candidate search on/off with `color_marker.candidate_search` or `-p candidate_search:=on|off`; faces with `color_marker.contact_faces`, sizes from `color_marker.extent_source`): COLOUR MARKER REGION ONLY, the black body is not used. Position and height = median of the marker 3D points (stray specks removed); sticker axes and size = min-area rectangle of the marker blob IN THE IMAGE (the 3D sticker points are distorted on the glossy head: plane tilted 73 deg although the sticker faces up). Candidate SEARCH: jaw along the sticker's long or short edge x yaw offsets (-10/0/+10 deg) x 5 pad positions x 2 flips, opening = sticker extent along the jaw + 2 x 12 mm, TCP 8 mm below the sticker; cost = edge prior + centring + yaw; ranked, `/grasp/execute` takes the first with a feasible IK chain.
   Limit: marker data alone cannot say which sticker edge the jaws should close along. `color_marker.jaw_edge: long` is a CONVENTION (the sticker's long edge lies across the head, true on the current head); the black footprint is what measures it in the other modes. If a head is stickered the other way round, set `jaw_edge: short` (the other edge is also in the candidate list, ranked lower).
 Why the pads touch the narrow side faces: the approach is straight down, so the jaws close horizontally across the head's narrow dimension seen from above. The sticker (top wide face) is the approach face; the bottom wide face rests in the slot and cannot be reached from above. Pads on the wide faces would need a SIDE approach, which none of the modes has.

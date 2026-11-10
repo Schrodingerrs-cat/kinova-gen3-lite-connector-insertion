@@ -67,33 +67,36 @@ def _synthetic_head(tilt_z=0.0):
     return img, depth, K, T
 
 
-def test_image_mode_finds_jaw_axis_width_and_height_of_a_synthetic_head():
-    from housing_grasp.color_marker import marker_points, head_points, synthesize_head_grasps
+def _grid_inputs():
+    from housing_grasp.color_marker import marker_points, head_points, scene_points, outline_normals
     img, depth, K, T = _synthetic_head()
-    G_ = marker_points(depth, img, K, T, G)
-    c = np.median(G_, 0)
+    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0)
     P = head_points(depth, img, K, T, c, G)
-    cands = synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008)
-    assert len(P) > len(G_) and cands
+    return P, outline_normals(P), scene_points(depth, img, K, T, c, G), G_, c
+
+
+def test_image_mode_grid_search_finds_jaw_axis_width_and_height_of_a_synthetic_head():
+    from housing_grasp.color_marker import grid_grasp_search
+    P, N, S, G_, c = _grid_inputs()
+    cands, st = grid_grasp_search(P, N, S, G_, c, G, 0.006, 0.0077, 0.085, 0.012, 0.008)
+    assert st["generated"] > 1000 and len(cands) > 100 and st["valid"] == len(cands)
     b = cands[0]
     assert abs(b["jaw"][1]) > 0.97                                  # jaw closes across the short side (y)
     assert abs(b["width_m"] - 0.013) < 0.0015 and abs(b["open_width_m"] - 0.037) < 0.0015
     assert abs(b["p"][2] - (0.015 - 0.008)) < 0.0015                # TCP 8 mm below the sticker/top face
+    assert b["offset_m"] < 0.003                                    # centred on the sticker
     assert [q["cost"] for q in cands] == sorted(q["cost"] for q in cands)
-    assert all(abs(q["p"][2] - b["p"][2]) <= G["max_z_spread_m"] for q in cands)
 
 
-def test_image_mode_drops_candidates_where_the_height_changes():
-    from housing_grasp.color_marker import synthesize_head_grasps
-    rng = np.random.default_rng(5)
-    P = np.c_[rng.uniform(-0.012, 0.012, 4000), rng.uniform(-0.0065, 0.0065, 4000), np.zeros(4000)]
-    P[:, 2] = np.where(P[:, 0] > 0.0, 0.015, 0.015 + 0.02 * (-P[:, 0] / 0.012))   # flat for x > 0, ramp for x < 0
-    c = np.array([0.003, 0.0, 0.015])
-    drop = synthesize_head_grasps(P, P, c, dict(G, head_height_rule="drop", yaw_steps_deg=[0]), 0.006, 0.085, 0.012, 0.008)
-    keep = synthesize_head_grasps(P, P, c, dict(G, head_height_rule="penalize", yaw_steps_deg=[0]), 0.006, 0.085, 0.012, 0.008)
-    extra = [q for q in keep if all(abs(q["offset_m"] - d["offset_m"]) > 1e-9 for d in drop)]   # the PCA axis sign is arbitrary: do not assume which side is the ramp
-    assert len(keep) == len(drop) + 1 and len(extra) == 1                                      # drop removes the ramp position, penalize keeps it in the search ...
-    assert extra[0]["p"][2] > max(q["p"][2] for q in drop) + 0.003 and extra[0]["cost"] > max(q["cost"] for q in drop)   # ... higher, and ranked below every flat position
+def test_grid_search_finger_collision_removes_candidates_with_scene_points_in_a_finger_box():
+    from housing_grasp.color_marker import grid_grasp_search
+    P, N, S, G_, c = _grid_inputs()
+    ok, _ = grid_grasp_search(P, N, S, G_, c, G, 0.006, 0.0077, 0.085, 0.012, 0.008)
+    b = ok[0]
+    wall = b["p"][:2] + b["jaw"][:2] * (b["open_width_m"] / 2 + 0.003)               # a block right where one finger would close
+    blk = np.c_[wall[0] + np.zeros(60), wall[1] + np.zeros(60), np.linspace(b["p"][2], b["p"][2] + 0.01, 60)]
+    hit, st = grid_grasp_search(P, N, np.vstack([S, blk]), G_, c, G, 0.006, 0.0077, 0.085, 0.012, 0.008)
+    assert st["collision"] > 0 and len(hit) < len(ok)
 
 
 def _sticker_image(angle_deg=0.0):
@@ -157,23 +160,6 @@ def test_contact_faces_rule_chooses_which_pair_of_faces_the_pads_touch():
     assert abs(larger["jaw"][0]) > 0.99 and abs(larger["face_width_m"] - 0.0247) < 1e-9     # jaw along the SHORT extent: pads on the 24.7 mm wide faces
     assert abs(smaller["jaw"][1]) > 0.99 and abs(smaller["face_width_m"] - 0.0134) < 1e-9
     assert pick("edge_prior", "long")["edge"] == "long" and pick("edge_prior", "short")["edge"] == "short"
-
-
-def test_head_mode_search_switch():
-    from housing_grasp.color_marker import marker_points, head_points, synthesize_head_grasps
-    img, depth, K, T = _synthetic_head()
-    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0); P = head_points(depth, img, K, T, c, G)
-    assert len(synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008, search=False)) == 1
-    assert len(synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008, search=True)) > 1
-
-
-def test_head_mode_search_includes_yaw_and_off_gives_one():
-    from housing_grasp.color_marker import marker_points, head_points, synthesize_head_grasps
-    img, depth, K, T = _synthetic_head()
-    G_ = marker_points(depth, img, K, T, G); c = np.median(G_, 0); P = head_points(depth, img, K, T, c, G)
-    on = synthesize_head_grasps(P, G_, c, G, 0.006, 0.085, 0.012, 0.008, search=True)
-    assert {q["yaw_deg"] for q in on} == set(float(y) for y in G["yaw_steps_deg"]) and len(on) >= 10
-    assert on[0]["yaw_deg"] == 0 and [q["cost"] for q in on] == sorted(q["cost"] for q in on)
 
 
 def test_marker_colour_is_a_setting_including_a_hue_range_that_wraps_for_red():

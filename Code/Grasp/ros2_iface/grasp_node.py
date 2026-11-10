@@ -49,8 +49,8 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the nod
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
 from housing_grasp.config import load_config  # noqa: E402
-from housing_grasp.color_marker import analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, synthesize_head_grasps  # noqa: E402
-from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_sticker_grasp, report_head_grasp  # noqa: E402
+from housing_grasp.color_marker import analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
+from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_sticker_grasp, report_grid_search  # noqa: E402
 from housing_grasp.gripper import finger_points, grasp_held, measure_fingers, summarize  # noqa: E402
 from housing_grasp.scan import fuse_clouds, view_cloud, view_poses  # noqa: E402
 from arm import Arm  # noqa: E402
@@ -264,7 +264,7 @@ class GraspNode(Node):
         fused, info = fuse_clouds(clouds, voxel_m=self.cfg["cloud"]["voxel_m"])
         marker = merge_views(markers, info, self.cfg["color_marker"]["voxel_m"])  # same ICP corrections as the full cloud
         np.save(out / "fused_cloud.npy", fused.astype(np.float32))
-        np.save(out / "marker_cloud.npy", color_marker.astype(np.float32))
+        np.save(out / "marker_cloud.npy", marker.astype(np.float32))
         self.scan_dir, self.marker_pts = out, marker
         self.pub_marker.publish(self._cloud(marker))
         (out / "fusion.json").write_text(json.dumps(dict(views=views, skipped=skipped, per_view=info), indent=1))
@@ -391,8 +391,8 @@ class GraspNode(Node):
 
     def head_grasp(self):
         """IMAGE MODE: the head is segmented in the image (marker + dark pixels connected to the sticker), ONLY those pixels are lifted to 3D with their
-        own depth, then antipodal candidates are synthesized on that head cloud (jaw across the head, several pad positions, opening from the measured
-        width). Ranked best first; /grasp/execute tries them in order."""
+        own depth, then a GRID SEARCH runs on that head cloud (jaw centre grid x yaw, pad window width, finger-collision test, scored by outline normals,
+        width evenness, centring and contact). Ranked best first; /grasp/execute tries them in order. No on/off switch: the search always runs."""
         depth, K, _, T_BC = self._frame()
         color, g, gc, gr = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"], self.cfg["gripper"]
         gp = marker_points(depth, color, K, T_BC, g)
@@ -402,26 +402,27 @@ class GraspNode(Node):
         P = head_points(depth, color, K, T_BC, c, g)
         if len(P) < g["min_head_points"]:
             raise RuntimeError("head cloud has only %d points (need %d): no usable depth on the segmented head" % (len(P), g["min_head_points"]))
-        search = self._search_on()
-        cands = synthesize_head_grasps(P, gp, c, g, gr["finger_width_m"], gr["max_open_m"], gc["open_margin_m"], g["grasp_drop_m"], search)
-        if not cands:
-            raise RuntimeError("no grasp candidate on the head cloud (head wider than the gripper, or too few points per pad window)")
+        N2, S = outline_normals(P), scene_points(depth, color, K, T_BC, c, g)
+        allc, stats = grid_grasp_search(P, N2, S, gp, c, g, gr["finger_width_m"], gr["finger_thickness_m"], gr["max_open_m"], gc["open_margin_m"], g["grasp_drop_m"])
+        if not allc:
+            raise RuntimeError("grid search found no candidate on the head cloud: %s" % stats)
+        cands = allc[:g["max_candidates_kept"]]
         grasps = self._grasps_from(cands)
         self.last = dict(ok=True, grasps=grasps, stamp=time.time(), cloud=P, cluster=gp)
         run = WORK / "runs" / time.strftime("%Y%m%d_%H%M%S")
         run.mkdir(parents=True, exist_ok=True)
         self.last_run = run
         (run / "plan.json").write_text(json.dumps(dict(
-            ok=True, method="head_image_mode", candidate_search=search, height_rule=g["head_height_rule"], sticker_centroid_median_m=c, n_marker_points=len(gp), n_head_points=len(P),
+            ok=True, method="head_image_mode_grid_search", search_stats=stats, sticker_centroid_median_m=c, n_marker_points=len(gp), n_head_points=len(P),
             candidates=cands, grasps=[dict(flip=q["flip"], T_BG=q["T_BG"], cost=q["cost"]) for q in grasps]), indent=1, default=lambda o: np.asarray(o).tolist()))
         np.save(run / "head_points.npy", P.astype(np.float32))
         np.save(run / "marker_close_points.npy", gp.astype(np.float32))
         np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
-        report_head_grasp(run / "plots", P, gp, cands)
+        report_grid_search(run / "plots", P, oriented_normals(P), N2, gp, c, allc, stats, gr["finger_width_m"])
         self._publish(self.last)
         b = cands[0]
-        return "image mode (search %s, height rule %s): head cloud %d points; %d candidates; best offset %+.0f mm, yaw %+.0f deg, TCP (%.1f, %.1f, %.1f) mm, jaw (%.2f, %.2f), width %.1f mm, opening %.1f mm (run %s)" % (
-            "ON" if search else "OFF", g["head_height_rule"], len(P), len(cands), b["offset_m"] * 1e3, b["yaw_deg"], *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
+        return "image mode grid search: head cloud %d points; %d candidates generated, %d valid; best yaw %.0f deg, %.1f mm from the sticker, TCP (%.1f, %.1f, %.1f) mm, jaw (%.2f, %.2f), width %.1f mm, opening %.1f mm (run %s)" % (
+            len(P), stats["generated"], stats["valid"], b["yaw_deg"], b["offset_m"] * 1e3, *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
 
     def cloud_grasp(self):
         """CLOUD MODE (marker region only, no black body): the marker pixels are the region of interest. Sticker position and height from the marker 3D points
