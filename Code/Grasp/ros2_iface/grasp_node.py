@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""ROS 2 node, main pipeline: colour scan -> colour marker -> camera over it -> marker-sticker grasp -> pick.
+"""ROS 2 node, main pipeline: colour scan -> colour marker -> camera over it -> head grasp (grid search) -> pick.
 Motion path = HW7's (arm.py): MoveIt only answers IK / line paths, trajectories go to the controller.
 
 Services (std_srvs/Trigger):
-  /grasp/pick          the whole pipeline: scan -> color_target -> view -> sticker_grasp -> execute
+  /grasp/pick          the whole pipeline: scan -> color_target -> view -> head_grasp (or cloud_grasp) -> execute
   /grasp/scan_gripper  once, arm over empty table: sweep the gripper, scan the fingers -> config/gripper_scan.yaml
   /grasp/home          joint move to scan.home_joints_deg
-  /grasp/scan          15 camera poses over the workspace (colour + depth) -> merged cloud + marker cloud (ICP, voxel)
+  /grasp/scan          7 camera poses over the workspace (colour + depth) -> merged cloud + marker cloud (ICP, voxel)
   /grasp/color_target  merged scan: table RANSAC, above-table clusters, marker clusters -> coarse target (marker centroid)
   /grasp/view          camera straight over that target at `view_height_m`
-  /grasp/sticker_grasp   close view: marker sticker + colour footprint of the housing -> grasp (jaw across the body, approach down)
-  /grasp/head_grasp    IMAGE MODE: head segmented in the image, only those pixels lifted to a head cloud, ranked candidates synthesized on it
-                       (param grasp_mode:=head makes /grasp/pick use it instead of sticker_grasp)
+  /grasp/head_grasp    DEFAULT. IMAGE MODE: head segmented in the image, only those pixels lifted to a head cloud, grid search of grasp candidates on it, ranked
+                       (param grasp_mode:=head is the default of /grasp/pick; the sticker mode is archived in archive/sticker_mode_20261110)
   /grasp/cloud_grasp   CLOUD MODE: marker region only (sticker axes from the image edges, position from the marker 3D points), candidate search + ranking
                        (grasp_mode:=cloud)
   /grasp/allow_grasp   explicit enable; until called, /grasp/execute only checks the motion
@@ -49,8 +48,8 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the nod
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
 from housing_grasp.config import load_config  # noqa: E402
-from housing_grasp.color_marker import analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
-from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_sticker_grasp, report_grid_search  # noqa: E402
+from housing_grasp.color_marker import wide_face_offset, analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
+from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_grid_search  # noqa: E402
 from housing_grasp.gripper import finger_points, grasp_held, measure_fingers, summarize  # noqa: E402
 from housing_grasp.scan import fuse_clouds, view_cloud, view_poses  # noqa: E402
 from arm import Arm  # noqa: E402
@@ -85,7 +84,7 @@ class GraspNode(Node):
     def __init__(self):
         super().__init__("grasp_node")
         for name, default in (("config", str(ROOT / "config" / "grasp.yaml")), ("dry_run", True),
-                              ("max_candidates", 4), ("allow_grasp", False), ("grasp_mode", "sticker"),
+                              ("max_candidates", 4), ("allow_grasp", False), ("grasp_mode", "head"),
                               ("max_plan_age_s", 60.0), ("view_height_m", 0.18)):
             self.declare_parameter(name, default)
         # candidate_search: "config" (use color_marker.candidate_search) | on | off; ROS reads on/off as booleans, so the parameter must accept both types
@@ -119,7 +118,7 @@ class GraspNode(Node):
         for name, fn in (("pick", self.pick), ("scan_gripper", self.scan_gripper), ("scan", self.scan),
                          ("view", self.view), ("execute", self.execute), ("home", self.home),
                          ("execute_proposal", self.execute_proposal), ("color_target", self.color_target),
-                         ("allow_grasp", self.allow_grasp), ("sticker_grasp", self.sticker_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp)):
+                         ("allow_grasp", self.allow_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp)):
             self.create_service(Trigger, f"/grasp/{name}", self._srv(fn), callback_group=cb)
         self.lock = threading.Lock()
         self.get_logger().info("grasp_node ready (dry_run=%s)" % self.get_parameter("dry_run").value)
@@ -135,6 +134,15 @@ class GraspNode(Node):
         T_BT = to_T([t.translation.x, t.translation.y, t.translation.z],
                     [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w])
         return depth, np.array(self.info.k).reshape(3, 3), T_BT, T_BT @ self.T_tool_cam
+
+    def _close_frame(self):
+        """Close-view frame for the grasp: depth = median of scan.close_frames fresh frames (zeros ignored; the arm is still, and the glossy sticker leaves
+        holes in a single frame), K, tool pose and camera pose at the last frame."""
+        n = self.cfg["scan"]["close_frames"]
+        frames, stamp = self._depth_frames(n)
+        depth = np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)
+        T_BT = self._tool_pose(stamp)
+        return np.nan_to_num(depth).astype(np.float32), np.array(self.info.k).reshape(3, 3), T_BT, T_BT @ self.T_tool_cam
 
     def _srv(self, fn):
         def handler(_, resp):
@@ -232,8 +240,11 @@ class GraspNode(Node):
         out = WORK / "scans" / time.strftime("%Y%m%d_%H%M%S")
         views, skipped = [], []
         last = self.home_q
-        for k, T in enumerate(view_poses(sc, T0, self.T_tool_cam)):
-            q = self.arm.ik_near(T, [self.home_q, last], sc["max_joint_dev_deg"])  # near home or near the previous view
+        jv = sc.get("views_joints_deg")  # recorded joint poses: visited as they are, no IK
+        poses = view_poses(sc, T0, self.T_tool_cam) if jv is None else [None] * len(jv)
+        n_views = len(poses)
+        for k, T in enumerate(poses):
+            q = (np.array(jv[k], float) + 180) % 360 - 180 if jv is not None else self.arm.ik_near(T, [self.home_q, last], sc["max_joint_dev_deg"])  # else: near home or near the previous view
             if q is None:
                 skipped.append(k)
                 continue
@@ -250,9 +261,9 @@ class GraspNode(Node):
             out.mkdir(parents=True, exist_ok=True)
             np.savez_compressed(out / ("view_%02d.npz" % k), depth=depth, color=self._color_bgr(), K=np.array(self.info.k).reshape(3, 3), T_BC=T_BT @ self.T_tool_cam, T_BT=T_BT)
             views.append(k)
-            self.get_logger().info("scan view %d/%d captured" % (len(views), len(sc["views"])))
+            self.get_logger().info("scan view %d/%d captured" % (len(views), n_views))
         if dry:
-            return "DRY RUN, nothing moved: %d/%d view poses plannable, skipped %s" % (len(views), len(sc["views"]), skipped)
+            return "DRY RUN, nothing moved: %d/%d view poses plannable, skipped %s" % (len(views), n_views, skipped)
         self.arm.go_joints(self.home_q)  # back to the start pose
         if len(views) < 2:
             raise RuntimeError("fewer than 2 views captured, skipped %s" % skipped)
@@ -300,7 +311,7 @@ class GraspNode(Node):
     def pick(self):
         """MAIN PIPELINE: scan (colour) -> merge/ICP + table RANSAC + marker clusters (coarse target) -> camera over it
         -> marker-sticker grasp -> execute. Motion needs dry_run:=false AND /grasp/allow_grasp (otherwise execute only checks)."""
-        grasp = dict(sticker=self.sticker_grasp, head=self.head_grasp, cloud=self.cloud_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
+        grasp = dict(head=self.head_grasp, cloud=self.cloud_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
         return " | ".join([self.scan(), self.color_target(), self.view(), grasp(), self.execute()])
 
     def _object_in_hand(self):
@@ -330,7 +341,7 @@ class GraspNode(Node):
         P, G = np.load(d / "fused_cloud.npy").astype(float), np.load(d / "marker_cloud.npy").astype(float)
         r = analyze_scan(P, G, self.cfg)
         if r["frame"] is None:
-            raise RuntimeError("no colour marker above the table in the merged scan %s" % d.name)
+            raise RuntimeError("no sticker-sized colour marker above the table in the merged scan %s (marker clusters: %s points; larger than marker_max_extent_m are ignored)" % (d.name, [len(c) for c in r["marker_clusters"]]))
         f = r["frame"]
         report_color_target(d / "plots", P, r)
         (d / "color_analysis.json").write_text(json.dumps(dict(
@@ -344,44 +355,6 @@ class GraspNode(Node):
             d.name, np.degrees(np.arccos(r["table_n"][2])), r["table_inliers"], len(set(r["object_labels"]) - {-1}),
             [len(c) for c in r["marker_clusters"]], np.round(f["centroid"] * 1e3, 0).tolist())
 
-    def sticker_grasp(self):
-        """Grasp straight from the marker sticker (user decision 2026-11-07): no depth-measured housing, no collision / optimizer checks.
-        Jaw axis across the housing footprint seen in the colour image, TCP `grasp_drop_m` below the sticker top, approach straight down."""
-        depth, K, _, T_BC = self._frame()
-        color, g, gc = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"]
-        gp = marker_points(depth, color, K, T_BC, g)
-        if len(gp) < 100:
-            raise RuntimeError("only %d marker points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
-        c = np.median(gp, 0)  # median: depth streaks on the glossy head would pull a mean
-        fp = housing_footprint(color, depth, K, T_BC, c, g)
-        jaw = np.r_[fp["jaw_axis"], 0.0]
-        jaw /= np.linalg.norm(jaw)
-        z_G = np.array([0.0, 0.0, -1.0])
-        open_w = min(fp["width_m"] + 2 * gc["open_margin_m"], self.cfg["gripper"]["max_open_m"])
-        p = np.array([c[0], c[1], c[2] - g["grasp_drop_m"]])
-        grasps = []
-        for flip in (1, -1):
-            y = flip * jaw
-            T = np.eye(4)
-            T[:3, :3], T[:3, 3] = np.stack([np.cross(y, z_G), y, z_G], 1), p
-            Tp, Tl = T.copy(), T.copy()
-            Tp[:3, 3] -= z_G * gc["standoff_m"]
-            Tl[:3, 3] -= z_G * gc["lift_m"]
-            grasps.append(dict(T_BG=T, T_pre=Tp, T_lift=Tl, open_width_m=open_w, expected_closed_width_m=fp["width_m"], zone_offset_m=0.0, flip=flip, cost=0.0))
-        self.last = dict(ok=True, grasps=grasps, stamp=time.time(), cloud=gp, cluster=gp)
-        run = WORK / "runs" / time.strftime("%Y%m%d_%H%M%S")
-        run.mkdir(parents=True, exist_ok=True)
-        self.last_run = run
-        (run / "plan.json").write_text(json.dumps(dict(
-            ok=True, method="sticker", sticker_centroid_median_m=c, n_marker_points=len(gp), footprint=fp, jaw_axis=jaw, open_width_m=open_w,
-            tcp_m=p, grasp_drop_m=g["grasp_drop_m"], grasps=[dict(flip=q["flip"], T_BG=q["T_BG"]) for q in grasps]), indent=1, default=lambda o: np.asarray(o).tolist()))
-        np.save(run / "marker_close_points.npy", gp.astype(np.float32))
-        np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
-        report_sticker_grasp(run / "plots", gp, fp, c, p, jaw, open_w)
-        self._publish(self.last)
-        return "sticker median (%.1f, %.1f, %.1f) mm, %d pts; housing footprint %.1f x %.1f mm; jaw axis (%.2f, %.2f); opening %.1f mm; TCP (%.1f, %.1f, %.1f) mm (run %s)" % (
-            *(c * 1e3), len(gp), fp["length_m"] * 1e3, fp["width_m"] * 1e3, jaw[0], jaw[1], open_w * 1e3, *(p * 1e3), run.name)
-
     def _search_on(self):
         """Candidate search switch: node param candidate_search (config | on | off); 'config' = color_marker.candidate_search."""
         p = self.get_parameter("candidate_search").value
@@ -393,17 +366,21 @@ class GraspNode(Node):
         """IMAGE MODE: the head is segmented in the image (marker + dark pixels connected to the sticker), ONLY those pixels are lifted to 3D with their
         own depth, then a GRID SEARCH runs on that head cloud (jaw centre grid x yaw, pad window width, finger-collision test, scored by outline normals,
         width evenness, centring and contact). Ranked best first; /grasp/execute tries them in order. No on/off switch: the search always runs."""
-        depth, K, _, T_BC = self._frame()
+        depth, K, T_BT, T_BC = self._close_frame()
         color, g, gc, gr = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"], self.cfg["gripper"]
-        gp = marker_points(depth, color, K, T_BC, g)
-        if len(gp) < 100:
+        gp = marker_points(depth, color, K, T_BC, g, self.target)   # only the marker blob nearest to the scan target
+        if len(gp) < g["min_marker_points"]:
             raise RuntimeError("only %d marker points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
         c = np.median(gp, 0)
         P = head_points(depth, color, K, T_BC, c, g)
         if len(P) < g["min_head_points"]:
             raise RuntimeError("head cloud has only %d points (need %d): no usable depth on the segmented head" % (len(P), g["min_head_points"]))
         N2, S = outline_normals(P), scene_points(depth, color, K, T_BC, c, g)
-        allc, stats = grid_grasp_search(P, N2, S, gp, c, g, gr["finger_width_m"], gr["finger_thickness_m"], gr["max_open_m"], gc["open_margin_m"], g["grasp_drop_m"])
+        jaw_home = (T_BT @ self.T_tool_tcp)[:3, 1]   # jaw axis at the current (home) wrist orientation; wrist joint 6 at home +0 / +-90 deg = jaw at that yaw / across it
+        yaw_ref = float(np.arctan2(jaw_home[1], jaw_home[0]) % np.pi)
+        wide, az, tilt = wide_face_offset(gp, yaw_ref, g["jaw_yaw_offsets_deg"] or [0, 90])   # from the sticker plane: the sticker is on a wide face
+        g = dict(g, wide_face_offset_deg=wide if g["wide_face_offset_deg"] == "auto" else g["wide_face_offset_deg"])
+        allc, stats = grid_grasp_search(P, N2, S, gp, c, g, gr["finger_width_m"], gr["finger_thickness_m"], gr["max_open_m"], gc["open_margin_m"], g["grasp_drop_m"], yaw_ref)
         if not allc:
             raise RuntimeError("grid search found no candidate on the head cloud: %s" % stats)
         cands = allc[:g["max_candidates_kept"]]
@@ -413,25 +390,25 @@ class GraspNode(Node):
         run.mkdir(parents=True, exist_ok=True)
         self.last_run = run
         (run / "plan.json").write_text(json.dumps(dict(
-            ok=True, method="head_image_mode_grid_search", search_stats=stats, sticker_centroid_median_m=c, n_marker_points=len(gp), n_head_points=len(P),
+            ok=True, method="head_image_mode_grid_search", search_stats=stats, wide_face_offset_deg=g["wide_face_offset_deg"], sticker_normal_azimuth_deg=az, sticker_plane_tilt_deg=tilt, jaw_ref_yaw_deg=float(np.degrees(yaw_ref)), sticker_centroid_median_m=c, n_marker_points=len(gp), n_head_points=len(P),
             candidates=cands, grasps=[dict(flip=q["flip"], T_BG=q["T_BG"], cost=q["cost"]) for q in grasps]), indent=1, default=lambda o: np.asarray(o).tolist()))
         np.save(run / "head_points.npy", P.astype(np.float32))
         np.save(run / "marker_close_points.npy", gp.astype(np.float32))
         np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
-        report_grid_search(run / "plots", P, oriented_normals(P), N2, gp, c, allc, stats, gr["finger_width_m"])
+        report_grid_search(run / "plots", P, oriented_normals(P), N2, gp, c, allc, stats, gr["finger_width_m"], S, gr["finger_thickness_m"], g["finger_box_h_m"])
         self._publish(self.last)
         b = cands[0]
-        return "image mode grid search: head cloud %d points; %d candidates generated, %d valid; best yaw %.0f deg, %.1f mm from the sticker, TCP (%.1f, %.1f, %.1f) mm, jaw (%.2f, %.2f), width %.1f mm, opening %.1f mm (run %s)" % (
-            len(P), stats["generated"], stats["valid"], b["yaw_deg"], b["offset_m"] * 1e3, *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
+        return "image mode grid search (wider-face jaw offset %s from the sticker plane: normal %.0f deg, tilt %.0f deg from horizontal): head cloud %d points; %d candidates generated, %d valid; best yaw %.0f deg, %.1f mm from the sticker, TCP (%.1f, %.1f, %.1f) mm, jaw (%.2f, %.2f), width %.1f mm, opening %.1f mm (run %s)" % (
+            g["wide_face_offset_deg"], az, tilt, len(P), stats["generated"], stats["valid"], b["yaw_deg"], b["offset_m"] * 1e3, *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
 
     def cloud_grasp(self):
         """CLOUD MODE (marker region only, no black body): the marker pixels are the region of interest. Sticker position and height from the marker 3D points
         (median); sticker axes and size from the marker blob's edges in the image; then a candidate SEARCH (jaw edge x yaw offsets x pad positions x flips),
         ranked. /grasp/execute tries them in rank order (first one with a feasible IK chain)."""
-        depth, K, _, T_BC = self._frame()
+        depth, K, _, T_BC = self._close_frame()
         color, g, gc, gr = self._color_bgr(), self.cfg["color_marker"], self.cfg["grasp"], self.cfg["gripper"]
-        gp = marker_points(depth, color, K, T_BC, g)
-        if len(gp) < 100:
+        gp = marker_points(depth, color, K, T_BC, g, self.target)   # only the marker blob nearest to the scan target
+        if len(gp) < g["min_marker_points"]:
             raise RuntimeError("only %d marker points in the close view: camera over the sticker? (/grasp/view)" % len(gp))
         c = np.median(gp, 0)
         gp = gp[np.linalg.norm(gp[:, :2] - c[:2], axis=1) < g["footprint_radius_m"]]  # stray marker specks elsewhere on the table are not the sticker
@@ -561,8 +538,10 @@ class GraspNode(Node):
         if dry or not self.get_parameter("allow_grasp").value:  # grasp motion needs dry_run:=false AND allow_grasp:=true
             return "NOT EXECUTED (dry_run or allow_grasp:=false), motion checked only. " + log[-1]
 
-        self.arm.grip_to(float(np.interp(g["open_width_m"], self.wid_tab[::-1], self.pos_tab[::-1])), gp["close_effort"], rate=0.3)
-        self.arm.approach(plan)
+        if self.arm.grip_pos() > 0.05:   # left closed or part-closed: open fully first (opening only, nothing closes before the grasp)
+            self.arm.grip_to(0.0, gp["close_effort"], rate=0.3)
+        open_pos = float(np.interp(g["open_width_m"], self.wid_tab[::-1], self.pos_tab[::-1]))
+        self.arm.approach(plan, at_pre_grasp=lambda: self.arm.grip_to(open_pos, gp["close_effort"], rate=0.3))  # the jaw opening is set up at the pre-grasp pose, just before the descent, not at the start of the long move
         pos, contact = self.arm.grip_to(gp["close_cmd"], gp["close_effort"], rate=0.2)
         held = contact or grasp_held(pos, gp)
         width = float(np.interp(pos, self.pos_tab, self.wid_tab))

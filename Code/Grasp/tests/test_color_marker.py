@@ -83,9 +83,28 @@ def test_image_mode_grid_search_finds_jaw_axis_width_and_height_of_a_synthetic_h
     b = cands[0]
     assert abs(b["jaw"][1]) > 0.97                                  # jaw closes across the short side (y)
     assert abs(b["width_m"] - 0.013) < 0.0015 and abs(b["open_width_m"] - 0.037) < 0.0015
-    assert abs(b["p"][2] - (0.015 - 0.008)) < 0.0015                # TCP 8 mm below the sticker/top face
+    assert b["depth_extra_m"] in G["extra_depth_m"] and abs(b["p"][2] - (0.015 - 0.008 - b["depth_extra_m"])) < 0.0015   # TCP = top - drop - extra depth
+    assert st["depth_levels"] == len(G["extra_depth_m"]) and {q["depth_extra_m"] for q in cands} <= set(G["extra_depth_m"])
     assert b["offset_m"] < 0.003                                    # centred on the sticker
+    assert b["face_len_m"] > 0.020                                  # the pads land on the long walls (25 mm), not the 13 mm ends
     assert [q["cost"] for q in cands] == sorted(q["cost"] for q in cands)
+
+
+def test_grid_search_jaw_yaw_restricted_to_home_and_plus_minus_90():
+    from housing_grasp.color_marker import grid_grasp_search
+    P, N, S, G_, c = _grid_inputs()
+    ref = np.radians(85.5)
+    cands, st = grid_grasp_search(P, N, S, G_, c, dict(G, jaw_yaw_offsets_deg=[0, 90]), 0.006, 0.0077, 0.085, 0.012, 0.008, ref)
+    yaws = {round(float(q["yaw_deg"]), 3) for q in cands}
+    assert st["yaws"] == 2 and yaws <= {85.5, 175.5} and len(yaws) >= 1
+
+
+def test_grid_search_finger_clearance_removes_deep_candidates_close_to_the_table():
+    from housing_grasp.color_marker import grid_grasp_search
+    P, N, S, G_, c = _grid_inputs()
+    base, _ = grid_grasp_search(P, N, S, G_, c, G, 0.006, 0.0077, 0.085, 0.012, 0.008)
+    far, st = grid_grasp_search(P, N, S, G_, c, dict(G, finger_clearance_m=0.02), 0.006, 0.0077, 0.085, 0.012, 0.008)   # tips would need to stay 20 mm above the table
+    assert len(base) > 0 and far == [] and st["collision"] > 0
 
 
 def test_grid_search_finger_collision_removes_candidates_with_scene_points_in_a_finger_box():
@@ -172,3 +191,49 @@ def test_marker_colour_is_a_setting_including_a_hue_range_that_wraps_for_red():
     blue = marker_mask(img, dict(G, h=[110, 130]))
     assert blue[5:15, 25:35].mean() > 0.9 and not blue[5:15, 5:15].any()
     assert marker_mask(img, G)[5:15, 5:15].sum() == 0                        # the default (teal) does not pick red or blue
+
+
+def test_nearest_blob_drops_a_larger_marker_coloured_strip():
+    from housing_grasp.color_marker import nearest_blob
+    K = np.array([[434.7, 0, 424.0], [0, 434.7, 240.0], [0, 0, 1.0]])
+    T = np.eye(4); T[:3, :3] = np.diag([1.0, -1.0, -1.0]); T[:3, 3] = [0.3, 0.0, 0.30]   # camera above (0.3, 0), looking down
+    m = np.zeros((480, 848), bool)
+    m[230:250, 414:434] = True      # sticker blob at the image centre
+    m[100:130, 500:800] = True      # long strip, much larger, elsewhere
+    keep = nearest_blob(m, K, T, np.array([0.3, 0.0, 0.0]))
+    assert keep[230:250, 414:434].all() and not keep[100:130, 500:800].any()
+    assert nearest_blob(m, K, T, np.array([0.3, 0.0, 0.0]), min_px=10000).sum() == 0     # nothing big enough: empty, no crash
+
+
+def test_scan_target_is_the_sticker_sized_marker_cluster_not_the_largest_strip():
+    from housing_grasp.config import load_config
+    from housing_grasp.color_marker import analyze_scan
+    cfg = load_config(str(pathlib.Path(__file__).resolve().parents[1] / "config" / "grasp.yaml"), allow_unscanned=True)
+    tz = cfg["scan"]["table_z_m"]
+    rng = np.random.default_rng(0)
+    table = np.c_[rng.uniform(0.2, 0.4, 40000), rng.uniform(-0.1, 0.1, 40000), np.full(40000, tz) + rng.normal(0, 0.0003, 40000)]
+    gx, gy = np.meshgrid(np.arange(0, 0.012, 0.001), np.arange(0, 0.012, 0.001))
+    sticker = np.c_[0.30 + gx.ravel(), 0.00 + gy.ravel(), np.full(gx.size, tz + 0.02)]            # 12 x 12 mm patch, 20 mm above the table
+    sx = np.arange(0, 0.09, 0.001)
+    strip = np.c_[0.25 + sx, np.full(sx.size, 0.05), np.full(sx.size, tz + 0.015)]                 # 90 mm long strip: more points than the sticker if dense
+    strip = np.vstack([strip + [0, dy, 0] for dy in np.arange(0, 0.008, 0.001)])
+    G = np.vstack([sticker, strip])
+    r = analyze_scan(np.vstack([table, G]), G, cfg)
+    assert len(r["marker_clusters"][0]) == len(sticker) or abs(len(r["marker_clusters"][0]) - len(sticker)) < 10   # first cluster is the sticker though the strip has more points
+    assert len(strip) > len(sticker) and abs(r["frame"]["centroid"][0] - 0.3055) < 0.01 and r["n_sticker_sized"] == 1
+
+
+def test_wide_face_offset_follows_the_sticker_plane_normal():
+    from housing_grasp.color_marker import wide_face_offset
+    az, tilt = np.radians(10.0), np.radians(74.0)                    # plane normal: 10 deg azimuth, 74 deg from horizontal
+    n = np.array([np.cos(az) * np.sin(tilt), np.sin(az) * np.sin(tilt), np.cos(tilt)])
+    u = np.cross(n, [0, 0, 1.0]); u /= np.linalg.norm(u); v = np.cross(n, u)
+    rng = np.random.default_rng(1)
+    pts = rng.uniform(-0.006, 0.006, (200, 1)) * u + rng.uniform(-0.006, 0.006, (200, 1)) * v + rng.normal(0, 2e-4, (200, 1)) * n
+    off, a, t = wide_face_offset(pts, np.radians(85.5), [0, 90])
+    assert off == 90.0 and abs(a - 10.0) < 3 and abs(t - 74.0) < 3    # normal at ~10 deg = 75 deg from the home jaw axis -> the +-90 family is the wider faces
+    off0, _, _ = wide_face_offset(pts, np.radians(10.0), [0, 90])      # jaw axis already along the normal: offset 0 is the wider faces
+    assert off0 == 0.0
+    flat = rng.uniform(-0.006, 0.006, (200, 3)) * [1, 1, 0.01]          # a horizontal patch: no trust
+    assert wide_face_offset(flat, 1.0, [0, 90])[0] is None
+

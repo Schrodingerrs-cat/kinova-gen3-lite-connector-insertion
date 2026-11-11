@@ -1,0 +1,28 @@
+>> Arm reachable at 192.168.1.10 via enxfa8a93251b5c
+>> arm, camera and MoveIt are up; starting the grasp node (dry_run default true)
+[INFO] [launch]: All log files can be found below /home/aryans-cat/.ros/log/2026-11-10-14-17-16-103216-aryan-209825
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [static_transform_publisher-1]: process started with pid [209856]
+[INFO] [grasp_node.py-2]: process started with pid [209858]
+[static_transform_publisher-1] 1794338236.335625 [0] static_tra: selected interface "lo" is not multicast-capable: disabling multicast
+[static_transform_publisher-1] [INFO] [1794338236.338532875] [hand_eye_tf]: Spinning until stopped - publishing transform
+[static_transform_publisher-1] translation: ('-0.008029', '-0.049560', '-0.090977')
+[static_transform_publisher-1] rotation: ('-0.496119', '0.513491', '-0.491041', '-0.499071')
+[static_transform_publisher-1] from 'tool_frame' to 'camera_link'
+[grasp_node.py-2] 1794338237.923438 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+[grasp_node.py-2] [WARN] [1794338237.963034329] [rcl.logging_rosout]: Publisher already registered for provided node name. If this is due to multiple nodes with the same name then all logs for that logger name will go out over the existing publisher. As soon as any node with that name is destructed it will unregister the publisher, preventing any further logs for that name from being published on the rosout topic.
+[grasp_node.py-2] [INFO] [1794338238.161895952] [grasp_node]: grasp_node ready (dry_run=False)
+[grasp_node.py-2] /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py:256: RuntimeWarning: All-NaN slice encountered
+[grasp_node.py-2]   depth = np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)
+[grasp_node.py-2] [INFO] [1794338259.713290055] [grasp_node]: scan view 1/7 captured
+[grasp_node.py-2] [INFO] [1794338265.675444271] [grasp_node]: scan view 2/7 captured
+[grasp_node.py-2] [INFO] [1794338276.348092828] [grasp_node]: scan view 3/7 captured
+[grasp_node.py-2] [INFO] [1794338287.165288207] [grasp_node]: scan view 4/7 captured
+[grasp_node.py-2] [INFO] [1794338299.333315666] [grasp_node]: scan view 5/7 captured
+[grasp_node.py-2] [INFO] [1794338311.507296873] [grasp_node]: scan view 6/7 captured
+[grasp_node.py-2] [INFO] [1794338318.320196830] [grasp_node]: scan view 7/7 captured
+[grasp_node.py-2] /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp/ros2_iface/grasp_node.py:144: RuntimeWarning: All-NaN slice encountered
+[grasp_node.py-2]   depth = np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)
+[grasp_node.py-2] [INFO] [1794338360.662229864] [grasp_node]: candidate 0 (2 mm, flip +1): pre-grasp: no near-current IK (or below the table); candidate 1 (2 mm, flip -1): ok
+[grasp_node.py-2] [INFO] [1794338372.519340577] [grasp_node]: gripper stopped at 0.813 (empty >= 0.790), ~0.4 mm, expected 11.8 mm: closed on nothing
+[grasp_node.py-2] [INFO] [1794338374.850840413] [grasp_node]: wrist camera after the lift: depth between the tips 0.117 m, table 0.253 m -> object in hand

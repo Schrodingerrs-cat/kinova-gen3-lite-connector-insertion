@@ -86,8 +86,11 @@ class Arm:
             q_from = np.array(pts[-1])
         return dict(q_pre=q_pre, down=legs[0], lift=legs[1]), "ok"
 
-    def approach(self, plan):
+    def approach(self, plan, at_pre_grasp=None):
+        """Joint move to the pre-grasp pose, then (optional callback, e.g. set the jaw opening) the straight descent."""
         self.go_joints(plan["q_pre"])
+        if at_pre_grasp:
+            at_pre_grasp()
         self.r.send_line(*plan["down"])
 
     def retreat(self, plan):

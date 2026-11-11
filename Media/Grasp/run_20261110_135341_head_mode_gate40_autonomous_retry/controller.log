@@ -1,0 +1,9 @@
+[   0.1 s] arm is 43 deg from home: going home first
+[   4.5 s] home -> OK: at home (was 43 deg away)
+[  89.6 s] scan -> OK: scan 20261110_135346: 7 views (skipped []), 1158917 fused points, 3733 marker points; ICP corrections vs earlier views: median 10.0 mm, max 25.6 mm
+[  92.8 s] color_target -> OK: merged scan 20261110_135346: table tilt 4.7 deg (106570 inliers), 117 above-table clusters, marker clusters [3521]; target (marker centroid) [263.0, -20.0, 3.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[  98.2 s] view -> OK: camera over [ 0.263 -0.02   0.003] at 180 mm
+[ 105.7 s] head_grasp -> OK: image mode grid search: head cloud 803 points; 6732 candidates generated, 1707 valid; best yaw 170 deg, 4.5 mm from the sticker, TCP (259.4, -19.5, -2.0) mm, jaw (-0.98, 0.17), width 12.1 mm, opening 36.1 mm (run 20261110_135526)
+[ 105.9 s] allow_grasp -> OK: grasp motion ENABLED (needs dry_run:=false too)
+[ 125.3 s] execute -> OK: held (finger check: no, wrist camera: yes); fingers stopped at ~0.4 mm; camera depth between the tips 0.144 m, table 0.252 m
+[ 125.5 s] outcome: GRASP_REPORTED_HELD: held (finger check: no, wrist camera: yes); fingers stopped at ~0.4 mm; camera depth between the tips 0.144 m, table 0.252 m

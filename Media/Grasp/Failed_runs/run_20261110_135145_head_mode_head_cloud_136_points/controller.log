@@ -1,0 +1,7 @@
+[   0.1 s] arm is 40 deg from home: going home first
+[   4.3 s] home -> OK: at home (was 40 deg away)
+[  89.8 s] scan -> OK: scan 20261110_135150: 7 views (skipped []), 1168471 fused points, 3622 marker points; ICP corrections vs earlier views: median 10.9 mm, max 26.9 mm
+[  93.0 s] color_target -> OK: merged scan 20261110_135150: table tilt 4.8 deg (104468 inliers), 132 above-table clusters, marker clusters [3523, 15]; target (marker centroid) [263.0, -20.0, 3.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[  98.4 s] view -> OK: camera over [ 0.263 -0.02   0.003] at 180 mm
+[ 100.0 s] head_grasp -> FAILED: head cloud has only 136 points (need 200): no usable depth on the segmented head
+[ 100.2 s] outcome: STOPPED_BEFORE_GRASP: sticker grasp could not be computed

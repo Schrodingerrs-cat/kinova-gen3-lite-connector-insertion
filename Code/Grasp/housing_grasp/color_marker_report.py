@@ -58,24 +58,7 @@ def report_color_target(out, P, r):
     fig.tight_layout(); fig.savefig(out / "03_marker_patch_frame.png", dpi=100); plt.close(fig)
 
 
-def report_sticker_grasp(out, gp, fp, c, p, jaw, open_w):
-    """Top view of the marker-sticker grasp: sticker points, housing footprint axes, jaw line, open fingers."""
-    out.mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7, 7))
-    ax.scatter(gp[:, 0] * 1e3, gp[:, 1] * 1e3, s=3, c="limegreen", label="marker sticker points (%d)" % len(gp))
-    m = fp["center_xy"] * 1e3
-    for v, col, nm, L in ((fp["long_axis"], "k", "housing long axis %.1f mm" % (fp["length_m"] * 1e3), fp["length_m"]), (fp["jaw_axis"], "tab:orange", "jaw axis (across, %.1f mm)" % (fp["width_m"] * 1e3), fp["width_m"])):
-        ax.plot([m[0] - v[0] * L * 500, m[0] + v[0] * L * 500], [m[1] - v[1] * L * 500, m[1] + v[1] * L * 500], color=col, lw=2, label=nm)
-    for sgn in (1, -1):  # open finger pads
-        q = p[:2] * 1e3 + sgn * jaw[:2] * open_w * 500
-        ax.plot(q[0], q[1], "s", color="tab:red", ms=9, label="open fingers (%.0f mm)" % (open_w * 1e3) if sgn == 1 else None)
-    ax.plot(p[0] * 1e3, p[1] * 1e3, "r*", ms=16, label="TCP (grasp point)")
-    ax.set_xlabel("base x (mm)"); ax.set_ylabel("base y (mm)"); ax.set_aspect("equal"); ax.legend(fontsize=8)
-    ax.set_title("Marker-sticker grasp, top view (TCP z = %.1f mm)" % (p[2] * 1e3))
-    fig.tight_layout(); fig.savefig(out / "01_sticker_grasp_topview.png", dpi=100); plt.close(fig)
-
-
-def report_grid_search(out, P, N3, N2, G, c, cands, stats, finger_w, top=1):
+def report_grid_search(out, P, N3, N2, G, c, cands, stats, finger_w, scene=None, finger_t=0.0077, finger_box_h=0.012):
     """Image mode grid search. Figures (mm): 01 head cloud with 3D normals, 02 head outline normals (top view, used for the pad contacts), 03 every valid candidate
     (jaw line at its centre, colour = cost) with the best opening, 04 grasp points in 3D (object, centroid, grasp points), 05 candidate counts per step, 06 best cost per yaw."""
     from matplotlib.collections import LineCollection
@@ -109,7 +92,7 @@ def report_grid_search(out, P, N3, N2, G, c, cands, stats, finger_w, top=1):
     for q in cands[:60]:   # the best 60 as jaw-gap lines
         h = q["jaw"][:2] * q["width_m"] * S / 2
         ax.plot(*np.stack([q["p"][:2] * S - h, q["p"][:2] * S + h]).T, color="black", lw=0.4, alpha=0.5)
-    ax.plot(*contacts.T * S, "-", color="red", lw=2.5, label="best: gap %.1f mm (opening %.1f mm), yaw %.0f deg" % (best["width_m"] * S, best["open_width_m"] * S, best["yaw_deg"]))
+    ax.plot(*contacts.T * S, "-", color="red", lw=2.5, label="best: gap %.1f mm (opening %.1f mm), yaw %.0f deg, %.0f mm deeper" % (best["width_m"] * S, best["open_width_m"] * S, best["yaw_deg"], best["depth_extra_m"] * S))
     ax.plot(*contacts.T * S, "s", color="red", ms=8)
     ax.plot(c[0] * S, c[1] * S, "*", color="gold", mec="k", ms=14, label="sticker median")
     ax.set_xlabel("base x (mm)"); ax.set_ylabel("base y (mm)"); ax.set_aspect("equal"); ax.legend(fontsize=8, loc="upper right")
@@ -126,17 +109,42 @@ def report_grid_search(out, P, N3, N2, G, c, cands, stats, finger_w, top=1):
     ax.set_title("Head cloud, centroid and the best grasp points")
     fig.tight_layout(); fig.savefig(out / "04_grasp_points_3d.png", dpi=110); plt.close(fig)
 
-    steps = [("generated\n(grid x yaw)", stats["generated"]), ("enough points\nin pad window", stats["generated"] - stats["few_points"]),
+    steps = [("generated\n(grid x yaw x depth)", stats["generated"]), ("enough points\nin pad window", stats["generated"] - stats["few_points"]),
              ("jaw centred in\nthe head gap", stats["generated"] - stats["few_points"] - stats["centre_off"]),
              ("opening fits\nthe gripper", stats["generated"] - stats["few_points"] - stats["centre_off"] - stats["too_wide"]),
              ("both pads have\ncontact points", stats["generated"] - stats["few_points"] - stats["centre_off"] - stats["too_wide"] - stats["no_contact"]),
-             ("fingers free\n(valid)", stats["valid"])]
+             ("fingers clear\nat that depth (valid)", stats["valid"])]
     fig, ax = plt.subplots(figsize=(9, 5))
     bars = ax.bar(range(len(steps)), [v for _, v in steps], color="tab:blue")
     ax.bar_label(bars, fontsize=9)
     ax.set_xticks(range(len(steps))); ax.set_xticklabels([n for n, _ in steps], fontsize=8); ax.set_ylabel("candidates")
     ax.set_title("Candidates left after each filter")
     fig.tight_layout(); fig.savefig(out / "05_candidate_counts.png", dpi=110); plt.close(fig)
+
+    if scene is not None:   # side view along the best jaw axis: head, scene (panel) points, the two fingertips at every depth tried
+        a = np.array([-jb[1], jb[0]])
+
+        def sidev(Q):
+            rel = Q[:, :2] - pb[:2]
+            keep = np.abs(rel @ a) <= finger_w / 2
+            return (rel[keep] @ jb) * 1e3, Q[keep, 2] * 1e3
+        hx, hz = sidev(P)
+        sx, sz = sidev(scene)
+        near = np.abs(sx) < 40
+        z_usual = pb[2] + best["depth_extra_m"]   # tip height at the usual depth (sticker height - grasp_drop_m)
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.scatter(sx[near], sz[near], s=3, c="lightgrey", label="non-head scene points (panel, table) under the pads")
+        ax.scatter(hx, hz, s=4, c="tab:green", label="head points under the pads")
+        for d in sorted({q["depth_extra_m"] for q in cands}):
+            ztip = (z_usual - d) * S
+            for sgn in (-1, 1):
+                x0 = sgn * best["open_width_m"] * S / 2
+                ax.plot([x0, x0 + sgn * finger_t * S], [ztip, ztip], color="tab:red", lw=2, alpha=0.9 if abs(d - best["depth_extra_m"]) < 1e-9 else 0.35)
+            ax.annotate("+%.0f mm" % (d * S), (best["open_width_m"] * S / 2 + finger_t * S + 0.5, ztip), fontsize=8, va="center")
+        ax.axhline(c[2] * S, color="gold", lw=1, ls="--", label="sticker median height")
+        ax.set_xlabel("along the jaw axis from the grasp centre (mm)"); ax.set_ylabel("z (mm)"); ax.legend(fontsize=8, loc="upper left")
+        ax.set_title("Side view of the best candidate: fingertip height at each depth tried (best = solid red)")
+        fig.tight_layout(); fig.savefig(out / "07_depth_levels_side_view.png", dpi=110); plt.close(fig)
 
     yaws = sorted({q["yaw_deg"] for q in cands})
     ybest = [min(q["cost"] for q in cands if q["yaw_deg"] == y) for y in yaws]

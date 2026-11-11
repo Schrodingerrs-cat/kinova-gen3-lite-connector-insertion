@@ -19,13 +19,31 @@ def marker_mask(bgr, g):
     return cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)).astype(bool)
 
 
-def marker_points(depth, bgr, K, T_BC, g):
-    """Marker-coloured pixels -> cleaned base-frame points. Flying pixels are removed on the FULL depth before the mask is applied."""
+def nearest_blob(mask, K, T_BC, target, min_px=30):
+    """Keep only the connected marker blob (>= min_px) nearest to the pixel where the scan target (base frame) projects: other marker-coloured things in the
+    view (a strip on the panel) are dropped."""
+    cam = np.linalg.inv(T_BC) @ np.r_[target, 1]
+    u0, v0 = K[0, 0] * cam[0] / cam[2] + K[0, 2], K[1, 1] * cam[1] / cam[2] + K[1, 2]
+    n, lab, st, cen = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
+    best, bd = 0, np.inf
+    for i in range(1, n):
+        d = np.hypot(cen[i][0] - u0, cen[i][1] - v0)
+        if st[i, cv2.CC_STAT_AREA] >= min_px and d < bd:
+            best, bd = i, d
+    return lab == best if best else np.zeros(mask.shape, bool)
+
+
+def marker_points(depth, bgr, K, T_BC, g, target=None):
+    """Marker-coloured pixels -> cleaned base-frame points. Flying pixels are removed on the FULL depth before the mask is applied.
+    target (base-frame xyz of the scan target): only the marker blob nearest to it is used."""
     valid = np.isfinite(depth) & (depth > 0)
     hi = maximum_filter(np.where(valid, depth, 0.0), 3)
     lo = minimum_filter(np.where(valid, depth, np.inf), 3)
     valid &= (hi - lo) <= g["edge_jump_m"]
-    vv, uu = np.nonzero(valid & marker_mask(bgr, g))
+    m = marker_mask(bgr, g)
+    if target is not None:
+        m = nearest_blob(m, K, T_BC, target)
+    vv, uu = np.nonzero(valid & m)
     z = depth[vv, uu].astype(float)
     pc = np.stack([(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z], 1)
     pb = pc @ T_BC[:3, :3].T + T_BC[:3, 3]
@@ -140,8 +158,10 @@ def analyze_scan(P, G, cfg):
     Ga = G[(hg > g["min_above_table_m"]) & (hg < g["max_above_table_m"])]
     glab = dbscan(Ga, g["marker_eps_m"], g["marker_min_pts"])
     clusters = sorted((Ga[glab == k] for k in set(glab) - {-1}), key=len, reverse=True)
+    small = [c for c in clusters if (c[:, :2].max(0) - c[:, :2].min(0)).max() <= g["marker_max_extent_m"]]   # the sticker is a small patch; a long strip of the same colour is not
+    clusters = small + [c for c in clusters if all(c is not s for s in small)]   # sticker-sized clusters first (largest first), the large ones after
     return dict(table_n=n, table_d=d, table_inliers=n_inl, object_points=obj, object_labels=dbscan(obj, g["cluster_eps_m"], g["cluster_min_pts"]),
-                marker_above=Ga, marker_labels=glab, marker_clusters=clusters, frame=marker_frame(clusters[0]) if clusters else None)
+                marker_above=Ga, marker_labels=glab, marker_clusters=clusters, n_sticker_sized=len(small), frame=marker_frame(small[0]) if small else None)
 
 
 def head_mask(bgr, K, T_BC, c, g):
@@ -218,26 +238,47 @@ def scene_points(depth, bgr, K, T_BC, c, g):
     return pb[np.linalg.norm(pb[:, :2] - c[:2], axis=1) < g["footprint_radius_m"] + 0.025]
 
 
-def grid_grasp_search(P, N, S, G, c, g, finger_w, finger_t, max_open, margin, drop):
+def wide_face_offset(G, yaw_ref, offsets_deg, min_tilt_deg=55.0):
+    """Which of the jaw offsets lands on the plug's WIDER faces. The sticker sits on a wide face (the plug is 15.0 x 7.5 mm, STEP model), so the horizontal direction of the
+    sticker plane's normal is the jaw direction for the wide-face grasp. G = sticker 3D points (base frame), yaw_ref = jaw axis at the home wrist orientation (rad).
+    Returns (offset_deg or None, normal azimuth deg, plane tilt deg from horizontal); None when the plane is not steep enough to trust (< min_tilt_deg)."""
+    _, _, vt = np.linalg.svd(G - G.mean(0), full_matrices=False)
+    n = vt[2]
+    tilt = float(np.degrees(np.arccos(abs(n[2]))))
+    az = float(np.arctan2(n[1], n[0]) % np.pi)
+    if tilt < min_tilt_deg:
+        return None, float(np.degrees(az)), tilt
+    dist = lambda o: abs(((az - (yaw_ref + np.radians(o)) + np.pi / 2) % np.pi) - np.pi / 2)
+    return float(min(offsets_deg, key=dist)), float(np.degrees(az)), tilt
+
+
+def grid_grasp_search(P, N, S, G, c, g, finger_w, finger_t, max_open, margin, drop, yaw_ref=None):
     """Image mode grasp search from the head cloud P (base frame, N = outward normals, S = non-head scene points, G = sticker points, c = sticker median).
     1. Grid: every g['grid_m'] over the head's xy extent, kept where the head cloud is (jaw centre).
-    2. Yaw: every g['yaw_step_deg'] over 180 deg at each grid point (jaw axis b, pad strip along a).
+    2. Yaw: every g['yaw_step_deg'] over 180 deg at each grid point (jaw axis b, pad strip along a). With yaw_ref (rad, the jaw axis at the home wrist orientation) and
+       g['jaw_yaw_offsets_deg'] (e.g. [0, 90]) ONLY those jaw yaws are tried: wrist joint 6 at its home value, or +-90 deg (the same line, tried as the two jaw flips).
     3. Pad window: head points within +- finger_w/2 along a. Jaw gap = 2nd..98th percentile extent along b; jaw centre must sit within g['center_tol_m'] of the
        middle of that gap; opening = width + 2 margins <= max_open.
-    4. Filters: >= g['min_window_points'] points; contact bands (g['contact_band_m'] at each end) hold >= 3 points; both finger boxes (finger_t x finger_w, from the
-       tip z up g['finger_box_h_m']) hit <= g['max_finger_hits'] scene points.
-    5. Cost = w_anti x (1 - antipodal) + w_even x width unevenness + w_center x distance to the sticker / 10 mm + w_contact x (1 - contact / best contact) + w_width x width / 20 mm (a narrow gap holds the part more securely), where
+    4. Filters: >= g['min_window_points'] points; contact bands (g['contact_band_m'] at each end) hold >= 3 points.
+    4b. Depth: every geometry above is tried at each g['extra_depth_m'] (e.g. 3..7 mm) BELOW the usual depth (sticker height - `drop`); at each depth both finger
+       boxes (finger_t x finger_w, from g['finger_clearance_m'] below the tip z up g['finger_box_h_m']) may hit <= g['max_finger_hits'] scene points (the panel top rejects a depth that is too deep).
+    5. Cost = w_anti x (1 - antipodal) + w_even x width unevenness + w_center x distance to the sticker / 10 mm + the three "grip quality" terms, each 0 for the best candidate and 1 for the worst: w_depth x (1 - extra depth / deepest extra depth) (deeper = more wall in the pads, within the collision limit), w_contact x (1 - contact points / most contact points) (covering more points) and w_face x (1 - face length / longest face length) (the wall the pad lands on is long along the pad: the wider face), where
        antipodal = mean of (outward normal of each contact band . its jaw direction), contact = min points of the two bands.
     Returns (candidates best first, stats). Candidate: dict(p, jaw (horizontal unit 3-vector), width_m, open_width_m, cost, offset_m (distance from the sticker),
-    yaw_deg, z_top_m = sticker median height, anti, even, contact, hits). stats: counts after every step."""
+    yaw_deg, z_top_m = sticker median height, depth_extra_m, anti, even, contact, face_len_m = length along the pad strip of the wall under the thinner pad, hits). stats: counts after every step."""
     from scipy.spatial import cKDTree
     xy, tree = P[:, :2], cKDTree(P[:, :2])
     gx, gy = np.meshgrid(np.arange(xy[:, 0].min(), xy[:, 0].max() + 1e-9, g["grid_m"]), np.arange(xy[:, 1].min(), xy[:, 1].max() + 1e-9, g["grid_m"]))
     grid = np.c_[gx.ravel(), gy.ravel()]
     grid = grid[tree.query(grid)[0] < g["grid_m"]]
-    yaws = np.deg2rad(np.arange(0.0, 180.0, g["yaw_step_deg"]))
+    if yaw_ref is not None and g.get("jaw_yaw_offsets_deg"):
+        yaws = np.unique(np.round((yaw_ref + np.deg2rad(g["jaw_yaw_offsets_deg"])) % np.pi, 9))
+    else:
+        yaws = np.deg2rad(np.arange(0.0, 180.0, g["yaw_step_deg"]))
     A, B = np.stack([-np.sin(yaws), np.cos(yaws)], 1), np.stack([np.cos(yaws), np.sin(yaws)], 1)   # pad-strip axis a, jaw axis b per yaw
-    st = dict(grid_points=len(grid), yaws=len(yaws), generated=len(grid) * len(yaws), few_points=0, centre_off=0, too_wide=0, no_contact=0, collision=0)
+    extras = list(g["extra_depth_m"])
+    L = len(extras)   # every (grid point, yaw) is tried at L depths; an early filter rejects all L at once
+    st = dict(grid_points=len(grid), yaws=len(yaws), depth_levels=L, generated=len(grid) * len(yaws) * L, few_points=0, centre_off=0, too_wide=0, no_contact=0, collision=0)
     out = []
     for q in grid:
         rel = xy - q
@@ -247,43 +288,57 @@ def grid_grasp_search(P, N, S, G, c, g, finger_w, finger_t, max_open, margin, dr
         for k in range(len(yaws)):
             win = np.abs(Sa[:, k]) <= finger_w / 2
             if win.sum() < g["min_window_points"]:
-                st["few_points"] += 1
+                st["few_points"] += L
                 continue
             t = Tb[win, k]
             lo, hi = np.percentile(t, [2, 98])
             if abs(lo + hi) / 2 > g["center_tol_m"]:
-                st["centre_off"] += 1
+                st["centre_off"] += L
                 continue
             width = float(hi - lo)
             if width + 2 * margin > max_open:
-                st["too_wide"] += 1
+                st["too_wide"] += L
                 continue
             idx = np.nonzero(win)[0]
             left, right = idx[t < lo + g["contact_band_m"]], idx[t > hi - g["contact_band_m"]]
             if len(left) < 3 or len(right) < 3:
-                st["no_contact"] += 1
+                st["no_contact"] += L
                 continue
             b = B[k]
             anti = 0.5 * (np.clip(-(N[left, :2] @ b), 0, 1).mean() + np.clip(N[right, :2] @ b, 0, 1).mean())
             z_top = float(c[2])   # sticker median height: the 3D sticker points ramp ~27 mm over 11 mm (depth artefact), a per-window height would move the TCP with the window
-            z_tcp = z_top - drop
             ow = width + 2 * margin
+            cb = g["contact_band_m"]
+            face = float(min(np.ptp(Sa[m_, k]) if m_.sum() >= 3 else 0.0 for m_ in ((Tb[:, k] > lo - cb) & (Tb[:, k] < lo + cb), (Tb[:, k] > hi - cb) & (Tb[:, k] < hi + cb))))   # wall length along the pad strip at each end of the gap, the shorter one
             sw = np.abs(Sa_s[:, k]) <= finger_w / 2
             sz = S[:, 2]
-            box = sw & (np.abs(Tb_s[:, k]) >= ow / 2) & (np.abs(Tb_s[:, k]) <= ow / 2 + finger_t) & (sz >= z_tcp) & (sz <= z_tcp + g["finger_box_h_m"])
-            if box.sum() > g["max_finger_hits"]:
-                st["collision"] += 1
-                continue
+            side = sw & (np.abs(Tb_s[:, k]) >= ow / 2) & (np.abs(Tb_s[:, k]) <= ow / 2 + finger_t)
             order = np.argsort(Sa[win, k])
             even = float(np.std([np.subtract(*np.percentile(t[o], [98, 2])) for o in np.array_split(order, 3)]) / width)
             mid = np.array([q[0] + b[0] * (lo + hi) / 2, q[1] + b[1] * (lo + hi) / 2])
-            out.append(dict(p=np.r_[mid, z_tcp], jaw=np.r_[b, 0.0], width_m=width, open_width_m=ow, offset_m=float(np.linalg.norm(mid - c[:2])),
-                            yaw_deg=float(np.rad2deg(yaws[k])), z_top_m=z_top, anti=float(anti), even=even, contact=int(min(len(left), len(right))), hits=int(box.sum())))
+            for ex in extras:
+                z_tcp = z_top - drop - ex
+                hits = int((side & (sz >= z_tcp - g["finger_clearance_m"]) & (sz <= z_tcp + g["finger_box_h_m"])).sum())   # box also reaches finger_clearance_m below the tip: the tip must stay that far above the panel
+                if hits > g["max_finger_hits"]:
+                    st["collision"] += 1
+                    continue
+                out.append(dict(p=np.r_[mid, z_tcp], jaw=np.r_[b, 0.0], width_m=width, open_width_m=ow, offset_m=float(np.linalg.norm(mid - c[:2])),
+                                yaw_deg=float(np.rad2deg(yaws[k])), z_top_m=z_top, depth_extra_m=float(ex), anti=float(anti), even=even,
+                                contact=int(min(len(left), len(right))), face_len_m=face, hits=hits))
     st["valid"] = len(out)
     if out:
-        cmax = max(q["contact"] for q in out)
+        cmax, fmax = max(q["contact"] for q in out), max(max(q["face_len_m"] for q in out), 1e-9)
+        wide = g.get("wide_face_offset_deg")
+        wide = None if isinstance(wide, str) else wide   # "auto" is resolved by the caller (wide_face_offset); unresolved = measure the face length
+        if yaw_ref is not None and wide is not None:   # the offset that lands on the wider faces is known (config): the face term is 0 there and 1 on the other family
+            for q in out:
+                q["face_pen"] = 0.0 if abs(((np.radians(q["yaw_deg"]) - yaw_ref - np.radians(wide) + np.pi / 2) % np.pi) - np.pi / 2) < 0.02 else 1.0
+        else:
+            for q in out:
+                q["face_pen"] = 1 - q["face_len_m"] / fmax
         for q in out:
-            q["cost"] = float(g["w_anti"] * (1 - q["anti"]) + g["w_even"] * q["even"] + g["w_center"] * q["offset_m"] / 0.010 + g["w_contact"] * (1 - q["contact"] / cmax) + g["w_width"] * q["width_m"] / 0.020)
+            q["cost"] = float(g["w_anti"] * (1 - q["anti"]) + g["w_even"] * q["even"] + g["w_center"] * q["offset_m"] / 0.010
+                              + g["w_depth"] * (1 - q["depth_extra_m"] / max(extras)) + g["w_contact"] * (1 - q["contact"] / cmax) + g["w_face"] * q["face_pen"])
     return sorted(out, key=lambda d: d["cost"]), st
 
 

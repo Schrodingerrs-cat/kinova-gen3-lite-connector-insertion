@@ -1,0 +1,28 @@
+{
+ "started": "2026-11-10T13:19:13",
+ "grasp_requested": false,
+ "stages": {
+  "scan": {
+   "ok": true,
+   "seconds": 135.6,
+   "message": "scan 20261110_131913: 14 views (skipped [8]), 2177168 fused points, 6622 marker points; ICP corrections vs earlier views: median 4.3 mm, max 19.8 mm"
+  },
+  "color_target": {
+   "ok": true,
+   "seconds": 5.6,
+   "message": "merged scan 20261110_131913: table tilt 4.7 deg (97906 inliers), 235 above-table clusters, marker clusters [6566, 21]; target (marker centroid) [262.0, -34.0, 5.0] mm. Orientation of the merged patch is NOT used (registration smear)"
+  },
+  "view": {
+   "ok": true,
+   "seconds": 5.4,
+   "message": "camera over [ 0.262 -0.034  0.005] at 180 mm"
+  },
+  "sticker_grasp": {
+   "ok": true,
+   "seconds": 0.4,
+   "message": "sticker median (263.8, -34.8, -47.5) mm, 181 pts; housing footprint 33.7 x 18.7 mm; jaw axis (-0.21, -0.98); opening 42.7 mm; TCP (263.8, -34.8, -55.5) mm (run 20261110_132141)"
+  }
+ },
+ "outcome": "PERCEPTION_ONLY: grasp computed, not requested",
+ "seconds_total": 148.2
+}

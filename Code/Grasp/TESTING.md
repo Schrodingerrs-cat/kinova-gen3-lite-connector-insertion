@@ -1,6 +1,6 @@
 # Testing every mode on the robot, terminal by terminal
 
-Status of each mode before you start: `sticker` ran on the arm once (n = 1). `head` (grid search) and `cloud` are offline only, never executed on the arm.
+Status of each mode before you start: `head` (the default, grid search) ran on the arm 4 times on 2026-11-10 and `cloud` once (n = 1 each). The sticker mode is archived (`archive/sticker_mode_20261110/`).
 The e-stop stays in reach for every real-motion step. Settings in `config/grasp.yaml` are read when the node starts, so after editing one, stop Terminal 1 (Ctrl-C) and start it again.
 
 ## Every terminal starts with
@@ -33,7 +33,7 @@ First, always: `python3 ros2_iface/smoke_test.py` (joints, TF, action servers, c
 ```bash
 RUN=$PWD/../../Media/Grasp/run_$(date +%Y%m%d_%H%M%S)_mytest
 ```
-Add `--skip-scan` to reuse the last scan (saves about 2.5 minutes) once one good scan exists. A run without `--grasp` does everything except move to the grasp.
+Add `--skip-scan` to reuse the last scan (saves the scan time, about 1 minute or more) once one good scan exists. A run without `--grasp` does everything except move to the grasp.
 
 ### Step 0: scan and rough target only (no grasp)
 ```bash
@@ -44,7 +44,6 @@ Check in RViz window 2 that the fused scan, the marker cloud and the cleaned sce
 ### Step 1: compute the grasp in each mode, without moving to it
 Needs Terminal 1 up and the camera over the sticker (Step 0 leaves it there).
 ```bash
-python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode sticker
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode head
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode cloud
 ```
@@ -52,7 +51,6 @@ Each writes plots into `$RUN/plots/`. The head mode writes the six grid-search f
 
 ### Step 2: real grasp per mode (Terminal 1 with `dry_run:=false`)
 ```bash
-python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode sticker --grasp
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode head --grasp
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode cloud --grasp
 ```
@@ -63,7 +61,6 @@ Settings are in the `color_marker:` block of `config/grasp.yaml`. Change one, re
 
 | Mode | Setting | Values to try | What it changes |
 |---|---|---|---|
-| sticker | none | | one grasp plus the jaw flip, no search |
 | head | none | | grid search, always on, no switch |
 | cloud | `candidate_search` | `true`, `false` | search of about 30 candidates, or one closed-form grasp |
 | cloud | `jaw_edge` | `long`, `short` | jaw along the sticker's long or short edge (90 degrees apart) |
@@ -76,7 +73,7 @@ Useful cloud combinations: `candidate_search` true and false with the defaults; 
 - **Different marker colour:** change `h`, `s_min`, `v_min` in `color_marker:` (a hue range that wraps, such as red, is written `h: [170, 10]`), restart, then Step 0.
 - **One-call pick:** `./run_ros.sh dry_run:=false grasp_mode:=head`, then `ros2 service call /grasp/pick std_srvs/srv/Trigger`. Not run yet.
 - **Hold check after a lift:** `ros2 service call /grasp/hold_check std_srvs/srv/Trigger`. Not run yet on a held object.
-- **Individual services:** `ros2 service call /grasp/<name> std_srvs/srv/Trigger` with `home, scan, color_target, view, sticker_grasp, head_grasp, cloud_grasp, allow_grasp, execute, hold_check`. `execute` only checks the motion until `allow_grasp` has been called and the node runs with `dry_run:=false`.
+- **Individual services:** `ros2 service call /grasp/<name> std_srvs/srv/Trigger` with `home, scan, color_target, view, head_grasp, cloud_grasp, allow_grasp, execute, hold_check`. `execute` only checks the motion until `allow_grasp` has been called and the node runs with `dry_run:=false`.
 - **Gripper and home:** `python3 ros2_iface/go_home.py`, `python3 ros2_iface/open_gripper.py`.
 - **Keyboard jog:** `Code/Teleop/run.sh` (never while the pipeline is moving the arm).
 

@@ -25,7 +25,7 @@ class Arm:
 
     def ready(self, timeout=10.0):
         ok = self.r.wait_ready(timeout)
-        ok = ok and self.r.ik_srv.wait_for_service(timeout) and self.r.cart_srv.wait_for_service(timeout)
+        ok = ok and self.r.ik_srv.wait_for_service(timeout)
         return bool(ok and self.r.spin_until(lambda: self.r.grip_pos_msr is not None, timeout))
 
     # ---- state ----
@@ -42,24 +42,31 @@ class Arm:
     def ik_near(self, T_tool, seed_deg, max_dev_deg):
         """Joint solution (deg) for the tool pose, or None. seed_deg: one seed or a list; the solution closest to a seed
         wins. Any joint further than max_dev from that seed = rejected (no wrist flip / spin)."""
-        if self.tcp_z(T_tool) < self.floor_z:
+        z = self.tcp_z(T_tool)
+        if z < self.floor_z:
+            self.why = "TCP z %.0f mm is below the floor %.0f mm" % (z * 1e3, self.floor_z * 1e3)
             return None
-        best = None
+        best, self.why, far = None, "MoveIt IK found no solution there (no answer, limit or unreachable)", None
         for seed in np.atleast_2d(seed_deg):
             q = self.r.ik(T_tool, seed)
             if q is None:
+                self.why = getattr(self.r, "ik_error", "MoveIt IK returned no solution")
                 continue
             dev = np.abs(q - seed).max()
+            far = dev if far is None else min(far, dev)
             if dev <= max_dev_deg and (best is None or dev < best[0]):
                 best = (dev, q)
+        if best is None and far is not None:
+            self.why = "IK solution needs a %.0f deg joint move (limit %.0f): flip or too big a step" % (far, max_dev_deg)
         return None if best is None else best[1]
 
     def go_joints(self, q_deg, duration=None):
         """Joint move, straight interpolation from now to q_deg (what is checked is what runs)."""
         dq = np.abs(np.asarray(q_deg) - self.q_deg()).max()
-        if dq < 0.3:
-            return
+        if dq < 1e-6:
+            return False
         self.r.move_joints(q_deg, duration or max(2.0, dq / self.m["joint_speed_deg_s"]))
+        return True
 
     def go_pose(self, T_tool, max_dev_deg):
         q = self.ik_near(T_tool, self.q_deg(), max_dev_deg)

@@ -39,18 +39,25 @@ color_marker:                        # the marker sticker on the head's top face
   yaw_penalty: 0.3            # cloud mode: cost of a 45 deg yaw offset (a yaw offset must win by clear evidence, not by noise)
   min_window_points: 30       # image mode: a pad window needs at least this many head points
   grid_m: 0.001               # image mode grid search: jaw-centre grid spacing over the head
+  jaw_yaw_offsets_deg: [0, 90]   # image mode: ONLY these jaw yaws are tried, relative to the jaw axis at the close-view (home) wrist orientation (base yaw 85.5 deg: along y). 0 = wrist joint 6 at home; +90 and -90 are the same line (the two jaw flips). For the cable as placed on 2026-11-10: 0 = the narrower side faces, +-90 = the wider faces. Empty list = sweep every yaw_step_deg
+  wide_face_offset_deg: auto  # image mode: the jaw offset above that lands on the WIDER faces. auto = from the sticker plane (the sticker is on a wide face of the plug, 15.0 x 7.5 mm in the STEP model): the offset closest to the plane normal's direction; needs a plane >= 55 deg from horizontal. A number (0 or 90) forces it; null = measure the face length in the cloud (unreliable)
   yaw_step_deg: 5             # ... jaw yaw step over 180 deg at every grid point
   center_tol_m: 0.0015        # ... the jaw centre must be this close to the middle of the head gap
   contact_band_m: 0.0015      # ... contact band at each end of the gap (points that touch the pads)
   finger_box_h_m: 0.012       # ... finger box height above the fingertip for the collision test
+  finger_clearance_m: 0.003   # ... the fingertip must stay this far above scene points (the panel top): depth and hand-eye errors are 1-2 mm
   max_finger_hits: 8          # ... scene (non-head) points allowed inside a finger box
-  w_anti: 1.0                 # ... cost weights: antipodal normals, width evenness, distance to the sticker (per 10 mm), contact points, gap width
+  w_anti: 1.0                 # ... cost weights. Quality: antipodal outline normals, width evenness along the pad, distance to the sticker (per 10 mm)
   w_even: 1.0
   w_center: 0.5
-  w_contact: 0.5
-  w_width: 0.5                # ... and the jaw gap width (per 20 mm): the grasp prefers the narrower gap
+  extra_depth_m: [0.003, 0.004, 0.005, 0.006, 0.007]   # ... each geometry is also tried this much BELOW the usual depth (sticker height - grasp_drop_m); the finger boxes must stay clear of the panel at each depth
+  w_depth: 0.5                # ... grip terms (each 0 for the best candidate, 1 for the worst): deeper (more wall in the pads, within the collision limit)
+  w_contact: 0.5              # ... covering more head points under the pads
+  w_face: 0.5                 # ... the pad lands on the longer wall (wider face: length of the wall along the pad strip)
   max_candidates_kept: 200    # image mode: best N candidates go to the plan / execute list (all valid ones are plotted)
-  min_head_points: 200        # image mode: head cloud needs at least this many points
+  marker_max_extent_m: 0.03   # a marker cluster whose xy extent is larger than this is not the sticker (e.g. a strip of the same colour on the panel); the target is the largest sticker-sized one
+  min_marker_points: 40       # close view: fewer marker points with depth than this = stop (camera not over the sticker, or no depth on it)
+  min_head_points: 100        # image mode: head cloud needs at least this many points
 gripper:                      # Gen3 Lite 2-finger; fingertip pad geometry to be measured
   max_open_m: 0.085           # from HW7 config (gripper_max_width_m)
   finger_width_m: null        # from the gripper scan (config/gripper_scan.yaml)
@@ -77,28 +84,23 @@ hold_check:                   # wrist camera check after the lift (HW7 rule: 0 f
 motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py)
   joint_speed_deg_s: 10       # largest joint, joint-space moves (HW7 used 8-10)
   line_speed_mps: 0.04        # descent / lift (HW7 lift_up 0.05)
-scan:                         # predefined workspace scan (/grasp/scan): 15 views, checked reachable from home (IK) 2026-11-07
+scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)
   table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
   home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here
   max_joint_dev_deg: 80       # a view/pre-grasp joint solution may differ this much per joint from where the arm starts (no wrist spinning)
   frames_per_view: 3          # depth frames per view, median-combined
+  close_frames: 5             # depth frames median-combined for the close-view grasp (single frames leave holes on the glossy sticker)
   gripper_positions: [0.0, 0.2, 0.4, 0.6, 0.78]   # /grasp/scan_gripper sweep (gripper moves, arm does not)
   look_at: [0.40, 0.0]        # oblique views tip the camera toward this base-frame x, y (workspace centre)
-  views:                      # [x, y, camera height above table (, tilt deg (, yaw deg))]; tilt turns the camera toward look_at, yaw spins it about base z
-    - [0.35,  0.00, 0.28]     # straight down, different positions
-    - [0.30, -0.12, 0.28]
-    - [0.30,  0.12, 0.28]
-    - [0.42,  0.12, 0.28]
-    - [0.42, -0.12, 0.28]
-    - [0.35,  0.00, 0.28, 0,  45]   # straight down, yawed
-    - [0.35,  0.00, 0.28, 0, -45]
-    - [0.38,  0.15, 0.22, 35]       # tilted, from the +y side
-    - [0.48,  0.10, 0.22, 35]       # tilted, far side
-    - [0.45,  0.05, 0.22, 45,  30]
-    - [0.45, -0.05, 0.22, 45, -30]
-    - [0.38, -0.15, 0.22, 35]       # tilted, from the -y side
-    - [0.32, -0.15, 0.25, 25]
-    - [0.27,  0.00, 0.26, 25]       # tilted, near side (gentler: steeper has no IK from home)
-    - [0.28,  0.06, 0.26, 25]
+  views_joints_deg:           # scan poses recorded by hand on 2026-11-10 (Kinova Web App monitoring screenshots in insertion_task/source/): the 6 joint angles (deg), visited as they are, NO IK.
+                              # All 7 see the head (0.20-0.29 m, optical axis 30-71 deg from straight down). Order = least joint travel (474 deg total, 89 deg largest move); the straight
+                              # joint-space path home -> poses -> home keeps the fingertip at least 57 mm above the base plane (forward kinematics, checked offline).
+    - [18.164,  29.433, 161.099, 267.225, 340.453, 293.253]   # screenshot 14-50-38, tool (0.175, -0.017, 0.120) m
+    - [71.722, 300.225,  83.550, 246.079, 265.089, 346.205]   # 14-55-16, tool (0.219,  0.163, 0.090) m
+    - [14.188, 300.220,  47.945, 285.347, 251.274, 292.387]   # 14-56-11, tool (0.325,  0.076, 0.114) m
+    - [43.424, 283.399,  33.434, 252.168, 235.527, 248.100]   # 14-57-47, tool (0.318,  0.130, 0.113) m
+    - [14.491, 282.908,  29.190, 272.075, 236.551, 278.948]   # 14-47-58, tool (0.333,  0.024, 0.083) m
+    - [332.207, 278.452, 20.002, 311.211, 230.333, 298.361]   # 14-58-42, tool (0.327, -0.098, 0.095) m
+    - [308.879, 280.278, 29.212, 311.470, 229.871, 233.206]   # 14-52-48, tool (0.245, -0.198, 0.100) m
 workspace:                    # base-frame x0, x1, y0, y1 (m) where the grasp target may be
   region: [0.18, 0.58, -0.32, 0.32]

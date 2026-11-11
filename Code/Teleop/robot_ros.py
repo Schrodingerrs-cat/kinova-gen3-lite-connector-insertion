@@ -124,6 +124,7 @@ class Robot(Node):
 
     def ik(self, T, seed_deg=None, timeout=0.5, tries=3):
         """Joint angles (deg) for the tool pose T (4x4, base frame), or None. MoveIt's solver is randomized, so it is retried."""
+        self.ik_error = "IK was not attempted"
         for _ in range(tries):
             req = GetPositionIK.Request()
             r = req.ik_request
@@ -135,11 +136,37 @@ class Robot(Node):
             st.joint_state.position = [float(v) for v in (self.q if seed_deg is None else np.radians(seed_deg))]
             r.robot_state = st
             fut = self.ik_srv.call_async(req)
-            self.spin_until(fut.done, 5.0)
-            res = fut.result()
-            if res is not None and res.error_code.val == MoveItErrorCodes.SUCCESS:
+            if not self.spin_until(fut.done, 5.0):
+                fut.cancel()
+                self.ik_error = "IK service did not respond within 5 s; check move_group / DDS"
+                return None
+            try:
+                res = fut.result()
+            except Exception as exc:
+                self.ik_error = f"IK service error: {exc}"
+                return None
+            if res is None:
+                self.ik_error = "IK service returned an empty response"
+                return None
+            code = res.error_code.val
+            if code == MoveItErrorCodes.SUCCESS:
                 d = dict(zip(res.solution.joint_state.name, res.solution.joint_state.position))
-                return np.degrees([d[j] for j in JOINTS])
+                if not all(j in d for j in JOINTS):
+                    self.ik_error = "IK response is missing arm joints"
+                    return None
+                q = np.degrees([d[j] for j in JOINTS])
+                if not np.isfinite(q).all():
+                    self.ik_error = "IK response contains non-finite joint angles"
+                    return None
+                self.ik_error = ""
+                return q
+            name = next((name for name in dir(MoveItErrorCodes)
+                         if name.isupper() and getattr(MoveItErrorCodes, name) == code), "UNKNOWN")
+            self.ik_error = f"MoveIt IK: {name} ({code})"
+            if code == MoveItErrorCodes.NO_IK_SOLUTION:
+                self.ik_error += "; full pose unsolved (translation holds orientation); try a smaller step or joint jog"
+            elif code == MoveItErrorCodes.TIMED_OUT:
+                self.ik_error += "; solver exhausted its time budget"
         return None
 
     def _pose(self, T):

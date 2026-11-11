@@ -1,0 +1,42 @@
+[INFO] [launch]: All log files can be found below /home/aryans-cat/.ros/log/2026-11-10-14-17-13-079460-aryan-209740
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: 🚀 Launching as Normal ROS Node
+[INFO] [realsense2_camera_node-1]: process started with pid [209744]
+[realsense2_camera_node-1] 1794338233.173212 [0] realsense2: selected interface "lo" is not multicast-capable: disabling multicast
+[realsense2_camera_node-1] [0m[INFO] [1794338233.175998517] [camera.camera]: RealSense ROS v4.58.4[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.176049356] [camera.camera]: Built with LibRealSense v2.58.4[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.176057412] [camera.camera]: Running with LibRealSense v2.58.4[0m
+[realsense2_camera_node-1]  10/11 14:17:13,276 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,276 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,276 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,277 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,277 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,348 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,348 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,348 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,348 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1]  10/11 14:17:13,348 ERROR [127743995930176] (librealsense-exception.h:53) Failed to read modalias Last Error: No such file or directory
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353228919] [camera.camera]: Device with serial number 262122273177 was found.
+[realsense2_camera_node-1] [0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353346357] [camera.camera]: Device with physical ID /sys/devices/pci0000:00/0000:00:14.0/usb3/3-2/3-2.3/3-2.3:1.0/video4linux/video8 was found.[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353374626] [camera.camera]: Device with name RealSense D405 was found.[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353641837] [camera.camera]: Device with port number 3-2.3 was found.[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353659495] [camera.camera]: Device USB type: 2.1[0m
+[realsense2_camera_node-1] [33m[WARN] [1794338233.353672885] [camera.camera]: Device 262122273177 is connected using a 2.1 port. Reduced performance is expected.[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353690352] [camera.camera]: Starting device RealSense D405 (Product ID: 0x0B5B)[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.353777901] [camera.camera]: getParameters...[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354345475] [camera.camera]: JSON file is not provided[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354362984] [camera.camera]: Device Name: RealSense D405[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354375855] [camera.camera]: Device Serial No: 262122273177[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354390377] [camera.camera]: Device physical port: /sys/devices/pci0000:00/0000:00:14.0/usb3/3-2/3-2.3/3-2.3:1.0/video4linux/video8[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354404611] [camera.camera]: Device FW version: 5.17.0.10[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354417092] [camera.camera]: Device Product ID: 0x0B5B[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.354430919] [camera.camera]: Sync Mode: Off[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.471915074] [camera.camera]: Set ROS param depth_module.depth_profile to default: 848x480x10[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.472566158] [camera.camera]: Set ROS param depth_module.color_profile to default: 848x480x10[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.473162016] [camera.camera]: Set ROS param depth_module.infra_profile to default: 848x480x10[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.477918826] [camera.camera]: Stopping Sensor: Depth Module[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.488523133] [camera.camera]: Starting Sensor: Depth Module[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.492635710] [camera.camera]: Open profile: stream_type: Color(0), Format: RGB8, Width: 848, Height: 480, FPS: 10[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.492663076] [camera.camera]: Open profile: stream_type: Depth(0), Format: Z16, Width: 848, Height: 480, FPS: 10[0m
+[realsense2_camera_node-1] [0m[INFO] [1794338233.494633955] [camera.camera]: RealSense Node Is Up![0m

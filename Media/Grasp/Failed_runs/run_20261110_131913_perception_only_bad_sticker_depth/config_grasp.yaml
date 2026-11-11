@@ -1,0 +1,104 @@
+# null = NOT MEASURED. load_config() refuses to run until every null is filled
+# (plan/SHARED_PRIMITIVES_CHECKLIST.md: no unmeasured constants).
+# null = NOT MEASURED. load_config() refuses to run until every null is filled (the gripper ones come from /grasp/scan_gripper).
+# No connector dimensions are configured: position / axes / width come from the marker sticker and the image. Every stage is explained in PIPELINE.md.
+cloud:                        # stage 1: clean cloud (all sizes in metres, independent of connector size)
+  voxel_m: 0.0008             # one averaged point per voxel (was 1 mm: finer on 2026-11-07)
+  outlier_radius_m: 0.003     # a point needs outlier_min_nb neighbours within this radius
+  outlier_min_nb: 4
+  edge_jump_m: 0.003          # depth discontinuity (3x3) above which a pixel is dropped
+color_marker:                        # the marker sticker on the head's top face (colour thresholding in the image). HSV measured on the real head 2026-11-07: H 93, S 219, V 138
+  h: [80, 105]                # OpenCV hue range (0-179)
+  s_min: 140                  # handwriting on the label strip is the same hue but paler / flat on the table (removed by table RANSAC)
+  v_min: 60
+  edge_jump_m: 0.004
+  voxel_m: 0.0005             # marker cloud is small: 0.5 mm
+  outlier_radius_m: 0.002
+  outlier_min_nb: 3
+  table_thresh_m: 0.003       # RANSAC inlier distance for the table plane
+  min_above_table_m: 0.003    # object = points this far above the table
+  max_above_table_m: 0.08
+  cluster_eps_m: 0.006        # DBSCAN on the above-table points (3 mm voxel)
+  cluster_min_pts: 20
+  marker_eps_m: 0.003          # DBSCAN on the marker points
+  marker_min_pts: 15
+  normal_knn: 15
+  max_nz: 0.6                 # marker plane points: normal this horizontal (vertical-ish faces)
+  min_plane_points: 40
+  dark_v: 70                  # housing = pixels darker than this (HSV value) or marker-coloured, connected to the sticker
+  footprint_radius_m: 0.022   # only pixels this close to the sticker are considered housing (keeps the cable and bolts out)
+  grasp_drop_m: 0.008         # fingertips this far BELOW the sticker top face. CHOSEN constant (not measured): the depth of the head sides is unreliable
+  head_band_m: [0.060, 0.060]  # image mode: head points kept this far below / above the sticker height (wide on purpose: the dark body is real data)
+  candidate_search: true      # CLOUD mode only: true = search (families x yaws x pad positions, ranked), false = ONE closed-form grasp. The image (head) mode always runs its grid search
+  n_offsets: 5                # cloud mode: pad positions along the sticker edge
+  offset_span_m: 0.006        # ... spread +- this around the sticker centre
+  contact_faces: edge_prior   # cloud mode: which side faces the pads touch: edge_prior (use jaw_edge) | larger (jaw along the SHORTER extent: pads on the wider faces) | smaller
+  extent_source: sticker      # cloud mode: sizes / axes for that choice from the marker sticker rectangle (marker only) | footprint (dark + marker outline of the head in the image)
+  jaw_edge: long              # cloud mode: jaws close along the sticker's LONG edge (true when the sticker is applied with its long edge across the head)
+  yaw_steps_deg: [-10, 0, 10] # cloud mode: jaw yaw offsets searched around each edge direction
+  yaw_penalty: 0.3            # cloud mode: cost of a 45 deg yaw offset (a yaw offset must win by clear evidence, not by noise)
+  min_window_points: 30       # image mode: a pad window needs at least this many head points
+  grid_m: 0.001               # image mode grid search: jaw-centre grid spacing over the head
+  yaw_step_deg: 5             # ... jaw yaw step over 180 deg at every grid point
+  center_tol_m: 0.0015        # ... the jaw centre must be this close to the middle of the head gap
+  contact_band_m: 0.0015      # ... contact band at each end of the gap (points that touch the pads)
+  finger_box_h_m: 0.012       # ... finger box height above the fingertip for the collision test
+  max_finger_hits: 8          # ... scene (non-head) points allowed inside a finger box
+  w_anti: 1.0                 # ... cost weights: antipodal normals, width evenness, distance to the sticker (per 10 mm), contact points, gap width
+  w_even: 1.0
+  w_center: 0.5
+  w_contact: 0.5
+  w_width: 0.5                # ... and the jaw gap width (per 20 mm): the grasp prefers the narrower gap
+  max_candidates_kept: 200    # image mode: best N candidates go to the plan / execute list (all valid ones are plotted)
+  min_head_points: 200        # image mode: head cloud needs at least this many points
+gripper:                      # Gen3 Lite 2-finger; fingertip pad geometry to be measured
+  max_open_m: 0.085           # from HW7 config (gripper_max_width_m)
+  finger_width_m: null        # from the gripper scan (config/gripper_scan.yaml)
+  finger_thickness_m: null    # from the gripper scan
+  finger_length_m: null       # visible finger length above the TCP, from the gripper scan
+  finger_tip_below_tcp_m: 0.0 # TCP is defined AT the fingertip ends (HW7 touch measurement)
+  tcp_in_tool_xyz_m: [0.0, 0.0, 0.035]  # HW7 calibration/tip_offset_measured.json (touch on paper)
+  tcp_in_tool_quat_xyzw: [0.0, 0.0, -0.7071068, 0.7071068]  # z_G=tool z (approach), y_G=tool x (jaw axis, per HW7 grasp_plan)
+  close_cmd: 0.81             # HW7 GRIP_CLOSED: fully closed, empty (0 = open)
+  close_effort: 30.0          # HW7 value; lower it if the housing deforms
+  position_to_width_m: null   # [[gripper_pos, jaw_gap_m], ...] from the gripper scan
+  empty_frac: 0.975           # HW7: settled position above this fraction of close_cmd = closed on nothing
+camera:
+  hand_eye_xyz_m: [-0.0080293, -0.0495603, -0.0909769]  # HW7 calibration/hand_eye.json; re-verify if the camera was remounted
+  hand_eye_quat_xyzw: [0.0097493, -0.0046708, -0.0127007, 0.9998609]
+grasp:
+  open_margin_m: 0.012        # per-side clearance when open (hand-eye error is ~10 mm)
+  max_joint_dev_deg: 120      # pre-grasp joints may differ this much from the view pose (jaw yaw can need ~90 deg of joint 6)
+  standoff_m: 0.06            # pre-grasp distance along the approach
+  lift_m: 0.08
+hold_check:                   # wrist camera check after the lift (HW7 rule: 0 false positives in 319 empty-hand frames there)
+  tip_max_m: 0.20             # depth between the fingertips below this
+  margin_m: 0.08              # and the table in the lower image corners at least this much farther
+motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py)
+  joint_speed_deg_s: 10       # largest joint, joint-space moves (HW7 used 8-10)
+  line_speed_mps: 0.04        # descent / lift (HW7 lift_up 0.05)
+scan:                         # predefined workspace scan (/grasp/scan): 15 views, checked reachable from home (IK) 2026-11-07
+  table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
+  home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here
+  max_joint_dev_deg: 80       # a view/pre-grasp joint solution may differ this much per joint from where the arm starts (no wrist spinning)
+  frames_per_view: 3          # depth frames per view, median-combined
+  gripper_positions: [0.0, 0.2, 0.4, 0.6, 0.78]   # /grasp/scan_gripper sweep (gripper moves, arm does not)
+  look_at: [0.40, 0.0]        # oblique views tip the camera toward this base-frame x, y (workspace centre)
+  views:                      # [x, y, camera height above table (, tilt deg (, yaw deg))]; tilt turns the camera toward look_at, yaw spins it about base z
+    - [0.35,  0.00, 0.28]     # straight down, different positions
+    - [0.30, -0.12, 0.28]
+    - [0.30,  0.12, 0.28]
+    - [0.42,  0.12, 0.28]
+    - [0.42, -0.12, 0.28]
+    - [0.35,  0.00, 0.28, 0,  45]   # straight down, yawed
+    - [0.35,  0.00, 0.28, 0, -45]
+    - [0.38,  0.15, 0.22, 35]       # tilted, from the +y side
+    - [0.48,  0.10, 0.22, 35]       # tilted, far side
+    - [0.45,  0.05, 0.22, 45,  30]
+    - [0.45, -0.05, 0.22, 45, -30]
+    - [0.38, -0.15, 0.22, 35]       # tilted, from the -y side
+    - [0.32, -0.15, 0.25, 25]
+    - [0.27,  0.00, 0.26, 25]       # tilted, near side (gentler: steeper has no IK from home)
+    - [0.28,  0.06, 0.26, 25]
+workspace:                    # base-frame x0, x1, y0, y1 (m) where the grasp target may be
+  region: [0.18, 0.58, -0.32, 0.32]

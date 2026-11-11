@@ -1,0 +1,7 @@
+[   0.1 s] arm is 87 deg from home: going home first
+[   8.9 s] home -> OK: at home (was 87 deg away)
+[  98.3 s] scan -> OK: scan 20261110_140754: 7 views (skipped []), 1200630 fused points, 5526 marker points; ICP corrections vs earlier views: median 6.9 mm, max 29.6 mm
+[ 102.0 s] color_target -> OK: merged scan 20261110_140754: table tilt 3.4 deg (99649 inliers), 143 above-table clusters, marker clusters [3107, 2089, 186, 46, 20, 16]; target (marker centroid) [268.0, -30.0, -15.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[ 108.0 s] view -> OK: camera over [ 0.268 -0.03  -0.015] at 180 mm
+[ 109.6 s] head_grasp -> FAILED: no housing pixels around the marker sticker
+[ 109.8 s] outcome: STOPPED_BEFORE_GRASP: sticker grasp could not be computed

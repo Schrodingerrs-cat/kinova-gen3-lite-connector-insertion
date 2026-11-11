@@ -1,0 +1,6 @@
+1794070954.173813 [0]       ros2: selected interface "lo" is not multicast-capable: disabling multicast
+requester: making request: std_srvs.srv.Trigger_Request()
+
+response:
+std_srvs.srv.Trigger_Response(success=True, message='scan 20261107_120234: 15 views (skipped []), 1647577 fused points; ICP corrections vs earlier views: median 3.9 mm, max 10.8 mm')
+

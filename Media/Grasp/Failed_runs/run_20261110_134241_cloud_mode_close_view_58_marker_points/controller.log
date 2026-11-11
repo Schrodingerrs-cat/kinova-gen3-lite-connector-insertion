@@ -1,0 +1,7 @@
+[   0.1 s] arm is 118 deg from home: going home first
+[  12.1 s] home -> OK: at home (was 118 deg away)
+[  97.6 s] scan -> OK: scan 20261110_134254: 7 views (skipped []), 1159103 fused points, 3740 marker points; ICP corrections vs earlier views: median 9.8 mm, max 29.4 mm
+[ 101.0 s] color_target -> OK: merged scan 20261110_134254: table tilt 4.6 deg (104706 inliers), 136 above-table clusters, marker clusters [3616, 15]; target (marker centroid) [263.0, -20.0, 3.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[ 106.4 s] view -> OK: camera over [ 0.263 -0.02   0.003] at 180 mm
+[ 108.1 s] cloud_grasp -> FAILED: only 58 marker points in the close view: camera over the sticker? (/grasp/view)
+[ 108.2 s] outcome: STOPPED_BEFORE_GRASP: sticker grasp could not be computed

@@ -1,0 +1,5 @@
+requester: making request: std_srvs.srv.Trigger_Request()
+
+response:
+std_srvs.srv.Trigger_Response(success=True, message='DRY RUN, gripper not moved. Would sweep positions [0.0, 0.2, 0.4, 0.6, 0.78] with empty space between the fingers')
+

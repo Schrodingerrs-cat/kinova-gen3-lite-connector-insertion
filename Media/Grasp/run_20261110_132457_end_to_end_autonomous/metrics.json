@@ -1,0 +1,43 @@
+{
+ "started": "2026-11-10T13:24:58",
+ "grasp_requested": true,
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 4.4,
+   "message": "at home (was 41 deg away)"
+  },
+  "scan": {
+   "ok": true,
+   "seconds": 143.8,
+   "message": "scan 20261110_132502: 15 views (skipped []), 2290259 fused points, 9149 marker points; ICP corrections vs earlier views: median 4.5 mm, max 16.7 mm"
+  },
+  "color_target": {
+   "ok": true,
+   "seconds": 4.4,
+   "message": "merged scan 20261110_132502: table tilt 4.6 deg (97125 inliers), 214 above-table clusters, marker clusters [9110, 23]; target (marker centroid) [259.0, -22.0, 4.0] mm. Orientation of the merged patch is NOT used (registration smear)"
+  },
+  "view": {
+   "ok": true,
+   "seconds": 5.4,
+   "message": "camera over [ 0.259 -0.022  0.004] at 180 mm"
+  },
+  "sticker_grasp": {
+   "ok": true,
+   "seconds": 0.4,
+   "message": "sticker median (259.3, -24.2, 8.3) mm, 682 pts; housing footprint 25.2 x 12.9 mm; jaw axis (-0.30, 0.95); opening 36.9 mm; TCP (259.3, -24.2, 0.3) mm (run 20261110_132737)"
+  },
+  "allow_grasp": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "grasp motion ENABLED (needs dry_run:=false too)"
+  },
+  "execute": {
+   "ok": true,
+   "seconds": 11.6,
+   "message": "held (finger check: no, wrist camera: yes); fingers stopped at ~0.4 mm; camera depth between the tips 0.120 m, table 0.261 m"
+  }
+ },
+ "outcome": "GRASP_REPORTED_HELD: held (finger check: no, wrist camera: yes); fingers stopped at ~0.4 mm; camera depth between the tips 0.120 m, table 0.261 m",
+ "seconds_total": 171.4
+}

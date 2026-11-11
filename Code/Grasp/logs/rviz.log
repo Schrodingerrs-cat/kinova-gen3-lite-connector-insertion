@@ -1,0 +1,6 @@
+Warning: Ignoring XDG_SESSION_TYPE=wayland on Gnome. Use QT_QPA_PLATFORM=wayland to run on Wayland anyway.
+1794070455.382053 [0]      rviz2: selected interface "lo" is not multicast-capable: disabling multicast
+[INFO] [1794070455.523201586] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1794070455.523257143] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[INFO] [1794070455.536866727] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1794070455.652279781] [rviz2]: Stereo is NOT SUPPORTED

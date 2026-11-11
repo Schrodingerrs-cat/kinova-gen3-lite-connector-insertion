@@ -1,0 +1,5 @@
+[ 135.7 s] scan -> OK: scan 20261110_131913: 14 views (skipped [8]), 2177168 fused points, 6622 marker points; ICP corrections vs earlier views: median 4.3 mm, max 19.8 mm
+[ 141.3 s] color_target -> OK: merged scan 20261110_131913: table tilt 4.7 deg (97906 inliers), 235 above-table clusters, marker clusters [6566, 21]; target (marker centroid) [262.0, -34.0, 5.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[ 146.8 s] view -> OK: camera over [ 0.262 -0.034  0.005] at 180 mm
+[ 148.2 s] sticker_grasp -> OK: sticker median (263.8, -34.8, -47.5) mm, 181 pts; housing footprint 33.7 x 18.7 mm; jaw axis (-0.21, -0.98); opening 42.7 mm; TCP (263.8, -34.8, -55.5) mm (run 20261110_132141)
+[ 148.3 s] outcome: PERCEPTION_ONLY: grasp computed, not requested

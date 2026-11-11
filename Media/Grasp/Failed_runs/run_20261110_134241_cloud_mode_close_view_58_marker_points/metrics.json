@@ -1,0 +1,33 @@
+{
+ "started": "2026-11-10T13:42:42",
+ "grasp_requested": true,
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 12.0,
+   "message": "at home (was 118 deg away)"
+  },
+  "scan": {
+   "ok": true,
+   "seconds": 85.5,
+   "message": "scan 20261110_134254: 7 views (skipped []), 1159103 fused points, 3740 marker points; ICP corrections vs earlier views: median 9.8 mm, max 29.4 mm"
+  },
+  "color_target": {
+   "ok": true,
+   "seconds": 3.4,
+   "message": "merged scan 20261110_134254: table tilt 4.6 deg (104706 inliers), 136 above-table clusters, marker clusters [3616, 15]; target (marker centroid) [263.0, -20.0, 3.0] mm. Orientation of the merged patch is NOT used (registration smear)"
+  },
+  "view": {
+   "ok": true,
+   "seconds": 5.4,
+   "message": "camera over [ 0.263 -0.02   0.003] at 180 mm"
+  },
+  "cloud_grasp": {
+   "ok": false,
+   "seconds": 0.6,
+   "message": "only 58 marker points in the close view: camera over the sticker? (/grasp/view)"
+  }
+ },
+ "outcome": "STOPPED_BEFORE_GRASP: sticker grasp could not be computed",
+ "seconds_total": 108.1
+}
