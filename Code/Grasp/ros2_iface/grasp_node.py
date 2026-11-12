@@ -11,6 +11,7 @@ Services (std_srvs/Trigger):
   /grasp/view          camera straight over that target at `view_height_m`
   /grasp/head_grasp    DEFAULT. IMAGE MODE: head segmented in the image, only those pixels lifted to a head cloud, grid search of grasp candidates on it, ranked
                        (param grasp_mode:=head is the default of /grasp/pick; the sticker mode is archived in archive/sticker_mode_20261110)
+  /grasp/model_grasp   MODEL MODE (own mode, grasp_mode:=model): ArUco tag on the panel -> plug pose (config/panel_map.yaml) -> candidates of the STEP-model search placed in the base frame
   /grasp/cloud_grasp   CLOUD MODE: marker region only (sticker axes from the image edges, position from the marker 3D points), candidate search + ranking
                        (grasp_mode:=cloud)
   /grasp/allow_grasp   explicit enable; until called, /grasp/execute only checks the motion
@@ -48,8 +49,9 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the nod
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
 from housing_grasp.config import load_config  # noqa: E402
+from housing_grasp.model_mode import detect_tag_pose, load_panel_map, place_candidates, plug_pose, plug_pose_from_sticker, tag_plane_height  # noqa: E402
 from housing_grasp.color_marker import wide_face_offset, analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
-from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_grid_search  # noqa: E402
+from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_grid_search, report_model_overlay  # noqa: E402
 from housing_grasp.gripper import finger_points, grasp_held, measure_fingers, summarize  # noqa: E402
 from housing_grasp.scan import fuse_clouds, view_cloud, view_poses  # noqa: E402
 from arm import Arm  # noqa: E402
@@ -118,7 +120,7 @@ class GraspNode(Node):
         for name, fn in (("pick", self.pick), ("scan_gripper", self.scan_gripper), ("scan", self.scan),
                          ("view", self.view), ("execute", self.execute), ("home", self.home),
                          ("execute_proposal", self.execute_proposal), ("color_target", self.color_target),
-                         ("allow_grasp", self.allow_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp)):
+                         ("allow_grasp", self.allow_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp), ("model_grasp", self.model_grasp)):
             self.create_service(Trigger, f"/grasp/{name}", self._srv(fn), callback_group=cb)
         self.lock = threading.Lock()
         self.get_logger().info("grasp_node ready (dry_run=%s)" % self.get_parameter("dry_run").value)
@@ -311,7 +313,7 @@ class GraspNode(Node):
     def pick(self):
         """MAIN PIPELINE: scan (colour) -> merge/ICP + table RANSAC + marker clusters (coarse target) -> camera over it
         -> marker-sticker grasp -> execute. Motion needs dry_run:=false AND /grasp/allow_grasp (otherwise execute only checks)."""
-        grasp = dict(head=self.head_grasp, cloud=self.cloud_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
+        grasp = dict(head=self.head_grasp, cloud=self.cloud_grasp, model=self.model_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
         return " | ".join([self.scan(), self.color_target(), self.view(), grasp(), self.execute()])
 
     def _object_in_hand(self):
@@ -400,6 +402,47 @@ class GraspNode(Node):
         b = cands[0]
         return "image mode grid search (wider-face jaw offset %s from the sticker plane: normal %.0f deg, tilt %.0f deg from horizontal): head cloud %d points; %d candidates generated, %d valid; best yaw %.0f deg, %.1f mm from the sticker, TCP (%.1f, %.1f, %.1f) mm, jaw (%.2f, %.2f), width %.1f mm, opening %.1f mm (run %s)" % (
             g["wide_face_offset_deg"], az, tilt, len(P), stats["generated"], stats["valid"], b["yaw_deg"], b["offset_m"] * 1e3, *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
+
+    def model_grasp(self):
+        """MODEL MODE (STEP/STL + panel ArUco tag), separate from the head and cloud modes: tag pose in the close view -> plug pose (stored offset, config/panel_map.yaml)
+        -> candidates of the offline model search (plug frame, CAD_files/*_grasp_candidates_*.json) placed in the base frame. The sticker, if seen, is only compared."""
+        depth, K, _, T_BC = self._frame()
+        color, gr, gc, g = self._color_bgr(), self.cfg["gripper"], self.cfg["grasp"], self.cfg["color_marker"]
+        pm = load_panel_map(ROOT / "config" / "panel_map.yaml")
+        entry = pm["plugs"][pm["plug"]]
+        tag = detect_tag_pose(color, K, T_BC, pm["tag"])
+        zd = tag_plane_height(depth, K, T_BC, tag["corners_px"])   # panel height from the depth over the tag (more accurate than the tag's scale)
+        z_note = "" if zd is None else "; panel height %.1f mm from depth (tag scale: %.1f mm)" % (zd * 1e3, tag["T"][2, 3] * 1e3)
+        if zd is not None:
+            tag["T"][2, 3] = zd
+        plug = plug_pose(tag["T"], entry["T_tag_plug"])
+        cands = place_candidates(json.load(open(ROOT.parents[1] / entry["candidates"])), plug, gc["open_margin_m"], gr["max_open_m"], pm["max_candidates"])
+        if not cands:
+            raise RuntimeError("no model candidate fits the gripper opening")
+        note, gp = "", marker_points(depth, color, K, T_BC, g, self.target)
+        if len(gp) >= g["min_marker_points"]:   # the sticker only checks the tag-based plug pose
+            st = plug_pose_from_sticker(gp, T_BC[:3, 3])
+            d, dyaw = float(np.linalg.norm(st["xy"] - plug["xy"])), float(np.degrees(abs(((st["yaw"] - plug["yaw"] + np.pi / 2) % np.pi) - np.pi / 2)))
+            note = "; sticker check: plug %.1f mm and %.0f deg from the tag prediction" % (d * 1e3, dyaw)
+            if pm["verify_tol_m"] is not None and d > pm["verify_tol_m"]:
+                raise RuntimeError("tag and sticker disagree on the plug position (%.1f mm > %.1f mm): wrong tag, moved panel or plug not seated" % (d * 1e3, pm["verify_tol_m"] * 1e3))
+        grasps = self._grasps_from(cands)
+        box = np.array([[plug["xy"][0], plug["xy"][1], plug["z"] + h] for h in (0.0, 0.02)])
+        self.last = dict(ok=True, grasps=grasps, stamp=time.time(), cloud=box, cluster=None)
+        run = WORK / "runs" / time.strftime("%Y%m%d_%H%M%S")
+        run.mkdir(parents=True, exist_ok=True)
+        self.last_run = run
+        (run / "plan.json").write_text(json.dumps(dict(
+            ok=True, method="model_mode", plug=pm["plug"], tag=dict(id=pm["tag"]["id"], side_px=tag["side_px"], reproj_px=tag["reproj_px"], T_base_tag=tag["T"]),
+            plug_pose=plug, sticker_centroid_median_m=np.r_[plug["xy"], plug["z"]], n_candidates=len(cands), candidates=cands,
+            grasps=[dict(flip=q["flip"], T_BG=q["T_BG"], cost=q["cost"]) for q in grasps]), indent=1, default=lambda o: np.asarray(o).tolist()))
+        np.save(run / "marker_close_points.npy", gp.astype(np.float32))
+        np.savez_compressed(run / "frame.npz", depth=depth, K=K, T_BC=T_BC, color=color)
+        report_model_overlay(run / "plots", color, K, T_BC, tag, plug, cands)
+        self._publish(self.last)
+        b = cands[0]
+        return "model mode (%s, tag %d px wide, reprojection %.2f px): plug (%.1f, %.1f) mm yaw %.1f deg; %d candidates; best yaw %.0f deg, tip %.0f mm above the panel, gap %.1f mm, opening %.1f mm, TCP (%.1f, %.1f, %.1f) mm%s %s (run %s)" % (
+            pm["plug"], tag["side_px"], tag["reproj_px"], *(plug["xy"] * 1e3), np.degrees(plug["yaw"]), len(cands), b["yaw_deg"], b["u0_mm"], b["width_m"] * 1e3, b["open_width_m"] * 1e3, *(b["p"] * 1e3), note, z_note, run.name)
 
     def cloud_grasp(self):
         """CLOUD MODE (marker region only, no black body): the marker pixels are the region of interest. Sticker position and height from the marker 3D points

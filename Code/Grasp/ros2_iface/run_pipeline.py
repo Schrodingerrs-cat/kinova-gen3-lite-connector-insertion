@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Colour-marker pipeline end to end, with data collection into a Media/Grasp run folder.
 
-python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud]
+python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud|model]
 
 home -> scan 7 views (colour) -> merge + ICP -> table RANSAC, clusters, marker clusters (coarse target)
      -> camera over the target -> marker-sticker grasp (close view) -> [--grasp] execute (+ wrist-camera hold check).
@@ -33,7 +33,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("run_dir")
 ap.add_argument("--grasp", action="store_true")
 ap.add_argument("--skip-scan", action="store_true")
-ap.add_argument("--mode", choices=("head", "cloud"), default="head", help="head = head cloud + grid search (default); cloud = marker region only + candidate search")
+ap.add_argument("--mode", choices=("head", "cloud", "model"), default="head", help="head = head cloud + grid search (default); cloud = marker region only + candidate search; model = STEP model + ArUco tag on the panel (config/panel_map.yaml)")
 args = ap.parse_args()
 RUN = pathlib.Path(args.run_dir)
 for sub in ("screenshots", "videos", "plots"):
@@ -101,7 +101,7 @@ try:
     assert ok, "camera could not go over the target"
     time.sleep(1.0)
     snap("03_close_view")
-    ok, _ = call(dict(head="head_grasp", cloud="cloud_grasp")[args.mode], 300)
+    ok, _ = call(dict(head="head_grasp", cloud="cloud_grasp", model="model_grasp")[args.mode], 300)
     snap("04_after_grasp_plan")
     if not ok:
         metrics["outcome"] = "STOPPED_BEFORE_GRASP: sticker grasp could not be computed"

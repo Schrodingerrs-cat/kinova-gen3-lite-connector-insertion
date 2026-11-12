@@ -46,6 +46,7 @@ Needs Terminal 1 up and the camera over the sticker (Step 0 leaves it there).
 ```bash
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode head
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode cloud
+python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode model     # only after the tag is on the panel and config/panel_map.yaml is measured (PIPELINE.md 5.4)
 ```
 Each writes plots into `$RUN/plots/`. The head mode writes the six grid-search figures (normals, candidates, grasp points, counts, cost per yaw). Compare the three tool points and jaw axes in `$RUN/controller.log` before you let any of them move the arm.
 

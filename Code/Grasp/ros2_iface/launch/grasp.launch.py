@@ -1,4 +1,4 @@
-"""ros2 launch ros2_iface/launch/grasp.launch.py [dry_run:=true] [rviz:=true] [candidate_search:=config|on|off] [grasp_mode:=head|cloud]
+"""ros2 launch ros2_iface/launch/grasp.launch.py [dry_run:=true] [rviz:=true] [candidate_search:=config|on|off] [grasp_mode:=head|cloud|model]
 
 Grasp node + camera TF into the robot tree + RViz. Needs the arm driver, MoveIt (IK / line paths) and
 realsense2_camera already running (run_ros.sh starts them), every terminal with `source ros_env.sh`.
@@ -35,7 +35,7 @@ def generate_launch_description():
         DeclareLaunchArgument("dry_run", default_value="true"),
         DeclareLaunchArgument("rviz", default_value="true"),
         DeclareLaunchArgument("candidate_search", default_value="config", description="config | on | off"),
-        DeclareLaunchArgument("grasp_mode", default_value="head", description="mode of /grasp/pick: head | cloud"),
+        DeclareLaunchArgument("grasp_mode", default_value="head", description="mode of /grasp/pick: head | cloud | model"),
         Node(package="tf2_ros", executable="static_transform_publisher", name="hand_eye_tf",
              arguments=["--x", x, "--y", y, "--z", z, "--qx", qx, "--qy", qy, "--qz", qz, "--qw", qw,
                         "--frame-id", "tool_frame", "--child-frame-id", "camera_link"]),

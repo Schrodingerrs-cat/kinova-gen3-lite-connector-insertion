@@ -171,3 +171,31 @@ def report_cloud_candidates(out, G, rect, cands, top=8):
     ax.set_xlabel("base x (mm)"); ax.set_ylabel("base y (mm)"); ax.set_aspect("equal"); ax.legend(fontsize=7, loc="upper right")
     ax.set_title("Cloud mode: candidates searched on the marker region (%d candidates, top %d drawn)" % (len(cands), min(top, len(cands))))
     fig.tight_layout(); fig.savefig(out / "01_marker_cloud_candidates_topview.png", dpi=100); plt.close(fig)
+
+
+def report_model_overlay(out, color, K, T_BC, tag, plug, cands, top=3):
+    """Model mode: tag outline + axes, the plug's 15 x 7.5 mm footprint, and the best candidates' pad rectangles drawn on the close view."""
+    import cv2
+    out.mkdir(parents=True, exist_ok=True)
+    img, inv = color.copy(), np.linalg.inv(T_BC)
+
+    def px(p):
+        c = inv @ np.r_[p, 1]
+        return int(round(K[0, 0] * c[0] / c[2] + K[0, 2])), int(round(K[1, 1] * c[1] / c[2] + K[1, 2]))
+    cv2.polylines(img, [tag["corners_px"].astype(np.int32)], True, (0, 255, 0), 2)
+    o = tag["T"][:3, 3]
+    for ax, col in ((0, (0, 0, 255)), (1, (0, 255, 0))):   # tag x red, y green
+        cv2.line(img, px(o), px(o + tag["T"][:3, ax] * 0.02), col, 2)
+    cy, sy = np.cos(plug["yaw"]), np.sin(plug["yaw"])
+    Rz = np.array([[cy, -sy], [sy, cy]])
+    box = [plug["xy"] + Rz @ np.array([sx * 0.0075, sy_ * 0.00375]) for sx, sy_ in ((1, 1), (1, -1), (-1, -1), (-1, 1))]
+    cv2.polylines(img, [np.array([px(np.r_[q, plug["z"] + 0.02]) for q in box], np.int32)], True, (0, 165, 255), 2)   # plug footprint at the top of the housing (20 mm)
+    for k, q in enumerate(cands[:top]):
+        for sgn in (-1, 1):
+            e = q["p"] + sgn * q["jaw"] * q["width_m"] / 2
+            cv2.circle(img, px(e), 5, (0, 0, 255) if k == 0 else (0, 120, 255), -1)
+        cv2.line(img, px(q["p"] - q["jaw"] * q["open_width_m"] / 2), px(q["p"] + q["jaw"] * q["open_width_m"] / 2), (0, 0, 255) if k == 0 else (0, 120, 255), 1)
+    c0 = px(plug["xy"].tolist() + [plug["z"]])
+    cv2.imwrite(str(out / "01_model_overlay_full.png"), img)
+    cv2.imwrite(str(out / "01_model_overlay.png"), img[max(0, c0[1] - 140):c0[1] + 140, max(0, c0[0] - 200):c0[0] + 200])
+

@@ -16,7 +16,7 @@ def plug_frame(mesh, panel_z_mm):
 
 
 def search(P, N, pad_w=6.0, pad_len=25.0, u0s=range(3, 13), yaw_step=5, s_step=1.0, band=0.5, w=None):
-    """Returns candidates best first: dict(yaw_deg, s_mm, u0_mm, gap_mm, contact, face_mm, anti, cost)."""
+    """Returns candidates best first: dict(yaw_deg, s_mm, mid_mm (jaw-gap midpoint along the jaw axis), u0_mm, gap_mm, contact, face_mm, anti, cost)."""
     w = w or dict(anti=1.0, depth=0.5, contact=0.5, face=0.5, center=0.5)
     out = []
     for yaw in np.arange(0, 180, yaw_step):
@@ -37,7 +37,7 @@ def search(P, N, pad_w=6.0, pad_len=25.0, u0s=range(3, 13), yaw_step=5, s_step=1
                 for sel in ((tb < lo + band), (tb > hi - band)):
                     m = sel & (P[:, 2] >= u0) & (P[:, 2] <= u0 + pad_len)
                     fl.append(np.ptp(ta[m]) if m.sum() >= 3 else 0.0)
-                out.append(dict(yaw_deg=float(yaw), s_mm=float(s), u0_mm=float(u0), gap_mm=float(hi - lo), contact=int(min(left.sum(), right.sum())), face_mm=float(min(fl)), anti=float(anti)))
+                out.append(dict(yaw_deg=float(yaw), s_mm=float(s), mid_mm=float((hi + lo) / 2), u0_mm=float(u0), gap_mm=float(hi - lo), contact=int(min(left.sum(), right.sum())), face_mm=float(min(fl)), anti=float(anti)))
     if not out:
         return out
     umin, umax, cmax, fmax = min(q["u0_mm"] for q in out), max(q["u0_mm"] for q in out), max(q["contact"] for q in out), max(q["face_mm"] for q in out)
