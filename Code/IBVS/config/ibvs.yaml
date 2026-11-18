@@ -3,21 +3,30 @@
 status: UNCALIBRATED          # contact runs refuse this; set to CALIBRATED only after G0-G2 evidence exists
 setup_revision: setup_r0
 robot:
-  twist_topic: null           # picknik_twist_controller takes geometry_msgs/Twist; confirm the topic with ros2 control list_controllers
-  twist_controller: null      # controller name for switch_controller (e.g. the one from ros2 control list_controllers)
-  traj_controller: null
-  command_frame: null         # "tool" or "camera": frame the Twist is expressed in; validate with the one-axis free-space test
+  twist_topic: /twist_controller/commands  # installed Picknik controller's ~/commands, geometry_msgs/Twist
+  twist_controller: twist_controller
+  traj_controller: joint_trajectory_controller
+  command_frame: tool         # installed Kortex driver declares TOOL; physical one-axis validation still required
   workspace_box_B_m: null     # [xmin, xmax, ymin, ymax, zmin, zmax] tool origin in base_link
 camera:
-  K: null                     # 3x3 row-major, from calibration
-  distortion: null            # 5 coeffs
+  K:                         # live /camera/camera/color/camera_info, 848x480
+    - [435.03948974609375, 0.0, 426.5322265625]
+    - [0.0, 434.42132568359375, 238.1904296875]
+    - [0.0, 0.0, 1.0]
+  distortion: [-0.0516357421875, 0.052858754992485046, 0.0008795959292910993, -0.00021346555149648339, -0.017710227519273758]
   T_EC_xyz_m: null            # camera optical frame in tool frame (hand-eye)
   T_EC_quat_xyzw: null
 markers:
-  aruco_dict: null            # e.g. DICT_4X4_50
-  ids: null                   # marker ids used as features, 4 corners each
+  aruco_dict: DICT_6X6_50     # detected in Media/IBVS/reference/goal.png
+  ids: [30]                  # marker ids used as features, 4 corners each
+  detect_inverted_marker: true  # goal marker has a white border
   side_m: null                # printed marker side
-  target_pixels: null         # id -> 4 corners [[u,v]x4] captured at the safe pre-contact servo goal (s*)
+  target_pixels:              # goal.png; OpenCV marker-canonical order (keep these correspondences)
+    30:
+      - [540.492493, 357.574158]
+      - [313.694611, 342.113068]
+      - [313.582855, 117.002983]
+      - [562.526428, 126.479561]
   min_side_px: null
   max_jump_px: null           # corner jump between frames above this = bad detection
   min_valid_markers: null

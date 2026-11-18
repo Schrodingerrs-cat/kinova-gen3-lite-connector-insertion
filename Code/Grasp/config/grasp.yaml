@@ -104,3 +104,8 @@ scan:                         # predefined workspace scan (/grasp/scan): 7 recor
     - [308.879, 280.278, 29.212, 311.470, 229.871, 233.206]   # 14-52-48, tool (0.245, -0.198, 0.100) m
 workspace:                    # base-frame x0, x1, y0, y1 (m) where the grasp target may be
   region: [0.18, 0.58, -0.32, 0.32]
+
+post_grasp:
+  # Saved joint pose used by the IBVS home -> post-grasp -> alignment sequence.
+  joint_waypoints_deg:
+    - [8.08, 21.2791, 118.2989, -87.3795, 6.709, -82.6386]

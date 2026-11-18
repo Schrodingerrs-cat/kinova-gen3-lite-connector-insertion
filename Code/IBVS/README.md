@@ -1,49 +1,69 @@
-# IBVS + bounded search (Task A)
+# IBVS
 
-Implements `plan/Task_A_IBVS_Search_PLAN.md` work packages A2-A6 in software. Hardware: Kinova Gen3 Lite, wrist D405, ArUco markers beside the socket.
+This folder contains image-based visual servoing for the Kinova Gen3 Lite and wrist-mounted RealSense D405. The camera detects a rectangle, compares its corners with a desired image target, and the controller makes small joint corrections until the corners align.
 
-## Layout
-```
-ibvs/                 pure NumPy/OpenCV, no ROS (all unit-tested)
-  config.py           refuses null values; contact=True also refuses UNCALIBRATED and unset safety flags
-  frames.py           pose matrix, twist adjoint
-  markers.py          ArUco corners -> normalized points; validity = size + frame-to-frame jump
-  depth.py            per-corner depth with validity, fallback = median of valid corners, none valid = abort
-  control.py          interaction matrix, damped pseudoinverse, 3-DoF law, speed cap + slew limit, convergence counter
-  search.py           bounded candidate list (nominal first, Chebyshev ring, then prior-sigma distance)
-  guards.py           servo stop checks (stale camera/joints, workspace box, timeout, marker loss), axial step progress
-  verify.py           INSERTED_VERIFIED / NOT_INSERTED / UNKNOWN_SENSOR / FAULT from the independent sensor, dwell + staleness
-  state_machine.py    the plan's state machine for B0 / A1 / A2 over injected primitives
-  logger.py           CSV with the plan's data columns
-ros2_iface/ibvs_node.py   ROS 2 wiring: camera, Twist publisher, controller switch, guarded axial steps, taught pick
-config/ibvs.yaml     every value null / false until measured
-tests/                python3 -m pytest tests -q
-```
+The current system tests free-space alignment with an **open, empty gripper**. Grasping is handled separately in [`../Grasp`](../Grasp/README.md).
 
-## Method (what is and is not IBVS)
-- Features: ArUco corners, undistorted to normalized coordinates; error `e = s - s*`, `s*` captured at the safe pre-contact goal.
-- Law: `u = -lambda (L A)^+ W e` with `A` selecting lateral x_S, y_S and yaw about z_S (axes measured in the camera frame, `ibvs.socket_axes_in_C`). Other DoFs are not commanded.
-- Depth Z only enters `L` (**hybrid** IBVS, not pure). Standoff and roll/pitch come from the taught geometry.
-- Search offsets are applied after `servo_align` returns to `s*`, retracted, in the socket frame, rotating about the camera origin like the servo yaw. The plug-tip pivot (`T_EP`) is not modelled.
-- Insertion is short position-controlled steps along z_S; each step checks robot follow-through (not force). No force-guided search.
-- Success is only the independent sensor (`verification.topic`, std_msgs/Bool). Pose or depth never counts.
+## Code overview
 
-## Run
+| File or folder | Purpose |
+| --- | --- |
+| `run_alignment.sh` | Runs startup → home → saved post-grasp pose → IBVS. |
+| `run_joint2_priority.sh` | Runs IBVS from the current robot pose. |
+| `ros2_iface/alignment_test.py` | Handles ROS startup, camera feedback, planning, robot motion, and recording. |
+| `ros2_iface/joint2_priority_servo.py` | Runs the alignment loop, chooses corrections, and checks convergence. |
+| `ibvs/` | Rectangle tracking, control calculations, depth processing, collision-scene checks, and display helpers. |
+| `config/alignment.yaml` | Base controller and motion settings. |
+| `config/center_rectangle.yaml` | Desired rectangle, tracking settings, and alignment tolerances. |
+| `tests/` | Offline tests for control mathematics and component logic. |
+
+Home/post-grasp poses and camera-to-tool calibration come from [`../Grasp/config/grasp.yaml`](../Grasp/config/grasp.yaml). The older ArUco insertion/search implementation remains in `ros2_iface/ibvs_node.py`; the commands below use the current rectangle-alignment system.
+
+## How to test
+
+Run these commands from the repository root. Hardware tests require the arm, D405, ROS 2, and the installed Kinova/MoveIt workspace.
+
 ```bash
-source ../Grasp/ros_env.sh            # same DDS settings as every other terminal; driver + camera up (../Grasp/run_ros.sh)
-python3 ros2_iface/ibvs_node.py servo                 # dry run: logs the commands it would send, publishes nothing
-python3 ros2_iface/ibvs_node.py servo --live          # non-contact servo (needs servo-section config)
-python3 ros2_iface/ibvs_node.py cycle A2 --live       # full cycle; needs status CALIBRATED, sensor tests passed, supervisor flags
+cd /home/sri/kinova-gen3-lite-connector-insertion-master
+source Code/IBVS/ros_env.sh
 ```
-Output goes to `runs/<ts>/trial.csv`. Copy real runs, with video, into `Media/IBVS/` per `Media/RULES.md`.
 
-## Status (2026-11-07)
-**Not run on the arm.** 22 synthetic tests pass (closed-loop convergence with correct signs, interaction matrix vs finite differences, guards, state machine, config refusal, ArUco detection on rendered markers). These are logic checks, not hardware evidence; per `CLAUDE.md` the task is NOT DONE until the real arm shows the closed loop and the sensor verifies seating.
+### 1. Run the offline tests
 
-Blocking items (all `null` in `config/ibvs.yaml`): K / distortion / `T_EC` (HW7 hand-eye in `../Grasp/config/grasp.yaml` is an unverified estimate), marker layout and `s*`, `socket_axes_in_C`, twist topic + controller names + command frame, speed/travel/search limits, waypoints, seating sensor and its positive/negative tests, e-stop/supervisor.
+```bash
+python3 -m pytest Code/IBVS/tests -q
+```
 
-Assumptions to verify on the arm before trusting them:
-- `picknik_twist_controller` takes `geometry_msgs/Twist` (header confirmed); topic name, frame, and watchdog on stop are NOT confirmed.
-- Controller switching uses `start_controllers`/`stop_controllers` of `/controller_manager/switch_controller`.
-- Aligned depth is 16UC1 millimetres; the node reads the color/depth/camera_info topics hardcoded in `../Grasp/ros2_iface/robot_ros.py`.
-- Taught pick uses joint waypoints; the grasp-held cue is gripper position only, to be validated by the 20-pick repeatability set.
+These tests check component logic without moving the robot. Use the next steps to test the integrated system.
+
+### 2. Check the system without moving the arm
+
+```bash
+bash Code/IBVS/run_joint2_priority.sh --bringup --show-image --wait-target-s 30
+```
+
+This checks feedback, rectangle detection, depth, and a virtual reach/collision preview at the current pose. It sends no motion trajectory. A successful preview reports `PREVIEW`.
+
+### 3. Run home → post-grasp → IBVS
+
+```bash
+bash Code/IBVS/run_alignment.sh --bringup --live --show-image
+```
+
+This moves to the saved home and post-grasp poses, then performs visual alignment. Moving to the post-grasp pose does not perform a grasp.
+
+### 4. Run IBVS directly from the current pose
+
+Use this instead of step 3 when positioning is already complete:
+
+```bash
+bash Code/IBVS/run_joint2_priority.sh --bringup --live --show-image --wait-target-s 30
+```
+
+`--bringup` starts missing ROS services, `--live` enables robot motion, and `--show-image` opens the camera display. The shell scripts source the ROS environment automatically. Run one motion program at a time. Press **Q/Esc** in the camera window or **Ctrl+C** to stop the runner; background ROS services may remain running.
+
+## Expected result
+
+The target is a **200×200 px square in an 848×480 image**. The controller first adjusts image center and size, then aligns the four corners. Success requires **every corner within 5 px for five consecutive fresh observations**.
+
+The final status is `CONVERGED`, or `ALREADY_ALIGNED` if no correction was needed. Each run prints its evidence directory under [`Media/IBVS`](../../Media/IBVS/README.md). Check `summary.json` for the result, `trial.csv` for measured errors, and `ibvs_correction.mp4` for the recording.

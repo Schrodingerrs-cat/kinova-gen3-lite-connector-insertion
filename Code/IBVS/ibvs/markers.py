@@ -9,8 +9,12 @@ class Tracker:
         self.dist = np.array(cfg_cam["distortion"], float)
         self.m = cfg_mk
         self.ids = list(cfg_mk["ids"])
-        self.det = cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg_mk["aruco_dict"])),
-                                           cv2.aruco.DetectorParameters())
+        self.dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg_mk["aruco_dict"]))
+        self.params = (cv2.aruco.DetectorParameters() if hasattr(cv2.aruco, "ArucoDetector")
+                       else cv2.aruco.DetectorParameters_create())
+        self.params.detectInvertedMarker = bool(cfg_mk.get("detect_inverted_marker", False))
+        self.params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.det = cv2.aruco.ArucoDetector(self.dictionary, self.params) if hasattr(cv2.aruco, "ArucoDetector") else None
         self.target_px = np.array([cfg_mk["target_pixels"][i] for i in self.ids], float)   # (m,4,2)
         self.star = self.normalize(self.target_px.reshape(-1, 2)).reshape(-1, 4, 2)
         self.prev = {}
@@ -20,7 +24,10 @@ class Tracker:
 
     def detect(self, gray):
         """Returns (px (m,4,2) with NaN for invalid markers, valid (m,) bool)."""
-        corners, found, _ = self.det.detectMarkers(gray)
+        if self.det is None:
+            corners, found, _ = cv2.aruco.detectMarkers(gray, self.dictionary, parameters=self.params)
+        else:
+            corners, found, _ = self.det.detectMarkers(gray)
         seen = {} if found is None else {int(i): c.reshape(4, 2) for i, c in zip(found.ravel(), corners)}
         px = np.full((len(self.ids), 4, 2), np.nan)
         for k, i in enumerate(self.ids):

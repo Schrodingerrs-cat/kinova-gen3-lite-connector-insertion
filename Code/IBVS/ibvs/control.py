@@ -54,5 +54,5 @@ class Convergence:
         self.tol, self.frames, self.n = tol, frames, 0
 
     def update(self, rms_px):
-        self.n = self.n + 1 if rms_px < self.tol else 0
+        self.n = self.n + 1 if rms_px <= self.tol else 0
         return self.n >= self.frames
