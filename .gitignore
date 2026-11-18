@@ -15,3 +15,12 @@ Media/**/*.npy
 
 # symlinks into local scan folders (absolute paths of this PC)
 Code/Calibration/results/analysis_of_*/view_*.npz
+
+# Laptop-local Python environment
+.venv/
+local_checks/
+
+# Local diagnostic captures and editor backups
+diagnostics/
+Code/Calibration/results/
+*.before_*

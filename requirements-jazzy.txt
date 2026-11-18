@@ -1,0 +1,4 @@
+# Uses system ROS, NumPy, SciPy, PyYAML, matplotlib and pytest.
+scikit-learn==1.4.2
+opencv-contrib-python==4.10.0.84
+trimesh==5.2.1

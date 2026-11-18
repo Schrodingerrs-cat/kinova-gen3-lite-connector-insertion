@@ -63,7 +63,12 @@ class Ibvs:
     def switch(self, on, off):
         if not self.live:
             return True
-        req = SwitchController.Request(start_controllers=[on], stop_controllers=[off], strictness=SwitchController.Request.STRICT)
+        req = SwitchController.Request()
+        req.strictness = SwitchController.Request.STRICT
+        if hasattr(req, "activate_controllers"):
+            req.activate_controllers, req.deactivate_controllers = [on], [off]
+        else:
+            req.start_controllers, req.stop_controllers = [on], [off]
         fut = self.sw.call_async(req)
         self.r.spin_until(fut.done, 5.0)
         return fut.result() is not None and fut.result().ok

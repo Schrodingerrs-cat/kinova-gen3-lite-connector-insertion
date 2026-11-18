@@ -34,7 +34,7 @@ def matrix(p, q):
 class Robot(Node):
     def __init__(self, name='grasp_robot', background=False):
         """background=True: own thread keeps joints/TF/camera fresh (use inside a long-running node)."""
-        super().__init__(name)
+        super().__init__(name, use_global_arguments=False)
         self._ex = SingleThreadedExecutor()
         self._ex.add_node(self)
         self._bg = background
@@ -86,7 +86,8 @@ class Robot(Node):
 
     def tool_matrix(self):
         """4x4 T_base_tool from TF."""
-        self.spin_until(lambda: self.tfbuf.can_transform(BASE, TOOL, rclpy.time.Time()), 5.0)
+        if not self.spin_until(lambda: self.tfbuf.can_transform(BASE, TOOL, rclpy.time.Time()), 5.0):
+            raise RuntimeError("No connected base_link -> tool_frame TF after 5 seconds; no motion commanded by pose lookup")
         t = self.tfbuf.lookup_transform(BASE, TOOL, rclpy.time.Time()).transform
         return matrix([t.translation.x, t.translation.y, t.translation.z], [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w])
 
@@ -149,18 +150,20 @@ class Robot(Node):
         ps.pose.orientation.x, ps.pose.orientation.y, ps.pose.orientation.z, ps.pose.orientation.w = [float(v) for v in q]
         return ps
 
-    def line_path(self, T_goal, q_start_rad=None):
+    def line_path(self, T_goal, q_start_rad=None, *, max_step_m=0.005, min_fraction=0.99, waypoints=None):
         """Straight tool line from q_start (default: now) to T_goal, no motion. Returns joint waypoints (rad) or None."""
+        if not np.isfinite(max_step_m) or max_step_m <= 0 or not 0 < min_fraction <= 1:
+            raise ValueError("Invalid Cartesian sampling or completion requirement")
         req = GetCartesianPath.Request()
-        req.group_name, req.link_name, req.max_step, req.avoid_collisions = GROUP, TOOL, 0.005, False
+        req.group_name, req.link_name, req.max_step, req.avoid_collisions = GROUP, TOOL, max_step_m, False
         req.header.frame_id = BASE
         st = RobotState(); st.joint_state.name = JOINTS
         st.joint_state.position = [float(v) for v in (self.q if q_start_rad is None else q_start_rad)]
         req.start_state = st
-        req.waypoints = [self._pose(T_goal).pose]
+        req.waypoints = [self._pose(T).pose for T in (waypoints if waypoints is not None else [T_goal])]
         fut = self.cart_srv.call_async(req); self.spin_until(fut.done, 10.0)
         res = fut.result()
-        if res is None or res.fraction < 0.99:
+        if res is None or res.fraction < min_fraction:
             return None
         return [list(p.positions) for p in res.solution.joint_trajectory.points]
 

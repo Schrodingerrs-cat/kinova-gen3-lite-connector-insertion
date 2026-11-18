@@ -53,48 +53,83 @@ def load(path):
     return [np.array(a) for a in d["T_base_tool"]], [np.array(a) for a in d["T_cam_marker"]]
 
 
-def capture_session():
+def capture_session(resume=None):
     import rclpy
     from console import Keys
     from robot_ros import Robot
     a = cfg["aruco"]
     if a["marker_size_m"] is None:
         sys.exit("set aruco.marker_size_m in calibration.yaml (side of the black square, measured with a ruler)")
+    from burst_capture import setup, capture
     rclpy.init()
-    robot = Robot("hand_eye_calibration", background=True)
-    if not robot.wait_ready(10):
-        sys.exit("no driver / TF: arm driver running? same ros_env.sh?")
-    stamp = time.strftime("hand_eye_%Y%m%d_%H%M%S")
-    T_bt, T_cm = [], []
-    print(__doc__.split("Setup:")[1].split("It never")[0])
-    with Keys() as keys:
-        while True:
-            k = keys.get()
-            if k == "c":
-                color, _, K = robot.grab()
-                dist = np.array(robot._img["info"].d) if "info" in robot._img else np.zeros(5)
-                M = cl.marker_pose(color, K, dist, a["dictionary"], a["marker_id"], a["marker_size_m"])
-                if M is None:
-                    print("marker %d not found in the image" % a["marker_id"], flush=True)
-                    continue
-                T_bt.append(robot.tool_matrix()); T_cm.append(M)
-                (HERE / "results" / (stamp + "_samples.json")).write_text(json.dumps(dict(T_base_tool=[t.tolist() for t in T_bt], T_cam_marker=[t.tolist() for t in T_cm])))
-                print("sample %d captured, marker %.0f mm from the camera" % (len(T_bt), M[2, 3] * 1e3), flush=True)
-            elif k == "u" and T_bt:
-                T_bt.pop(); T_cm.pop(); print("removed, %d samples" % len(T_bt), flush=True)
-            elif k == "s":
-                solve(T_bt, T_cm, stamp)
-            elif k == "q":
-                break
-    import os
-    os._exit(0)
+    robot = Robot("hand_eye_calibration", background=False)
+    subscription=setup(robot)
+    if resume is not None:
+        stored=json.loads(resume.read_text())
+        if stored.get("aruco")!=a:
+            raise ValueError("Tag settings changed; start a new session")
+        stamp=resume.name.removesuffix("_samples.json")
+        folder=resume.parent/stamp
+        if not folder.is_dir():raise ValueError("Resume evidence folder missing")
+        T_bt=[np.array(t) for t in stored["T_base_tool"]]
+        T_cm=[np.array(t) for t in stored["T_cam_marker"]]
+        accepted=stored["captures"]
+        attempts=max([int(p.name.split("_")[-1]) for p in folder.glob("attempt_*")],default=0)
+    else:
+        stamp=time.strftime("hand_eye_burst_%Y%m%d_%H%M%S")
+        folder=HERE/"results"/stamp
+        folder.mkdir(parents=True,exist_ok=False)
+        T_bt,T_cm,accepted=[],[],[]
+        attempts=0
+    def save():
+        (HERE/"results"/(stamp+"_samples.json")).write_text(json.dumps(dict(
+            method="8 fresh colour frames, subpixel corners, image-timestamp robot TF",
+            aruco=a,captures=accepted,T_base_tool=[t.tolist() for t in T_bt],
+            T_cam_marker=[t.tolist() for t in T_cm]),indent=2))
+    save()
+    print(("RESUMED BURST SESSION: " if resume else "NEW BURST SESSION: ")+stamp+" (%d saved samples)"%len(T_bt),flush=True)
+    print("c: capture 8 frames while stationary | u: undo | s: solve | q: save and quit. No robot motion.",flush=True)
+    print("Keep entire tag visible with >=8px margin. Tag and robot base must remain fixed.",flush=True)
+    try:
+        with Keys() as keys:
+            while True:
+                k=keys.get()
+                if k=="c":
+                    attempts+=1
+                    print("Capturing stationary burst...",flush=True)
+                    try:
+                        BT,CM,quality=capture(robot,a,folder/("attempt_%03d"%attempts))
+                    except Exception as exc:
+                        print("CAPTURE REJECTED: "+str(exc),flush=True)
+                        continue
+                    T_bt.append(BT);T_cm.append(CM);accepted.append(dict(attempt=attempts,quality=quality))
+                    save()
+                    print("sample %d captured: 8 frames, reprojection %.2f px, corner std %.2f px, marker %.0f mm" % (
+                        len(T_bt),quality['reprojection_rms_px'],quality['corner_std_max_px'],CM[2,3]*1000),flush=True)
+                elif k=="u" and T_bt:
+                    T_bt.pop();T_cm.pop();accepted.pop();save()
+                    print("removed; %d samples"%len(T_bt),flush=True)
+                elif k=="s":solve(T_bt,T_cm,stamp)
+                elif k=="q":break
+    finally:
+        save()
+        robot.destroy_subscription(subscription)
+        robot.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--from", dest="src", metavar="FILE")
+    ap.add_argument("--resume-latest",action="store_true",help="resume latest burst session only if tag/base/mount stayed fixed")
     args = ap.parse_args()
+    if args.src and args.resume_latest:ap.error("choose --from or --resume-latest")
     if args.src:
         solve(*load(args.src), pathlib.Path(args.src).stem)
     else:
-        capture_session()
+        resume=None
+        if args.resume_latest:
+            sessions=list((HERE/"results").glob("hand_eye_burst_*_samples.json"))
+            if not sessions:ap.error("no burst session to resume")
+            resume=max(sessions,key=lambda p:p.stat().st_mtime)
+        capture_session(resume)

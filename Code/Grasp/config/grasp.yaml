@@ -25,8 +25,8 @@ color_marker:                        # the marker sticker on the head's top face
   normal_knn: 15
   max_nz: 0.6                 # marker plane points: normal this horizontal (vertical-ish faces)
   min_plane_points: 40
-  dark_v: 70                  # housing = pixels darker than this (HSV value) or marker-coloured, connected to the sticker
-  footprint_radius_m: 0.022   # only pixels this close to the sticker are considered housing (keeps the cable and bolts out)
+  dark_v: 90                  # housing = pixels darker than this (HSV value) or marker-coloured, connected to the sticker
+  footprint_radius_m: 0.015   # only pixels this close to the sticker are considered housing (keeps the cable and bolts out)
   grasp_drop_m: 0.008         # fingertips this far BELOW the sticker top face. CHOSEN constant (not measured): the depth of the head sides is unreliable
   head_band_m: [0.060, 0.060]  # image mode: head points kept this far below / above the sticker height (wide on purpose: the dark body is real data)
   candidate_search: true      # CLOUD mode only: true = search (families x yaws x pad positions, ranked), false = ONE closed-form grasp. The image (head) mode always runs its grid search
@@ -50,7 +50,7 @@ color_marker:                        # the marker sticker on the head's top face
   w_anti: 1.0                 # ... cost weights. Quality: antipodal outline normals, width evenness along the pad, distance to the sticker (per 10 mm)
   w_even: 1.0
   w_center: 0.5
-  extra_depth_m: [0.003, 0.004, 0.005, 0.006, 0.007]   # ... each geometry is also tried this much BELOW the usual depth (sticker height - grasp_drop_m); the finger boxes must stay clear of the panel at each depth
+  extra_depth_m: [0.0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007]   # ... each geometry is also tried this much BELOW the usual depth (sticker height - grasp_drop_m); the finger boxes must stay clear of the panel at each depth
   w_depth: 0.5                # ... grip terms (each 0 for the best candidate, 1 for the worst): deeper (more wall in the pads, within the collision limit)
   w_contact: 0.5              # ... covering more head points under the pads
   w_face: 0.5                 # ... the pad lands on the longer wall (wider face: length of the wall along the pad strip)
@@ -93,9 +93,10 @@ scan:                         # predefined workspace scan (/grasp/scan): 7 recor
   gripper_positions: [0.0, 0.2, 0.4, 0.6, 0.78]   # /grasp/scan_gripper sweep (gripper moves, arm does not)
   look_at: [0.40, 0.0]        # oblique views tip the camera toward this base-frame x, y (workspace centre)
   views_joints_deg:           # scan poses recorded by hand on 2026-11-10 (Kinova Web App monitoring screenshots in insertion_task/source/): the 6 joint angles (deg), visited as they are, NO IK.
-                              # All 7 see the head (0.20-0.29 m, optical axis 30-71 deg from straight down). Order = least joint travel (474 deg total, 89 deg largest move); the straight
+                              # Legacy six views plus new rear view; verify visibility and transitions. Legacy views see the head (0.20-0.29 m, optical axis 30-71 deg from straight down). Order = least joint travel (474 deg total, 89 deg largest move); the straight
                               # joint-space path home -> poses -> home keeps the fingertip at least 57 mm above the base plane (forward kinematics, checked offline).
-    - [18.164,  29.433, 161.099, 267.225, 340.453, 293.253]   # screenshot 14-50-38, tool (0.175, -0.017, 0.120) m
+    # screenshot 14-50-38, tool (0.175, -0.017, 0.120) m
+    - [104.0, -43.8, 107.2, -109.9, -88.3, -20.0]  # rear view observed 2026-11-15; scan transitions not hardware-validated
     - [71.722, 300.225,  83.550, 246.079, 265.089, 346.205]   # 14-55-16, tool (0.219,  0.163, 0.090) m
     - [14.188, 300.220,  47.945, 285.347, 251.274, 292.387]   # 14-56-11, tool (0.325,  0.076, 0.114) m
     - [43.424, 283.399,  33.434, 252.168, 235.527, 248.100]   # 14-57-47, tool (0.318,  0.130, 0.113) m

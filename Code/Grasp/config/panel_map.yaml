@@ -3,7 +3,7 @@
 tag:
   dictionary: DICT_4X4_50
   id: 0
-  size_m: null              # side of the BLACK square, measured with a ruler after printing tags/panel_tags_aruco4x4_25mm.pdf
+  size_m: 0.100              # side of the BLACK square, measured with a ruler after printing tags/panel_tags_aruco4x4_25mm.pdf
 plug: usb_a                 # which plug of the panel to pick (one entry per plug type below)
 max_candidates: 40          # best N of the model search are tried (both jaw flips each)
 verify_tol_m: null          # sticker-based plug position vs the tag prediction: stop if farther than this; null = only report it
@@ -12,7 +12,7 @@ plugs:
     model: CAD_files/USB_A_Plug.glb
     candidates: CAD_files/USB_A_Plug_grasp_candidates_top200.json   # from housing_grasp/model_grasp.py (offline), plug frame
     T_tag_plug:             # plug frame (x across the 15 mm wide face, y across the 7.5 mm thickness, up from the panel) in the tag frame (x right, y up in the tag image, z out of the panel)
-      xy_m: null            # plug axis at the panel surface, from the tag centre: [dx, dy]
-      yaw_deg: null         # rotation of the plug x axis from the tag x axis
-      z_m: 0.0
+      xy_m: [0.04952,-0.08958]            # plug axis at the panel surface, from the tag centre: [dx, dy]
+      yaw_deg: 4.6         # rotation of the plug x axis from the tag x axis
+      z_m: 0.035
 # the other two plugs (audio jack, IEC) are added here once their models and offsets exist

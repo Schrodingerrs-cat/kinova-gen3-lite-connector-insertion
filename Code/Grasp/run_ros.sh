@@ -1,24 +1,41 @@
 #!/usr/bin/env bash
-# One command: arm link + driver + camera + MoveIt (IK / line paths only) + grasp node + RViz. Ctrl-C stops everything.
-#   ./run_ros.sh                  dry run (checks every IK / line, nothing moves)
-#   ./run_ros.sh dry_run:=false   real motion. Keep the e-stop within reach.
-# Then in another terminal (source ros_env.sh first):  ros2 service call /grasp/<name> std_srvs/srv/Trigger
-# Logs: logs/<name>.log. Check first: python3 ros2_iface/smoke_test.py
+# Jazzy: one MoveIt launch owns the driver and controller manager.
+set -eo pipefail
 cd "$(dirname "$0")"
 source ./ros_env.sh
-mkdir -p logs
-./arm_link.sh || exit 1
+mkdir -p logs/jazzy
+./arm_link.sh
 
-trap 'kill 0 2>/dev/null' EXIT INT TERM
-wait_for() { for _ in $(seq 1 "$3"); do grep -q "$2" "logs/$1.log" 2>/dev/null && return 0; sleep 1; done; echo "!! $1: '$2' not seen in logs/$1.log"; return 1; }
-
-ros2 daemon stop >/dev/null 2>&1
-ros2 launch kortex_bringup gen3_lite.launch.py robot_ip:=192.168.1.10 launch_rviz:=false > logs/driver.log 2>&1 &
-wait_for driver "joint_trajectory_controller.*activated" 60 || exit 1
-ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true pointcloud.enable:=true > logs/camera.log 2>&1 &
-wait_for camera "Open profile" 30 || exit 1
-# stock MoveIt launch, unpatched: its own controller name does not match the driver, and we do not use its execution
-ros2 launch kinova_gen3_lite_moveit_config robot.launch.py robot_ip:=192.168.1.10 launch_rviz:=false > logs/moveit.log 2>&1 &
-wait_for moveit "You can start planning" 40 || exit 1
-echo ">> arm, camera and MoveIt are up; starting the grasp node (dry_run default true)"
-ros2 launch ros2_iface/launch/grasp.launch.py "$@"
+# Refuse duplicate hardware stacks; stop the old launch terminals first.
+existing="$(timeout 8 ros2 node list --no-daemon 2>/dev/null || true)"
+if printf '%s\n' "$existing" | grep -Eq '^/(controller_manager|move_group|camera/camera|grasp_node)$'; then
+  echo 'A robot/camera stack is already running. Stop its launch terminals before using run_ros.sh.'
+  exit 1
+fi
+pids=()
+cleanup() {
+  trap - EXIT INT TERM
+  for pid in "${pids[@]}"; do kill -TERM "$pid" 2>/dev/null || true; done
+  for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+wait_for() {
+  local name="$1" pattern="$2" seconds="$3" pid="$4"
+  for ((i=0; i<seconds; i++)); do
+    if grep -q "$pattern" "logs/jazzy/$name.log" 2>/dev/null; then return 0; fi
+    if ! kill -0 "$pid" 2>/dev/null; then tail -40 "logs/jazzy/$name.log"; return 1; fi
+    sleep 1
+  done
+  echo "Startup timeout: see logs/jazzy/$name.log"; tail -40 "logs/jazzy/$name.log"; return 1
+}
+ros2 launch ros2_iface/launch/robot_jazzy.launch.py robot_ip:=192.168.1.10 use_fake_hardware:=false launch_rviz:=false > logs/jazzy/moveit.log 2>&1 &
+pids+=("$!")
+wait_for moveit 'You can start planning' 60 "${pids[0]}"
+ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true pointcloud.enable:=true enable_sync:=true > logs/jazzy/camera.log 2>&1 &
+pids+=("$!")
+wait_for camera 'RealSense Node Is Up' 45 "${pids[1]}"
+echo 'Robot and camera are up. Grasp node defaults to dry_run:=true.'
+ros2 launch ros2_iface/launch/grasp.launch.py "$@" &
+pids+=("$!")
+wait "${pids[2]}"

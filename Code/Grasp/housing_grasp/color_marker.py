@@ -16,8 +16,19 @@ def marker_mask(bgr, g):
     h0, h1 = g["h"]  # OpenCV hue 0-179; a range that wraps past 179 (red) is written with h0 > h1, e.g. [170, 10]
     hue = (hsv[..., 0] >= h0) & (hsv[..., 0] <= h1) if h0 <= h1 else (hsv[..., 0] >= h0) | (hsv[..., 0] <= h1)
     m = hue & (hsv[..., 1] >= g["s_min"]) & (hsv[..., 2] >= g["v_min"])
-    return cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)).astype(bool)
+    cleaned = cv2.morphologyEx(
+        m.astype(np.uint8),
+        cv2.MORPH_OPEN,
+        np.ones((3, 3), np.uint8),
+    )
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(
+        cleaned, connectivity=8
+    )
+    if count <= 1:
+        return cleaned.astype(bool)
 
+    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    return labels == largest
 
 def nearest_blob(mask, K, T_BC, target, min_px=30):
     """Keep only the connected marker blob (>= min_px) nearest to the pixel where the scan target (base frame) projects: other marker-coloured things in the

@@ -1,0 +1,57 @@
+{
+  "source_perception_run": "/home/jay-patil/Peg insertion project/kinova-gen3-lite-connector-insertion/Media/Grasp/work/fresh_nearby_runs/1794789916872077379",
+  "source_motion_run": "/home/jay-patil/Peg insertion project/kinova-gen3-lite-connector-insertion/Media/Grasp/work/video_runs/1794789954005073051",
+  "views": 3,
+  "target_points": 1426,
+  "metrics": [
+    {
+      "view": "view_00",
+      "points": 379,
+      "median_p95_mm": [
+        1.1489797408476974,
+        2.572787345597202
+      ],
+      "within_2mm_percent": 84.21052631578947
+    },
+    {
+      "view": "view_01",
+      "points": 525,
+      "median_p95_mm": [
+        1.2527109716547673,
+        2.897318308598038
+      ],
+      "within_2mm_percent": 76.19047619047619
+    },
+    {
+      "view": "view_02",
+      "points": 522,
+      "median_p95_mm": [
+        0.611922333857918,
+        3.9415070277126905
+      ],
+      "within_2mm_percent": 86.66666666666667
+    }
+  ],
+  "yaw_spread_deg": 10.542664851372564,
+  "fit_quality": {
+    "profile": "supervised_pickup",
+    "experimental": true,
+    "thresholds": {
+      "max_p95_mm": 5.0,
+      "min_within_2mm_percent": 70.0,
+      "max_yaw_spread_deg": 15.0
+    },
+    "accepted": true,
+    "note": "Experimental pickup screen only; not pose accuracy or holding verification"
+  },
+  "measured_tool_heights_mm": [
+    255.42085198570553,
+    127.8,
+    49.7,
+    30.4,
+    34.8,
+    84.3
+  ],
+  "physical_outcome": "User reported successful extraction and holding; not independently verified by an in-hand sensor",
+  "success_rate": "Not measured; one demonstration shown"
+}

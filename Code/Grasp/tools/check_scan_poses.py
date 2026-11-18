@@ -2,6 +2,7 @@
 (1) lowest point of the straight joint-space path home -> poses -> home, (2) can each pose see a given point (default: where the head was).
 python3 tools/check_scan_poses.py [x y z of the head, m]"""
 import pathlib
+import argparse
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -10,9 +11,16 @@ import numpy as np
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-URDF = "/opt/ros/humble/share/kortex_description/robots/gen3_lite.urdf"
+from ament_index_python.packages import get_package_share_directory
+URDF = pathlib.Path(get_package_share_directory("kortex_description")) / "robots" / "gen3_lite.urdf"
 cfg = yaml.safe_load(open(ROOT / "config" / "grasp.yaml"))
-head = np.array([float(a) for a in sys.argv[1:4]]) if len(sys.argv) >= 4 else np.array([0.26, -0.02, 0.005])
+parser=argparse.ArgumentParser()
+parser.add_argument('head',nargs='*',type=float)
+parser.add_argument('--start',nargs=6,type=float,help='actual scan starting joints in degrees')
+args=parser.parse_args()
+if len(args.head) not in (0,3):
+    parser.error('head must have three coordinates')
+head=np.array(args.head or [0.26,-0.02,0.005])
 
 
 def rot(r, p, y):
@@ -44,12 +52,22 @@ def fk(q_deg):
 
 wrap = lambda q: (np.asarray(q, float) + 180) % 360 - 180
 home, poses = wrap(cfg["scan"]["home_joints_deg"]), [wrap(q) for q in cfg["scan"]["views_joints_deg"]]
+violations=[]
+for i,q in enumerate([home]+poses):
+    for k,value in enumerate(np.radians(q),1):
+        limit=joints['joint_%d'%k].find('limit')
+        if limit is not None and not float(limit.get('lower','-inf'))<=value<=float(limit.get('upper','inf')):
+            violations.append((i,k,float(np.degrees(value))))
+print('Joint-limit violations:',violations)
+if violations:
+    raise SystemExit('Scan configuration exceeds installed URDF limits')
 tcp, hand_eye = np.array(cfg["gripper"]["tcp_in_tool_xyz_m"]), cfg["camera"]
 x, y, z, w = hand_eye["hand_eye_quat_xyzw"]
 T_tc = np.eye(4)
 T_tc[:3, :3] = [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)], [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)], [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
 T_tc[:3, 3] = hand_eye["hand_eye_xyz_m"]
-seq = [home] + poses + [home]
+start=wrap(args.start) if args.start else home
+seq = [start] + poses + poses[-2::-1] + [start]
 low = {"wrist (joint 5)": 9.0, "tool frame": 9.0, "fingertip": 9.0}
 for a, b in zip(seq[:-1], seq[1:]):
     for s in np.linspace(0, 1, 100):

@@ -11,6 +11,8 @@ Services (std_srvs/Trigger):
   /grasp/view          camera straight over that target at `view_height_m`
   /grasp/head_grasp    DEFAULT. IMAGE MODE: head segmented in the image, only those pixels lifted to a head cloud, grid search of grasp candidates on it, ranked
                        (param grasp_mode:=head is the default of /grasp/pick; the sticker mode is archived in archive/sticker_mode_20261110)
+  /grasp/cad_capture   Fit one fresh stationary camera view to CAD (no motion)
+  /grasp/cad_grasp     Require three-view CAD agreement, then generate grasps (no motion)
   /grasp/model_grasp   MODEL MODE (own mode, grasp_mode:=model): ArUco tag on the panel -> plug pose (config/panel_map.yaml) -> candidates of the STEP-model search placed in the base frame
   /grasp/cloud_grasp   CLOUD MODE: marker region only (sticker axes from the image edges, position from the marker 3D points), candidate search + ranking
                        (grasp_mode:=cloud)
@@ -21,6 +23,7 @@ Services (std_srvs/Trigger):
 With dry_run:=true (default) the services that move check every IK / line with MoveIt but move nothing.
 """
 import json
+import subprocess
 import pathlib
 import sys
 import threading
@@ -48,6 +51,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the node (scans, plan frames); the record of a run is its folder in Media/Grasp
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
+from housing_grasp.cad_execution import consistent_pose, place_grasps
 from housing_grasp.config import load_config  # noqa: E402
 from housing_grasp.model_mode import detect_tag_pose, load_panel_map, place_candidates, plug_pose, plug_pose_from_sticker, tag_plane_height  # noqa: E402
 from housing_grasp.color_marker import wide_face_offset, analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
@@ -116,15 +120,17 @@ class GraspNode(Node):
         self.arm = Arm(Robot("grasp_robot", background=True), self.cfg["motion"], self.T_tool_tcp,
                        self.cfg["scan"]["table_z_m"] - 0.005, gp["close_cmd"])
         self.proposal = None
+        self.cad_records = []
+        self.cad_lock = threading.Lock()
         self.create_subscription(String, "/grasp/proposal", self._on_proposal, LATCHED, callback_group=cb)
-        for name, fn in (("pick", self.pick), ("scan_gripper", self.scan_gripper), ("scan", self.scan),
+        for name, fn in (("cad_capture", self.cad_capture), ("cad_grasp", self.cad_grasp), ("pick", self.pick), ("scan_gripper", self.scan_gripper), ("scan", self.scan),
                          ("view", self.view), ("execute", self.execute), ("home", self.home),
                          ("execute_proposal", self.execute_proposal), ("color_target", self.color_target),
                          ("allow_grasp", self.allow_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp), ("model_grasp", self.model_grasp)):
             self.create_service(Trigger, f"/grasp/{name}", self._srv(fn), callback_group=cb)
         self.lock = threading.Lock()
         self.get_logger().info("grasp_node ready (dry_run=%s)" % self.get_parameter("dry_run").value)
-
+        self.declare_parameter("pregrasp_only", True)
     # ---------- inputs ----------
     def _frame(self):
         """Latest aligned depth (m), intrinsics K, camera pose in base T_BC (tool pose from TF x hand-eye)."""
@@ -240,7 +246,7 @@ class GraspNode(Node):
         T0 = self._tool_pose(stamp)  # tool orientation at scan start is kept for every view
         self.home_T, self.home_q = T0, self.arm.q_deg()
         out = WORK / "scans" / time.strftime("%Y%m%d_%H%M%S")
-        views, skipped = [], []
+        views, skipped, visited_joints = [], [], []
         last = self.home_q
         jv = sc.get("views_joints_deg")  # recorded joint poses: visited as they are, no IK
         poses = view_poses(sc, T0, self.T_tool_cam) if jv is None else [None] * len(jv)
@@ -255,6 +261,7 @@ class GraspNode(Node):
                 views.append(k)
                 continue
             self.arm.go_joints(q)
+            visited_joints.append(np.asarray(q).copy())
             time.sleep(0.7)
             frames, stamp = self._depth_frames(sc["frames_per_view"])
             depth = np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)
@@ -266,7 +273,10 @@ class GraspNode(Node):
             self.get_logger().info("scan view %d/%d captured" % (len(views), n_views))
         if dry:
             return "DRY RUN, nothing moved: %d/%d view poses plannable, skipped %s" % (len(views), n_views, skipped)
-        self.arm.go_joints(self.home_q)  # back to the start pose
+        # Retrace the checked outbound transitions; avoid a long final joint sweep.
+        for q in reversed(visited_joints[:-1]):
+            self.arm.go_joints(q)
+        self.arm.go_joints(self.home_q)
         if len(views) < 2:
             raise RuntimeError("fewer than 2 views captured, skipped %s" % skipped)
         clouds, markers = [], []
@@ -376,7 +386,18 @@ class GraspNode(Node):
         c = np.median(gp, 0)
         P = head_points(depth, color, K, T_BC, c, g)
         if len(P) < g["min_head_points"]:
-            raise RuntimeError("head cloud has only %d points (need %d): no usable depth on the segmented head" % (len(P), g["min_head_points"]))
+            folder = WORK / "failed_grasps" / time.strftime("%Y%m%d_%H%M%S")
+            folder.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                folder / "insufficient_head.npz",
+                color=color, depth=depth, K=K,
+                T_BT=T_BT, T_BC=T_BC,
+                head=P, sticker=gp, center=c,
+            )
+            raise RuntimeError(
+                "Head has %d points; need %d. Saved to %s"
+                % (len(P), g["min_head_points"], folder)
+            )
         N2, S = outline_normals(P), scene_points(depth, color, K, T_BC, c, g)
         jaw_home = (T_BT @ self.T_tool_tcp)[:3, 1]   # jaw axis at the current (home) wrist orientation; wrist joint 6 at home +0 / +-90 deg = jaw at that yaw / across it
         yaw_ref = float(np.arctan2(jaw_home[1], jaw_home[0]) % np.pi)
@@ -384,7 +405,25 @@ class GraspNode(Node):
         g = dict(g, wide_face_offset_deg=wide if g["wide_face_offset_deg"] == "auto" else g["wide_face_offset_deg"])
         allc, stats = grid_grasp_search(P, N2, S, gp, c, g, gr["finger_width_m"], gr["finger_thickness_m"], gr["max_open_m"], gc["open_margin_m"], g["grasp_drop_m"], yaw_ref)
         if not allc:
-            raise RuntimeError("grid search found no candidate on the head cloud: %s" % stats)
+            folder = WORK / "failed_grasps" / time.strftime("%Y%m%d_%H%M%S")
+            folder.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                folder / "diagnostic.npz",
+                color=color, depth=depth, K=K,
+                T_BT=T_BT, T_BC=T_BC,
+                head=P, normals=N2, scene=S, sticker=gp,
+                center=c, yaw_ref=yaw_ref,
+            )
+            settings = dict(
+                search=g, gripper=gr, grasp=gc, stats=stats
+            )
+            (folder / "settings.json").write_text(
+                json.dumps(settings, indent=2,
+                           default=lambda x: np.asarray(x).tolist())
+            )
+            raise RuntimeError(
+                "No grasp: %s. Diagnostics saved to %s" % (stats, folder)
+            )
         cands = allc[:g["max_candidates_kept"]]
         grasps = self._grasps_from(cands)
         self.last = dict(ok=True, grasps=grasps, stamp=time.time(), cloud=P, cluster=gp)
@@ -406,7 +445,7 @@ class GraspNode(Node):
     def model_grasp(self):
         """MODEL MODE (STEP/STL + panel ArUco tag), separate from the head and cloud modes: tag pose in the close view -> plug pose (stored offset, config/panel_map.yaml)
         -> candidates of the offline model search (plug frame, CAD_files/*_grasp_candidates_*.json) placed in the base frame. The sticker, if seen, is only compared."""
-        depth, K, _, T_BC = self._frame()
+        depth, K, _, T_BC = self._close_frame()
         color, gr, gc, g = self._color_bgr(), self.cfg["gripper"], self.cfg["grasp"], self.cfg["color_marker"]
         pm = load_panel_map(ROOT / "config" / "panel_map.yaml")
         entry = pm["plugs"][pm["plug"]]
@@ -420,12 +459,22 @@ class GraspNode(Node):
         if not cands:
             raise RuntimeError("no model candidate fits the gripper opening")
         note, gp = "", marker_points(depth, color, K, T_BC, g, self.target)
-        if len(gp) >= g["min_marker_points"]:   # the sticker only checks the tag-based plug pose
+        if len(gp) >= g["min_marker_points"]:
             st = plug_pose_from_sticker(gp, T_BC[:3, 3])
-            d, dyaw = float(np.linalg.norm(st["xy"] - plug["xy"])), float(np.degrees(abs(((st["yaw"] - plug["yaw"] + np.pi / 2) % np.pi) - np.pi / 2)))
+            d = float(np.linalg.norm(st["xy"] - plug["xy"]))
+            dyaw = float(np.degrees(abs(
+                ((st["yaw"] - plug["yaw"] + np.pi / 2) % np.pi)
+                - np.pi / 2
+            )))
             note = "; sticker check: plug %.1f mm and %.0f deg from the tag prediction" % (d * 1e3, dyaw)
             if pm["verify_tol_m"] is not None and d > pm["verify_tol_m"]:
-                raise RuntimeError("tag and sticker disagree on the plug position (%.1f mm > %.1f mm): wrong tag, moved panel or plug not seated" % (d * 1e3, pm["verify_tol_m"] * 1e3))
+                raise RuntimeError(
+                    "Tag and sticker disagree by %.1f mm" % (d * 1e3)
+                )
+        else:
+            note = "; sticker check SKIPPED: %d usable points, need %d" % (
+                len(gp), g["min_marker_points"]
+            )
         grasps = self._grasps_from(cands)
         box = np.array([[plug["xy"][0], plug["xy"][1], plug["z"] + h] for h in (0.0, 0.02)])
         self.last = dict(ok=True, grasps=grasps, stamp=time.time(), cloud=box, cluster=None)
@@ -481,6 +530,63 @@ class GraspNode(Node):
             "ON" if search else "OFF", g["contact_faces"], g["extent_source"], rect["long_m"] * 1e3, rect["short_m"] * 1e3, len(cands), b["edge"], b["yaw_deg"], b["offset_m"] * 1e3, b["face_width_m"] * 1e3,
             *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["open_width_m"] * 1e3, run.name)
 
+    def cad_capture(self):
+        """Fresh stationary view -> offline CAD fitter. Does not move the robot."""
+        if not self.cad_lock.acquire(blocking=False):
+            raise RuntimeError("CAD operation already running")
+        self.last = None
+        try:
+            if self.depth is None or self.color is None:
+                raise RuntimeError("No live camera data")
+            now_ns = self.get_clock().now().nanoseconds
+            stamps = [m.header.stamp.sec*10**9+m.header.stamp.nanosec for m in (self.depth,self.color)]
+            if any(not 0 <= (now_ns-t)/1e9 <= 1 for t in stamps) or abs(stamps[0]-stamps[1])>100000000:
+                raise RuntimeError("Camera messages stale or more than 100 ms apart")
+            self._need_arm()
+            joints_before=self.arm.q_deg().copy()
+            captured = time.time()
+            depth,K,_,camera = self._close_frame()
+            if np.max(np.abs(self.arm.q_deg()-joints_before))>.2:
+                raise RuntimeError("Arm moved during CAD capture; stop at a view first")
+            run = WORK / "cad_live" / str(time.time_ns())
+            run.mkdir(parents=True)
+            np.savez_compressed(run/"frame.npz",depth=depth,K=K,T_BC=camera,color=self._color_bgr())
+            python = ROOT.parents[1]/".venv/bin/python"
+            if not python.exists():
+                raise RuntimeError("Project .venv Python missing (CAD dependencies)")
+            proc = subprocess.run([str(python),str(ROOT/"tools/fit_cad_cloud.py"),str(run/"frame.npz"),
+                                   "--six-dof","--geometry","above-panel","--out",str(run)],
+                                  capture_output=True,text=True,timeout=90)
+            (run/"fitter.log").write_text(proc.stdout+proc.stderr)
+            if proc.returncode:
+                raise RuntimeError("CAD fitting failed; see %s" % (run/"fitter.log"))
+            fit=json.loads((run/"fit.json").read_text())
+            if not fit["fit_gate_pass"]:
+                self.cad_records=[]
+                raise RuntimeError("CAD residual gate rejected this view; inspect %s" % run)
+            T=np.load(run/"fit.npz")["T_base_plug"]
+            self.cad_records.append(dict(T=T,camera=camera,captured_at=captured,fit=fit,run=str(run)))
+            self.cad_records=self.cad_records[-3:]
+            return "CAD view saved (%d/3); inspect overlay in %s. No motion." % (len(self.cad_records),run)
+        except Exception:
+            self.cad_records=[]
+            raise
+        finally:
+            self.cad_lock.release()
+
+    def cad_grasp(self):
+        """Three-view agreement -> CAD grasp candidates. Does not move the robot."""
+        with self.cad_lock:
+            self.last=None
+            T=consistent_pose(self.cad_records,time.time())
+            candidates=json.loads((ROOT.parents[1]/"CAD_files/USB_A_Plug_grasp_candidates_top200.json").read_text())
+            grasps=place_grasps(T,candidates,self.cfg)
+            for g in grasps:
+                self._check_proposal(g["T_BG"],g["open_width_m"])
+            self.last=dict(ok=True,grasps=grasps,stamp=time.time(),cad=True,
+                           capture_deadline=min(r["captured_at"] for r in self.cad_records)+120)
+            return "CAD plan ready: %d candidates, three live views agree; use dry-run /grasp/execute first" % len(grasps)
+
     def _grasps_from(self, cands):
         """Candidates -> grasp dicts (both jaw directions each, approach straight down, pre-grasp and lift along the approach), ranked."""
         gc, z_G, out = self.cfg["grasp"], np.array([0.0, 0.0, -1.0]), []
@@ -507,6 +613,11 @@ class GraspNode(Node):
             raise RuntimeError("run /grasp/plan first")
         if time.time() - res["stamp"] > self.get_parameter("max_plan_age_s").value:
             raise RuntimeError("plan is stale, run /grasp/plan again")
+        if res.get("cad") and time.time()>res["capture_deadline"]:
+            self.last=None
+            raise RuntimeError("CAD captures expired; collect fresh views")
+        if res.get("cad") and not self.get_parameter("dry_run").value and self.get_parameter("allow_grasp").value:
+            self.last=None  # a CAD motion plan is single-use
         return self._run(res["grasps"][: self.get_parameter("max_candidates").value])
 
     def home(self):
@@ -581,8 +692,17 @@ class GraspNode(Node):
         if dry or not self.get_parameter("allow_grasp").value:  # grasp motion needs dry_run:=false AND allow_grasp:=true
             return "NOT EXECUTED (dry_run or allow_grasp:=false), motion checked only. " + log[-1]
 
-        if self.arm.grip_pos() > 0.05:   # left closed or part-closed: open fully first (opening only, nothing closes before the grasp)
+        if self.arm.grip_pos() > 0.05:
             self.arm.grip_to(0.0, gp["close_effort"], rate=0.3)
+
+        if self.get_parameter("pregrasp_only").value:
+            self.arm.go_joints(plan["q_pre"])
+            self.last = None
+            return (
+                "PREGRASP ONLY: stopped at pregrasp with gripper open. "
+                "No descent, closure, or lift commanded. "
+                "Generate a fresh plan before another execution."
+            )
         open_pos = float(np.interp(g["open_width_m"], self.wid_tab[::-1], self.pos_tab[::-1]))
         self.arm.approach(plan, at_pre_grasp=lambda: self.arm.grip_to(open_pos, gp["close_effort"], rate=0.3))  # the jaw opening is set up at the pre-grasp pose, just before the descent, not at the start of the long move
         pos, contact = self.arm.grip_to(gp["close_cmd"], gp["close_effort"], rate=0.2)

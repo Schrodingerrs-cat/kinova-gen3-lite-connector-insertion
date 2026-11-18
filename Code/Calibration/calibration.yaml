@@ -36,7 +36,7 @@ calib_scan:                   # calibration scan over the EMPTY table: views [x,
 aruco:                        # hand-eye calibration marker: print it, stick it FLAT on the table, do not move it during the capture
   dictionary: DICT_4X4_50
   marker_id: 0
-  marker_size_m: null         # side of the BLACK square, measured with a ruler (m)
+  marker_size_m: 0.100         # side of the BLACK square, measured with a ruler (m)
 chessboard:                   # intrinsics check
   inner_corners: [9, 6]       # columns, rows of INNER corners
   square_size_m: null         # side of one square, measured (m)
