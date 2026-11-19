@@ -32,3 +32,9 @@ Empty so far (2026-11-10). Large files: decide whether to commit them, ignore th
 - Size 15.0 x 7.5 x 50.25 mm, long axis = z. Cross-section along it (read from the mesh): metal USB-A shell z +10..+22 mm, 12.0 x 4.5 mm; moulded housing z -10..+10 mm, 15.0 x 7.5 mm (the part to grip); strain-relief boot z -18..-12 mm, 9.8 x 7.5 mm; cable stub z -28..-18 mm, about 6 mm round.
 - Seated in the panel socket the metal shell is inside the panel, so the housing starts at the panel surface: housing 0..20 mm above the panel, boot 22..28, cable to 38 (the first depth-based runs measured 14.2-14.5 x 8.2-8.3 x 38.6-39 mm).
 - `USB_A_Plug_grasp_candidates_top200.json`: best 200 candidates of `housing_grasp/model_grasp.py` in the upright plug frame (x, y across, u = height above the panel; jaw yaw, pad centre s, tip height u0). Best: jaw along y (pads on the 15 x 20 mm wide faces, gap 7.5 mm), centred, tip 3 mm above the panel; the narrow-face family (gap 15 mm) is far behind. Offline only; needs the plug pose (x, y, yaw) to be used.
+
+## CAD mode files (2026-11-18)
+- `Micro_Jack_3.5mm.STEP` (teammate upload), `Micro_Jack_3.5mm.glb` (our conversion by `cascadio`, made on first use by `cad_fit.model_cloud`). Model frame used by CAD mode: `[Y, -Z, -X]` mm; tip u = -13.9, 6.5 mm body u 2.1..22.1 (shoulder at the panel), taper to u = 29.8.
+- `Micro_Jack_3.5mm_candidates.json` (+ `.metadata.json`): made by `python3 Code/Grasp/tools/make_candidates.py micro_jack`; pads centred on the 6.5 mm body, tip height from the seat + 3 mm, gap 6.5 mm. Offline geometry only.
+- All per-connector facts are in `Code/Grasp/config/connectors.yaml`.
+- Adding a connector: put the STEP file here, add an entry to `Code/Grasp/config/connectors.yaml` (the file is validated on load), run `python3 Code/Grasp/tools/make_candidates.py NAME`, then `python3 Code/Grasp/tools/scan_observability.py NAME` to see how well the views pin its pose down.

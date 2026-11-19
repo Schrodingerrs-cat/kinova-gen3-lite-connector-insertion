@@ -6,11 +6,14 @@ Services (std_srvs/Trigger):
   /grasp/pick          the whole pipeline: scan -> color_target -> view -> head_grasp (or cloud_grasp) -> execute
   /grasp/scan_gripper  once, arm over empty table: sweep the gripper, scan the fingers -> config/gripper_scan.yaml
   /grasp/home          joint move to scan.home_joints_deg
+  /grasp/open_gripper  fully open the gripper if it is not (run start check)
   /grasp/scan          7 camera poses over the workspace (colour + depth) -> merged cloud + marker cloud (ICP, voxel)
   /grasp/color_target  merged scan: table RANSAC, above-table clusters, marker clusters -> coarse target (marker centroid)
   /grasp/view          camera straight over that target at `view_height_m`
   /grasp/head_grasp    DEFAULT. IMAGE MODE: head segmented in the image, only those pixels lifted to a head cloud, grid search of grasp candidates on it, ranked
                        (param grasp_mode:=head is the default of /grasp/pick; the sticker mode is archived in archive/sticker_mode_20261110)
+  /grasp/cad_scan      CAD MODE (grasp_mode:=cad): find the sticker, move to 3 close tilted views around it, save frames (params cad_connector, cad_hint 'x,y')
+  /grasp/cad_grasp     CAD MODE: fit the connector's STEP model to the 3 views (panel plane + leave-one-view-out gate), place its candidates, plan
   /grasp/model_grasp   MODEL MODE (own mode, grasp_mode:=model): ArUco tag on the panel -> plug pose (config/panel_map.yaml) -> candidates of the STEP-model search placed in the base frame
   /grasp/cloud_grasp   CLOUD MODE: marker region only (sticker axes from the image edges, position from the marker 3D points), candidate search + ranking
                        (grasp_mode:=cloud)
@@ -26,6 +29,7 @@ import sys
 import threading
 import time
 
+import cv2
 import numpy as np
 import rclpy
 import tf2_ros
@@ -49,6 +53,8 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the nod
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
 from housing_grasp.config import load_config  # noqa: E402
+from housing_grasp import cad_fit, cad_place  # noqa: E402
+from housing_grasp.cad_report import report_cad_fit  # noqa: E402
 from housing_grasp.model_mode import detect_tag_pose, load_panel_map, place_candidates, plug_pose, plug_pose_from_sticker, tag_plane_height  # noqa: E402
 from housing_grasp.color_marker import wide_face_offset, analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
 from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_grid_search, report_model_overlay  # noqa: E402
@@ -87,7 +93,7 @@ class GraspNode(Node):
         super().__init__("grasp_node")
         for name, default in (("config", str(ROOT / "config" / "grasp.yaml")), ("dry_run", True),
                               ("max_candidates", 4), ("allow_grasp", False), ("grasp_mode", "head"),
-                              ("max_plan_age_s", 60.0), ("view_height_m", 0.18)):
+                              ("max_plan_age_s", 60.0), ("view_height_m", 0.18), ("cad_connector", ""), ("cad_hint", "")):
             self.declare_parameter(name, default)
         # candidate_search: "config" (use color_marker.candidate_search) | on | off; ROS reads on/off as booleans, so the parameter must accept both types
         self.declare_parameter("candidate_search", "config", ParameterDescriptor(dynamic_typing=True))
@@ -120,7 +126,7 @@ class GraspNode(Node):
         for name, fn in (("pick", self.pick), ("scan_gripper", self.scan_gripper), ("scan", self.scan),
                          ("view", self.view), ("execute", self.execute), ("home", self.home),
                          ("execute_proposal", self.execute_proposal), ("color_target", self.color_target),
-                         ("allow_grasp", self.allow_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp), ("model_grasp", self.model_grasp)):
+                         ("allow_grasp", self.allow_grasp), ("hold_check", self.hold_check), ("head_grasp", self.head_grasp), ("cloud_grasp", self.cloud_grasp), ("model_grasp", self.model_grasp), ("open_gripper", self.open_gripper), ("cad_scan", self.cad_scan), ("cad_grasp", self.cad_grasp)):
             self.create_service(Trigger, f"/grasp/{name}", self._srv(fn), callback_group=cb)
         self.lock = threading.Lock()
         self.get_logger().info("grasp_node ready (dry_run=%s)" % self.get_parameter("dry_run").value)
@@ -274,7 +280,7 @@ class GraspNode(Node):
             v = np.load(out / ("view_%02d.npz" % k))
             clouds.append(view_cloud(v["depth"], v["K"], v["T_BC"], self.cfg["cloud"]))
             markers.append(marker_points(v["depth"], v["color"], v["K"], v["T_BC"], self.cfg["color_marker"]))
-        fused, info = fuse_clouds(clouds, voxel_m=self.cfg["cloud"]["voxel_m"])
+        fused, info = fuse_clouds(clouds, voxel_m=self.cfg["cloud"]["voxel_m"], use_icp=self.cfg["scan"].get("icp", False))
         marker = merge_views(markers, info, self.cfg["color_marker"]["voxel_m"])  # same ICP corrections as the full cloud
         np.save(out / "fused_cloud.npy", fused.astype(np.float32))
         np.save(out / "marker_cloud.npy", marker.astype(np.float32))
@@ -284,8 +290,9 @@ class GraspNode(Node):
         self.fused = fused
         self.pub_fused.publish(self._cloud(fused))
         shifts = [i["shift_mm"] for i in info[1:]]
-        return "scan %s: %d views (skipped %s), %d fused points, %d marker points; ICP corrections vs earlier views: median %.1f mm, max %.1f mm" % (
-            out.name, len(views), skipped, len(fused), len(marker), np.median(shifts), np.max(shifts))
+        return "scan %s: %d views (skipped %s), %d fused points, %d marker points; %s" % (
+            out.name, len(views), skipped, len(fused), len(marker),
+            "ICP corrections vs earlier views: median %.1f mm, max %.1f mm" % (np.median(shifts), np.max(shifts)) if self.cfg["scan"].get("icp", False) else "no ICP (views stacked as the kinematics place them)")
 
     def view(self):
         """Camera straight over the colour-marker target set by /grasp/color_target, view_height_m above it (home orientation)."""
@@ -313,7 +320,9 @@ class GraspNode(Node):
     def pick(self):
         """MAIN PIPELINE: scan (colour) -> merge/ICP + table RANSAC + marker clusters (coarse target) -> camera over it
         -> marker-sticker grasp -> execute. Motion needs dry_run:=false AND /grasp/allow_grasp (otherwise execute only checks)."""
-        grasp = dict(head=self.head_grasp, cloud=self.cloud_grasp, model=self.model_grasp)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
+        grasp = dict(head=self.head_grasp, cloud=self.cloud_grasp, model=self.model_grasp, cad=None)[self.get_parameter("grasp_mode").value]  # param grasp_mode: sticker (default) | head | cloud
+        if self.get_parameter("grasp_mode").value == "cad":
+            return " | ".join([self.cad_scan(), self.cad_grasp(), self.execute()])
         return " | ".join([self.scan(), self.color_target(), self.view(), grasp(), self.execute()])
 
     def _object_in_hand(self):
@@ -403,6 +412,153 @@ class GraspNode(Node):
         return "image mode grid search (wider-face jaw offset %s from the sticker plane: normal %.0f deg, tilt %.0f deg from horizontal): head cloud %d points; %d candidates generated, %d valid; best yaw %.0f deg, %.1f mm from the sticker, TCP (%.1f, %.1f, %.1f) mm, jaw (%.2f, %.2f), width %.1f mm, opening %.1f mm (run %s)" % (
             g["wide_face_offset_deg"], az, tilt, len(P), stats["generated"], stats["valid"], b["yaw_deg"], b["offset_m"] * 1e3, *(b["p"] * 1e3), b["jaw"][0], b["jaw"][1], b["width_m"] * 1e3, b["open_width_m"] * 1e3, run.name)
 
+    # ---------- CAD mode ----------
+    def _cad_find(self, spec):
+        """Sticker blob (in the connector's own marker colour if it has one), (sticker-sized, in the workspace) nearest cad_hint 'x,y' else the largest, in the current view -> base-frame point or None."""
+        depth, K, _, T_BC = self._close_frame()
+        color, g = self._color_bgr(), cad_fit.marker_cfg(self.cfg["color_marker"], spec)
+        x0, x1, y0, y1 = self.cfg["workspace"]["region"]
+        k, lab, st, _ = cv2.connectedComponentsWithStats(marker_mask(color, g).astype(np.uint8), connectivity=8)
+        hint = self.get_parameter("cad_hint").value
+        best = None
+        for i in range(1, k):
+            vv, uu = np.nonzero((lab == i) & np.isfinite(depth) & (depth > 0))
+            if st[i, cv2.CC_STAT_AREA] < 30 or len(vv) < 15:
+                continue
+            z = depth[vv, uu].astype(float)
+            P = np.c_[(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z] @ T_BC[:3, :3].T + T_BC[:3, 3]
+            c = np.median(P, 0)
+            if np.ptp(P[:, :2], axis=0).max() > g["marker_max_extent_m"] or not (x0 < c[0] < x1 and y0 < c[1] < y1):
+                continue
+            key = np.linalg.norm(c[:2] - np.array([float(a) for a in hint.split(",")])) if hint else -len(vv)
+            if best is None or key < best[0]:
+                best = (key, c)
+        return None if best is None else best[1]
+
+    def _cad_target(self, spec, vc, dry):
+        """Sticker position (base frame, m) and how it was found. (None, why) in a dry run that would need the 7-pose scan."""
+        tgt, how = self._cad_find(spec), "seen from home"
+        if (tgt is None and vc["coarse"] != "never") or (vc["coarse"] == "always" and not dry):
+            if dry:
+                return None, "sticker not seen from home; a real run would use the 7-pose scan"
+            self.scan()
+            self.color_target()
+            tgt, how = np.asarray(self.target, float), "7-pose scan"
+        if tgt is None:
+            raise RuntimeError("sticker not seen from home and views.coarse is 'never'")
+        return tgt, how
+
+    def _cad_view_plans(self, tgt, vc):
+        """[(azimuth deg, joints deg)]: for each view the first azimuth (configured, then +-30, +-60 deg) that keeps the fingertips clear and has an IK solution."""
+        Rh, plans, last = self.home_T[:3, :3] @ self.T_tool_cam[:3, :3], [], self.home_q
+        for az0 in vc["azimuths_deg"][: vc["n"]]:
+            for dz in (0, 30, -30, 60, -60):
+                T_BT = cad_fit.close_view_pose(tgt, az0 + dz, vc["distance_m"], vc["tilt_deg"], Rh) @ np.linalg.inv(self.T_tool_cam)
+                if (T_BT @ self.T_tool_tcp)[2, 3] - tgt[2] < vc["tip_clear_mm"] * 1e-3:   # the fingertips would hang next to the connector
+                    continue
+                q = self.arm.ik_near(T_BT, [self.home_q, last], self.cfg["scan"]["max_joint_dev_deg"])
+                if q is not None:
+                    plans.append((az0 + dz, q))
+                    last = q
+                    break
+        if len(plans) < vc["n"]:
+            raise RuntimeError("only %d of %d close views are reachable around %s (IK, floor or fingertip clearance %d mm): move the connector closer to the arm's centre "
+                               "or change views.distance_m / tilt_deg / tip_clear_mm" % (len(plans), vc["n"], np.round(tgt, 3), vc["tip_clear_mm"]))
+        return plans
+
+    def _cad_capture(self, plans, vc):
+        """Move to each view, wait for the arm to settle, save the median-depth frame. Returns the folder."""
+        out = WORK / "cad" / time.strftime("%Y%m%d_%H%M%S")
+        out.mkdir(parents=True, exist_ok=True)
+        for k, (az, q) in enumerate(plans):
+            self.arm.go_joints(q)
+            time.sleep(vc["settle_s"])
+            frames, stamp = self._depth_frames(vc["frames"])
+            depth = np.nan_to_num(np.nanmedian(np.where(np.stack(frames) > 0, np.stack(frames), np.nan), 0)).astype(np.float32)
+            T_BT = self._tool_pose(stamp)
+            np.savez_compressed(out / ("view_%02d.npz" % k), depth=depth, color=self._color_bgr(), K=np.array(self.info.k).reshape(3, 3), T_BC=T_BT @ self.T_tool_cam, T_BT=T_BT)
+            self.get_logger().info("cad view %d/%d captured (azimuth %d deg)" % (k + 1, len(plans), az))
+        return out
+
+    def cad_scan(self):
+        """CAD mode, step 1: from home find the sticker (else the 7-pose scan), then 3 close tilted views around it; the frames are saved."""
+        ccfg, spec = cad_fit.load_config(self.get_parameter("cad_connector").value or None)
+        vc, dry = ccfg["views"], self.get_parameter("dry_run").value
+        self.last = None                                    # a plan of an earlier cable must never be executable after this
+        self._need_arm()
+        _, stamp = self._depth_frames(1)
+        self.home_T, self.home_q = self._tool_pose(stamp), self.arm.q_deg()
+        tgt, how = self._cad_target(spec, vc, dry)
+        if tgt is None:
+            return "DRY RUN: " + how
+        plans = self._cad_view_plans(tgt, vc)
+        azimuths = [p[0] for p in plans]
+        if dry:
+            return "DRY RUN, nothing moved: %s sticker %s at %s; %d close views plannable at azimuths %s deg" % (spec["name"], how, np.round(tgt, 3), len(plans), azimuths)
+        t0 = time.time()
+        out = self._cad_capture(plans, vc)
+        (out / "target.json").write_text(json.dumps(dict(connector=spec["name"], target_m=tgt.tolist(), how=how, azimuths_deg=azimuths)))
+        self.cad_dir = out
+        return "%s sticker %s at %s; %d close views in %.0f s (azimuths %s deg), frames in %s" % (spec["name"], how, np.round(tgt, 3), len(plans), time.time() - t0, azimuths, out.name)
+
+    def _cad_fit(self, spec, ccfg, views, tgt):
+        """Connector points of every view, the panel plane and the model fitted to them."""
+        fc, obs, stk = ccfg["fit"], [], []
+        for i, v in enumerate(views):
+            pts, st = cad_fit.connector_points(v, spec, self.cfg["color_marker"], tgt)
+            if len(pts) < fc["min_points_view"]:
+                raise RuntimeError("view %d: only %d connector points (need %d): sticker or housing not segmented" % (i, len(pts), fc["min_points_view"]))
+            obs.append(pts)
+            stk.append(st)
+        centre = np.median(np.vstack(stk), 0)
+        plane = cad_fit.panel_plane(views, centre, ccfg["panel"], float(np.percentile(np.vstack(obs)[:, 2], 3)))
+        M, _ = cad_fit.model_cloud(spec)
+        return dict(obs=obs, centre=centre, plane=plane, M=M, rep=cad_fit.fit_views(obs, M, spec, plane, ccfg))
+
+    def _cad_save_plan(self, spec, ccfg, d, views, fit, cands, stats):
+        """plan.json, last view frame, observed + fitted points and the figures of this plan; returns the folder."""
+        run = WORK / "runs" / time.strftime("%Y%m%d_%H%M%S")
+        (run / "plots").mkdir(parents=True, exist_ok=True)
+        rep, T = fit["rep"], fit["rep"]["T_base_model_mm"]
+        ok = bool(cands) and (rep["gate_pass"] or not ccfg["fit"]["gate"]["require"])
+        (run / "plan.json").write_text(json.dumps(dict(
+            ok=ok, method="cad_fit", connector=spec["name"], sticker_centroid_median_m=fit["centre"] * 1e-3, views_dir=d.name, plane=fit["plane"], fit=rep,
+            place_stats=stats, n_candidates=len(cands), candidates=cands), indent=1, default=lambda o: np.asarray(o).tolist()))
+        np.savez_compressed(run / "frame.npz", depth=views[-1]["depth"], K=views[-1]["K"], T_BC=views[-1]["T_BC"], color=views[-1]["color"])
+        np.savez_compressed(run / "cad_points.npz", observed_mm=np.vstack(fit["obs"]), model_posed_mm=fit["M"] @ T[:3, :3].T + T[:3, 3])
+        report_cad_fit(run / "plots", views, fit["obs"], fit["M"], T, fit["plane"], cands, rep)
+        return run
+
+    def cad_grasp(self):
+        """CAD mode, step 2: fit the STEP model to the 3 views, gate it, place its candidates (panel clearance + finger boxes vs the scene), plan like the other modes."""
+        ccfg, spec = cad_fit.load_config(self.get_parameter("cad_connector").value or None)
+        self.last = None
+        if self.home_T is None:
+            raise RuntimeError("home pose unknown in this node session: run /grasp/cad_scan first")
+        d = getattr(self, "cad_dir", None) or sorted((WORK / "cad").glob("*/view_00.npz"))[-1].parent
+        info = json.loads((d / "target.json").read_text())
+        if info.get("connector", spec["name"]) != spec["name"]:
+            raise RuntimeError("the saved views are of '%s' but the connector is '%s': run /grasp/cad_scan again" % (info["connector"], spec["name"]))
+        views = [dict(np.load(p)) for p in sorted(d.glob("view_*.npz"))]
+        fit = self._cad_fit(spec, ccfg, views, np.array(info["target_m"]))
+        rep, plane, T = fit["rep"], fit["plane"], fit["rep"]["T_base_model_mm"]
+        gr, gc, jaw_home = self.cfg["gripper"], self.cfg["grasp"], (self.home_T @ self.T_tool_tcp)[:3, 1]
+        cands, stats = cad_place.place(T, cad_place.load_candidates(spec, cad_fit.ROOT), spec, ccfg["place"], plane, cad_place.scene_points(views, fit["centre"], T, fit["M"]),
+                                       float(np.arctan2(jaw_home[1], jaw_home[0]) % np.pi), gr["finger_width_m"], gr["finger_thickness_m"], gc["open_margin_m"], gr["max_open_m"])
+        run = self._cad_save_plan(spec, ccfg, d, views, fit, cands, stats)
+        self.last_run, summary = run, cad_fit.fit_summary(spec, rep, plane)
+        if not rep["gate_pass"] and ccfg["fit"]["gate"]["require"]:
+            raise RuntimeError("CAD fit rejected, no grasp planned (run %s): %s | %s" % (run.name, "; ".join(rep["gate_failures"]), summary))
+        if not cands:
+            raise RuntimeError("no CAD candidate survives the panel clearance and finger-box checks %s | %s" % (stats, summary))
+        grasps = self._grasps_from(cands)
+        self.last = dict(ok=True, grasps=grasps, tries=len(grasps), stamp=time.time(), cloud=np.vstack(fit["obs"]) * 1e-3, cluster=None)
+        self._publish(self.last)
+        b = cands[0]
+        return "%s%s | %d candidates (of %d), best: jaw yaw %.0f deg, tip %.1f mm above the panel, gap %.1f mm, opening %.1f mm, TCP (%.1f, %.1f, %.1f) mm (run %s)" % (
+            summary, "" if rep["gate_pass"] else " | GATE FAILED but not required: " + "; ".join(rep["gate_failures"]), len(cands), stats["considered"],
+            float(np.degrees(np.arctan2(b["jaw"][1], b["jaw"][0])) % 180), b["tip_above_panel_mm"], b["width_m"] * 1e3, b["open_width_m"] * 1e3, *(b["p"] * 1e3), run.name)
+
     def model_grasp(self):
         """MODEL MODE (STEP/STL + panel ArUco tag), separate from the head and cloud modes: tag pose in the close view -> plug pose (stored offset, config/panel_map.yaml)
         -> candidates of the offline model search (plug frame, CAD_files/*_grasp_candidates_*.json) placed in the base frame. The sticker, if seen, is only compared."""
@@ -483,10 +639,12 @@ class GraspNode(Node):
 
     def _grasps_from(self, cands):
         """Candidates -> grasp dicts (both jaw directions each, approach straight down, pre-grasp and lift along the approach), ranked."""
-        gc, z_G, out = self.cfg["grasp"], np.array([0.0, 0.0, -1.0]), []
+        gc, out = self.cfg["grasp"], []
         for cd in cands:
+            z_G = np.asarray(cd.get("approach", [0.0, 0.0, -1.0]), float)   # CAD mode: down the fitted plug axis
             for flip in (1, -1):
-                y = flip * cd["jaw"]
+                y = flip * np.asarray(cd["jaw"], float)
+                y = (y - (y @ z_G) * z_G) / np.linalg.norm(y - (y @ z_G) * z_G)
                 T = np.eye(4)
                 T[:3, :3], T[:3, 3] = np.stack([np.cross(y, z_G), y, z_G], 1), cd["p"]
                 Tp, Tl = T.copy(), T.copy()
@@ -507,7 +665,7 @@ class GraspNode(Node):
             raise RuntimeError("run /grasp/plan first")
         if time.time() - res["stamp"] > self.get_parameter("max_plan_age_s").value:
             raise RuntimeError("plan is stale, run /grasp/plan again")
-        return self._run(res["grasps"][: self.get_parameter("max_candidates").value])
+        return self._run(res["grasps"][: res.get("tries") or self.get_parameter("max_candidates").value])
 
     def home(self):
         q = wrap180(self.cfg["scan"]["home_joints_deg"])
@@ -517,6 +675,17 @@ class GraspNode(Node):
             return "DRY RUN, nothing moved. Home is %.0f deg away (largest joint)" % d
         self.arm.go_joints(q)
         return "at home (was %.0f deg away)" % d
+
+    def open_gripper(self):
+        """Fully open the gripper if it is not (position > 0.05 rad = part or fully closed). Run start check; nothing moves in a dry run."""
+        self._need_arm()
+        pos = self.arm.grip_pos()
+        if pos <= 0.05:
+            return "gripper already open (%.3f rad)" % pos
+        if self.get_parameter("dry_run").value:
+            return "DRY RUN, gripper not moved: it is at %.3f rad (0 = open)" % pos
+        self.arm.grip_to(0.0, self.cfg["gripper"]["close_effort"], rate=0.3)
+        return "gripper was at %.3f rad, opened to %.3f rad" % (pos, self.arm.grip_pos())
 
     # ---------- any grasp algorithm ----------
     def _on_proposal(self, m):
@@ -549,7 +718,7 @@ class GraspNode(Node):
             raise RuntimeError("no valid /grasp/proposal received")
         if time.time() - p["stamp"] > self.get_parameter("max_plan_age_s").value:
             raise RuntimeError("proposal is stale, publish it again")
-        gp, g = self.cfg["gripper"], self.cfg["grasp"]
+        g = self.cfg["grasp"]
         z_G = p["T_BG"][:3, 2]
         T_pre, T_lift = p["T_BG"].copy(), p["T_BG"].copy()
         T_pre[:3, 3] -= z_G * g["standoff_m"]
@@ -580,6 +749,7 @@ class GraspNode(Node):
         g, plan = chosen
         if dry or not self.get_parameter("allow_grasp").value:  # grasp motion needs dry_run:=false AND allow_grasp:=true
             return "NOT EXECUTED (dry_run or allow_grasp:=false), motion checked only. " + log[-1]
+        self.last = None   # a plan moves the arm once; the next grasp needs a fresh plan
 
         if self.arm.grip_pos() > 0.05:   # left closed or part-closed: open fully first (opening only, nothing closes before the grasp)
             self.arm.grip_to(0.0, gp["close_effort"], rate=0.3)

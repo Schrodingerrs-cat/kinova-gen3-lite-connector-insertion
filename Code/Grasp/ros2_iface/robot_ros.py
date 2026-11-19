@@ -19,6 +19,11 @@ from sensor_msgs.msg import CameraInfo, Image, JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import tf2_ros
 
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from housing_grasp.motion_profile import joint_move, path_move  # noqa: E402
+
 BASE, TOOL, GROUP = 'base_link', 'tool_frame', 'arm'
 JOINTS = [f'joint_{i}' for i in range(1, 7)]
 ARM_ACTION = '/joint_trajectory_controller/follow_joint_trajectory'
@@ -90,12 +95,14 @@ class Robot(Node):
         t = self.tfbuf.lookup_transform(BASE, TOOL, rclpy.time.Time()).transform
         return matrix([t.translation.x, t.translation.y, t.translation.z], [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w])
 
-    def send_joint_path(self, waypoints_rad, times_s, velocities=None, timeout=120.0):
+    def send_joint_path(self, waypoints_rad, times_s, velocities=None, timeout=120.0, accelerations=None):
         traj = JointTrajectory(); traj.joint_names = JOINTS
         for i, (q, t) in enumerate(zip(waypoints_rad, times_s)):
             p = JointTrajectoryPoint(); p.positions = [float(v) for v in q]
             if velocities is not None:
                 p.velocities = [float(v) for v in velocities[i]]
+            if accelerations is not None:   # with velocities AND accelerations on every point the controller interpolates with a quintic spline (no acceleration steps)
+                p.accelerations = [float(v) for v in accelerations[i]]
             p.time_from_start = Duration(sec=int(t), nanosec=int((t % 1) * 1e9)); traj.points.append(p)
         goal = FollowJointTrajectory.Goal(); goal.trajectory = traj
         fut = self.arm.send_goal_async(goal)
@@ -114,13 +121,9 @@ class Robot(Node):
             raise RuntimeError(f'arm trajectory failed: {res.result().result.error_string}')
 
     def move_joints(self, q_deg, duration):
-        """Joint-space move from the current joints to q_deg in `duration` s."""
-        q0, q1 = np.array(self.q), np.radians(q_deg)
-        n = max(8, int(duration * 8))
-        s = np.linspace(0.0, 1.0, n + 1)
-        pos = 10 * s**3 - 15 * s**4 + 6 * s**5
-        vel = (30 * s**2 - 60 * s**3 + 30 * s**4) / duration
-        self.send_joint_path([q0 + (q1 - q0) * p for p in pos], [0.05 + duration * x for x in s], [(q1 - q0) * v for v in vel])
+        """Joint-space move from the current joints to q_deg in `duration` s: quintic profile (zero speed and acceleration at both ends)."""
+        t, p, v, a = joint_move(np.array(self.q), np.radians(q_deg), duration)
+        self.send_joint_path(p, 0.05 + t, v, accelerations=a)
 
     def ik(self, T, seed_deg=None, timeout=0.5, tries=3):
         """Joint angles (deg) for the tool pose T (4x4, base frame), or None. MoveIt's solver is randomized, so it is retried."""
@@ -165,9 +168,9 @@ class Robot(Node):
         return [list(p.positions) for p in res.solution.joint_trajectory.points]
 
     def send_line(self, pts, duration):
-        """Run waypoints from line_path() at constant speed over `duration` s."""
-        n = len(pts)
-        self.send_joint_path(pts, [0.01 + duration * i / max(1, n - 1) for i in range(n)])
+        """Run the waypoints of line_path() over `duration` s with the quintic profile: starts and stops at rest, smooth in between."""
+        t, p, v, a = path_move(pts, duration)
+        self.send_joint_path(p, 0.05 + t, v, accelerations=a)
 
     def move_line(self, T_goal, duration):
         """Straight-line tool move to T_goal."""

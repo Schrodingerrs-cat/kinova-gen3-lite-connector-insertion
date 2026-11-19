@@ -10,6 +10,8 @@ import time
 import numpy as np
 from control_msgs.action import GripperCommand
 
+from housing_grasp.motion_profile import duration_for
+
 MAX_STEP_RAD = 0.1      # one 5 mm line step may not jump a joint more than this (singularity / flip)
 DT = 0.04               # gripper ramp period, s
 STALL_GAP = 0.05        # fingers lag the command by more than this (fraction of full close) = contact
@@ -59,7 +61,8 @@ class Arm:
         dq = np.abs(np.asarray(q_deg) - self.q_deg()).max()
         if dq < 0.3:
             return
-        self.r.move_joints(q_deg, duration or max(2.0, dq / self.m["joint_speed_deg_s"]))
+        m = self.m
+        self.r.move_joints(q_deg, duration or duration_for(np.radians(dq), np.radians(m["joint_speed_deg_s"]), np.radians(m["max_joint_vel_deg_s"]), m["min_move_s"]))
 
     def go_pose(self, T_tool, max_dev_deg):
         q = self.ik_near(T_tool, self.q_deg(), max_dev_deg)
@@ -82,7 +85,7 @@ class Arm:
                 return None, "%s: straight line not feasible" % name
             if np.abs(np.diff(np.array(pts), axis=0)).max() > MAX_STEP_RAD:
                 return None, "%s: joint jump along the line" % name
-            legs.append((pts, max(2.0, float(np.linalg.norm(T1[:3, 3] - T0[:3, 3])) / self.m["line_speed_mps"])))
+            legs.append((pts, max(self.m["min_line_s"], float(np.linalg.norm(T1[:3, 3] - T0[:3, 3])) / self.m["line_speed_mps"])))
             q_from = np.array(pts[-1])
         return dict(q_pre=q_pre, down=legs[0], lift=legs[1]), "ok"
 

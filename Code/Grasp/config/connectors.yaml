@@ -1,0 +1,72 @@
+# CAD mode (--mode cad): one entry per connector. Add a connector = add its STEP file + an entry here + python3 tools/make_candidates.py NAME.
+# Model frame (mm): u axis = plug axis, pointing AWAY from the panel (up when the plug stands in its socket); u = seat_u_mm is where the panel surface cuts the plug.
+active: usb_a                   # default connector (run_pipeline.py --connector NAME [NAME ...] and the node param cad_connector override it)
+#
+# Optional per connector: marker: {h: [lo, hi], s_min: .., v_min: ..}   its own sticker colour (OpenCV hue 0-179; lo > hi wraps, e.g. red [170, 10]);
+# without it the color_marker colour of grasp.yaml is used. Different colours per cable let one panel hold several cables without a --hint.
+# The file is validated on every load (housing_grasp/connectors.py): a bad entry is refused with the key named, before anything moves.
+
+views:                          # 3 close tilted views around the sticker (replaces the 7-pose scan)
+  n: 3
+  distance_m: 0.20              # camera to target (D405 works from 0.07 m). The fingertips are 126 mm ahead of the camera, so closer puts them on the connector
+  tilt_deg: 35                  # optical axis from straight down: tilted views see the side walls and fix the plug's tilt (Jay's 3 near-vertical views at 0.31 m could not)
+  tip_clear_mm: 35              # a view pose is skipped if its fingertip is lower than this above the sticker (the fingers hang in the image's lower part)
+  azimuths_deg: [0, 120, 240]   # first choice; if IK fails for one the node tries +-30, +-60 deg
+  coarse: fallback              # never | fallback (7-pose scan only if the sticker is not seen from home) | always (7-pose scan first, then the close views)
+  settle_s: 0.4
+  frames: 5                     # depth frames median-combined per view
+
+fit:
+  train_per_view: 400
+  min_points_view: 80
+  yaw_step_deg: 15              # multi-start yaw (unused for axially symmetric connectors)
+  trim: 0.7                     # fraction of the points kept (the cable and fingers are the rest)
+  tilt_max_deg: 15              # free-tilt refinement bound; the seated fit (axis = panel normal) is tried first
+  tilt_gain: 0.25               # the free-tilt fit is used only if its leave-one-view-out p95 is this much (fraction) better
+  gate:
+    p80_mm: 3.0                 # held-out VIEW residual (fit on 2 views, test on the 3rd); p80 and not p95 so a few cable pixels cannot fail a good fit
+    within_mm: 2.0
+    min_within_pct: 70          # of ALL held-out points (cable points count against it)
+    pos_spread_mm: 3.0          # leave-one-out fits vs the all-views fit
+    axis_spread_deg: 5.0
+    seat_tol_mm: 3.0            # where the fitted axis crosses the measured panel plane vs the connector's seat_u: catches a bad plane
+    require: true               # false = report the gate but do not stop (never silently)
+
+panel:                          # white panel around the connector gives the seat plane (constrains axis + height)
+  ring_mm: [16, 40]
+  tol_mm: 1.5
+  min_points: 300
+  min_inliers: 120
+  max_tilt_deg: 6
+  below_mm: 25                  # the plane crosses the plug axis 0..25 mm below its lowest seen point
+
+place:
+  clearance_mm: 3.0             # fingertip stays this far above the measured panel plane
+  max_hits: 8                   # scene points allowed in a finger box (cable, neighbours)
+  box_h_m: 0.012
+  max_candidates: 60            # best N (both jaw flips each) go to the IK / path check
+  jaw_yaw_offsets_deg: [0, 90]  # axially symmetric connectors: jaw yaw relative to the home jaw axis (like the head mode)
+
+connectors:
+  usb_a:
+    step: CAD_files/USB A Plug.step
+    mesh: CAD_files/USB_A_Plug.glb
+    candidates: CAD_files/USB_A_Plug_grasp_candidates_top200.json
+    mesh_to_model: {A: [[1, 0, 0], [0, -1, 0], [0, 0, -1]], b_mm: [0, 0, 10]}   # model = A @ mesh_m * 1000 + b; panel at u = 0
+    seat_u_mm: 0.0
+    fit_u_mm: [0.0, 28.0]       # visible part: housing + boot (the cable stub bends in real life)
+    body_u_mm: [0.0, 20.0]      # contact part for the grasp search
+    symmetry: flip              # rectangular housing: the half turn about u is the same grasp (both jaw flips are tried anyway)
+    roi_radius_mm: 15
+    dark_v: 90
+  micro_jack:
+    step: CAD_files/Micro_Jack_3.5mm.STEP
+    mesh: CAD_files/Micro_Jack_3.5mm.glb
+    candidates: CAD_files/Micro_Jack_3.5mm_candidates.json
+    mesh_to_model: {A: [[0, 1, 0], [0, 0, -1], [-1, 0, 0]], b_mm: [0, 0, 0]}    # model = [Y, -Z, -X]: tip at u = -13.9, 6.5 mm body u 2.1..22.1, taper to 29.8
+    seat_u_mm: 2.1              # ASSUMED: the shoulder where the 6.5 mm body starts sits at the panel. The fit reports the implied value to check it
+    fit_u_mm: [2.1, 29.8]
+    body_u_mm: [2.1, 22.1]
+    symmetry: axial             # a cylinder: yaw about u cannot be seen, so the jaw yaw is chosen for the arm (jaw_yaw_offsets_deg)
+    roi_radius_mm: 12
+    dark_v: 90

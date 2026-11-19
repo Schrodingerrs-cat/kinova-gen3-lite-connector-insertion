@@ -38,13 +38,6 @@ plan = json.load(open(plan_dir / "plan.json"))
 F = np.load(plan_dir / "frame.npz")
 color, depth, K, T_BC = F["color"], F["depth"], F["K"], F["T_BC"]  # colour is BGR (saved by /grasp/head_grasp, /grasp/cloud_grasp)
 
-if (RUN / "scan_used.txt").exists():  # run reused a scan: copy it in so the package is self-contained
-    src = pathlib.Path((RUN / "scan_used.txt").read_text().strip())
-    if not (RUN / "scan" / src.name).exists():  # already inside the run folder: the original location may have been moved
-        shutil.copytree(src, RUN / "scan" / src.name)
-scan = sorted((RUN / "scan").glob("2*"))[-1]
-
-
 def ply(path, xyz, rgb):
     a = np.empty(len(xyz), dtype=[("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("r", "u1"), ("g", "u1"), ("b", "u1")])
     a["x"], a["y"], a["z"] = xyz[:, 0], xyz[:, 1], xyz[:, 2]
@@ -60,66 +53,80 @@ def project(p):
     return int(round(K[0, 0] * c[0] / c[2] + K[0, 2])), int(round(K[1, 1] * c[1] / c[2] + K[1, 2]))
 
 
-# ---- point clouds (PLY, base frame, metres) ----
-fused = np.load(scan / "fused_cloud.npy")
-h = np.clip((fused[:, 2] + 0.06) / 0.12, 0, 1)
-cm = (plt.get_cmap("viridis")(h)[:, :3] * 255).astype(np.uint8)
-ply(RUN / "point_clouds" / "1_fused_scan_all_points.ply", fused, cm)
-marker = np.load(pick(scan, "marker_cloud.npy", "green_cloud.npy"))
-ply(RUN / "point_clouds" / "2_fused_scan_marker_only.ply", marker, np.tile(np.array([0, 255, 0], np.uint8), (len(marker), 1)))
-vv, uu = np.nonzero(np.isfinite(depth) & (depth > 0))
-z = depth[vv, uu].astype(float)
-pc = np.stack([(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z], 1)
-pb = pc @ T_BC[:3, :3].T + T_BC[:3, 3]
-ply(RUN / "point_clouds" / "3_close_view_single_frame_colour.ply", pb, color[vv, uu][:, ::-1])
-gc = np.load(pick(plan_dir, "marker_close_points.npy", "green_close_points.npy"))
-ply(RUN / "point_clouds" / "4_close_view_marker.ply", gc, np.tile(np.array([0, 255, 0], np.uint8), (len(gc), 1)))
+CAD = plan.get("method") == "cad_fit"
+if CAD:   # CAD mode: no 7-pose scan; the fit overlays are already in plots/. Write the observed and fitted-model clouds.
+    P = np.load(plan_dir / "cad_points.npz")
+    ply(RUN / "point_clouds" / "1_cad_observed_points.ply", P["observed_mm"] / 1000, np.tile(np.array([0, 255, 0], np.uint8), (len(P["observed_mm"]), 1)))
+    ply(RUN / "point_clouds" / "2_cad_model_fitted.ply", P["model_posed_mm"] / 1000, np.tile(np.array([255, 0, 255], np.uint8), (len(P["model_posed_mm"]), 1)))
+    tcp, fused, marker, gc = None, np.zeros((0, 3)), np.zeros((0, 3)), np.zeros((0, 3))
+else:
+    if (RUN / "scan_used.txt").exists():  # run reused a scan: copy it in so the package is self-contained
+        src = pathlib.Path((RUN / "scan_used.txt").read_text().strip())
+        if not (RUN / "scan" / src.name).exists():  # already inside the run folder: the original location may have been moved
+            shutil.copytree(src, RUN / "scan" / src.name)
+    scan = sorted((RUN / "scan").glob("2*"))[-1]
 
-# ---- perception overlay on the close view ----
-img = color.copy()
-m = marker_mask(color, G).astype(np.uint8)
-cv2.drawContours(img, cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0], -1, (0, 255, 0), 2)
-c3 = np.array(plan["sticker_centroid_median_m"])
-if "footprint" in plan:   # sticker mode: one grasp + the housing footprint rectangle
-    fp, tcp, jaw, ow = plan["footprint"], np.array(plan["tcp_m"]), np.array(plan["jaw_axis"]), plan["open_width_m"]
-    ctr, la, ja = np.array(fp["center_xy"]), np.array(fp["long_axis"]), np.array(fp["jaw_axis"])
-    corners = [ctr + sl * la * fp["length_m"] / 2 + sj * ja * fp["width_m"] / 2 for sl, sj in ((1, 1), (1, -1), (-1, -1), (-1, 1))]
-    cv2.polylines(img, [np.array([project(np.r_[q, c3[2]]) for q in corners], np.int32)], True, (0, 165, 255), 2)  # housing footprint
-else:                     # head mode: best grid-search candidate + the head cloud pixels
-    best = plan["candidates"][0]
-    tcp, jaw, ow = np.array(best["p"]), np.array(best["jaw"]), best["open_width_m"]
-    if (plan_dir / "head_points.npy").exists():   # cloud mode has no head cloud: only the sticker contour and the jaw
-        for q in np.load(plan_dir / "head_points.npy")[::3]:
-            cv2.circle(img, project(q), 1, (0, 165, 255), -1)   # head cloud (orange)
-for s in (1, -1):  # open finger positions
-    cv2.circle(img, project(tcp + s * jaw * ow / 2), 7, (0, 0, 255), -1)
-cv2.line(img, project(tcp + jaw * ow / 2), project(tcp - jaw * ow / 2), (0, 0, 255), 1)
-cv2.drawMarker(img, project(tcp), (255, 0, 0), cv2.MARKER_STAR, 18, 2)
-x0, y0 = project(c3)
-cv2.imwrite(str(RUN / "perception" / "01_close_view_overlay.png"), img[max(0, y0 - 130):y0 + 130, max(0, x0 - 190):x0 + 190])
-cv2.imwrite(str(RUN / "perception" / "01_close_view_overlay_full.png"), img)
 
-# ---- marker mask in six scan views ----
-tiles = []
-nv = len(sorted(scan.glob('view_*.npz')))
-for k in sorted({0, nv // 5, 2 * nv // 5, 3 * nv // 5, 4 * nv // 5, nv - 1}):   # up to six views spread over the scan
-    v = np.load(scan / ("view_%02d.npz" % k))
-    t = v["color"].copy()
-    cv2.drawContours(t, cv2.findContours(marker_mask(t, G).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0], -1, (0, 255, 0), 2)
-    cv2.putText(t, "scan view %d" % k, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-    tiles.append(cv2.resize(t, (424, 240)))
-tiles += [np.zeros_like(tiles[0])] * (-len(tiles) % 3)   # pad to full rows of 3
-cv2.imwrite(str(RUN / "perception" / "02_marker_mask_in_scan_views.png"), np.vstack([np.hstack(tiles[i:i + 3]) for i in range(0, len(tiles), 3)]))
+    # ---- point clouds (PLY, base frame, metres) ----
+    fused = np.load(scan / "fused_cloud.npy")
+    h = np.clip((fused[:, 2] + 0.06) / 0.12, 0, 1)
+    cm = (plt.get_cmap("viridis")(h)[:, :3] * 255).astype(np.uint8)
+    ply(RUN / "point_clouds" / "1_fused_scan_all_points.ply", fused, cm)
+    marker = np.load(pick(scan, "marker_cloud.npy", "green_cloud.npy"))
+    ply(RUN / "point_clouds" / "2_fused_scan_marker_only.ply", marker, np.tile(np.array([0, 255, 0], np.uint8), (len(marker), 1)))
+    vv, uu = np.nonzero(np.isfinite(depth) & (depth > 0))
+    z = depth[vv, uu].astype(float)
+    pc = np.stack([(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z], 1)
+    pb = pc @ T_BC[:3, :3].T + T_BC[:3, 3]
+    ply(RUN / "point_clouds" / "3_close_view_single_frame_colour.ply", pb, color[vv, uu][:, ::-1])
+    gc = np.load(pick(plan_dir, "marker_close_points.npy", "green_close_points.npy"))
+    ply(RUN / "point_clouds" / "4_close_view_marker.ply", gc, np.tile(np.array([0, 255, 0], np.uint8), (len(gc), 1)))
 
-# ---- single close frame, three projections ----
-near = pb[np.linalg.norm(pb[:, :2] - tcp[:2], axis=1) < 0.05]
-fig, ax = plt.subplots(1, 3, figsize=(16, 5))
-for a, (i, j, t) in zip(ax, ((0, 1, "top x-y"), (0, 2, "side x-z"), (1, 2, "side y-z"))):
-    a.scatter(near[:, i] * 1e3, near[:, j] * 1e3, s=1.5, c=near[:, 2] * 1e3, cmap="viridis")
-    a.scatter(gc[:, i] * 1e3, gc[:, j] * 1e3, s=5, c="lime", label="marker sticker")
-    a.plot(tcp[i] * 1e3, tcp[j] * 1e3, "r*", ms=14, label="TCP target")
-    a.set_title("close view, single frame, " + t); a.set_xlabel("xyz"[i] + " (mm)"); a.set_ylabel("xyz"[j] + " (mm)"); a.set_aspect("equal"); a.legend(fontsize=8)
-fig.tight_layout(); fig.savefig(RUN / "perception" / "03_close_frame_point_cloud_3_views.png", dpi=95); plt.close(fig)
+    # ---- perception overlay on the close view ----
+    img = color.copy()
+    m = marker_mask(color, G).astype(np.uint8)
+    cv2.drawContours(img, cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0], -1, (0, 255, 0), 2)
+    c3 = np.array(plan["sticker_centroid_median_m"])
+    if "footprint" in plan:   # sticker mode: one grasp + the housing footprint rectangle
+        fp, tcp, jaw, ow = plan["footprint"], np.array(plan["tcp_m"]), np.array(plan["jaw_axis"]), plan["open_width_m"]
+        ctr, la, ja = np.array(fp["center_xy"]), np.array(fp["long_axis"]), np.array(fp["jaw_axis"])
+        corners = [ctr + sl * la * fp["length_m"] / 2 + sj * ja * fp["width_m"] / 2 for sl, sj in ((1, 1), (1, -1), (-1, -1), (-1, 1))]
+        cv2.polylines(img, [np.array([project(np.r_[q, c3[2]]) for q in corners], np.int32)], True, (0, 165, 255), 2)  # housing footprint
+    else:                     # head mode: best grid-search candidate + the head cloud pixels
+        best = plan["candidates"][0]
+        tcp, jaw, ow = np.array(best["p"]), np.array(best["jaw"]), best["open_width_m"]
+        if (plan_dir / "head_points.npy").exists():   # cloud mode has no head cloud: only the sticker contour and the jaw
+            for q in np.load(plan_dir / "head_points.npy")[::3]:
+                cv2.circle(img, project(q), 1, (0, 165, 255), -1)   # head cloud (orange)
+    for s in (1, -1):  # open finger positions
+        cv2.circle(img, project(tcp + s * jaw * ow / 2), 7, (0, 0, 255), -1)
+    cv2.line(img, project(tcp + jaw * ow / 2), project(tcp - jaw * ow / 2), (0, 0, 255), 1)
+    cv2.drawMarker(img, project(tcp), (255, 0, 0), cv2.MARKER_STAR, 18, 2)
+    x0, y0 = project(c3)
+    cv2.imwrite(str(RUN / "perception" / "01_close_view_overlay.png"), img[max(0, y0 - 130):y0 + 130, max(0, x0 - 190):x0 + 190])
+    cv2.imwrite(str(RUN / "perception" / "01_close_view_overlay_full.png"), img)
+
+    # ---- marker mask in six scan views ----
+    tiles = []
+    nv = len(sorted(scan.glob('view_*.npz')))
+    for k in sorted({0, nv // 5, 2 * nv // 5, 3 * nv // 5, 4 * nv // 5, nv - 1}):   # up to six views spread over the scan
+        v = np.load(scan / ("view_%02d.npz" % k))
+        t = v["color"].copy()
+        cv2.drawContours(t, cv2.findContours(marker_mask(t, G).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0], -1, (0, 255, 0), 2)
+        cv2.putText(t, "scan view %d" % k, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+        tiles.append(cv2.resize(t, (424, 240)))
+    tiles += [np.zeros_like(tiles[0])] * (-len(tiles) % 3)   # pad to full rows of 3
+    cv2.imwrite(str(RUN / "perception" / "02_marker_mask_in_scan_views.png"), np.vstack([np.hstack(tiles[i:i + 3]) for i in range(0, len(tiles), 3)]))
+
+    # ---- single close frame, three projections ----
+    near = pb[np.linalg.norm(pb[:, :2] - tcp[:2], axis=1) < 0.05]
+    fig, ax = plt.subplots(1, 3, figsize=(16, 5))
+    for a, (i, j, t) in zip(ax, ((0, 1, "top x-y"), (0, 2, "side x-z"), (1, 2, "side y-z"))):
+        a.scatter(near[:, i] * 1e3, near[:, j] * 1e3, s=1.5, c=near[:, 2] * 1e3, cmap="viridis")
+        a.scatter(gc[:, i] * 1e3, gc[:, j] * 1e3, s=5, c="lime", label="marker sticker")
+        a.plot(tcp[i] * 1e3, tcp[j] * 1e3, "r*", ms=14, label="TCP target")
+        a.set_title("close view, single frame, " + t); a.set_xlabel("xyz"[i] + " (mm)"); a.set_ylabel("xyz"[j] + " (mm)"); a.set_aspect("equal"); a.legend(fontsize=8)
+    fig.tight_layout(); fig.savefig(RUN / "perception" / "03_close_frame_point_cloud_3_views.png", dpi=95); plt.close(fig)
 
 # ---- annotated video (measured values from trajectory.csv, no stage guesses) ----
 rows = np.array([[float(x) if x not in ("", "nan") else np.nan for x in r] for r in list(csv.reader(open(RUN / "trajectory.csv")))[1:] if len(r) == 11])
@@ -137,4 +144,4 @@ while True:
     out.write(f)
     i += 1
 out.release()
-print("exported: %d points fused, %d marker points, close frame %d points; video frames %d" % (len(fused), len(marker), len(pb), i))
+print("exported: CAD observed + model clouds; video frames %d" % i if CAD else "exported: %d points fused, %d marker points, close frame %d points; video frames %d" % (len(fused), len(marker), len(pb), i))

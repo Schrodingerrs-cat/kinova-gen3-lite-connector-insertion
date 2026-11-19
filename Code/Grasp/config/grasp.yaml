@@ -81,12 +81,16 @@ grasp:
 hold_check:                   # wrist camera check after the lift (HW7 rule: 0 false positives in 319 empty-hand frames there)
   tip_max_m: 0.20             # depth between the fingertips below this
   margin_m: 0.08              # and the table in the lower image corners at least this much farther
-motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py)
-  joint_speed_deg_s: 10       # largest joint, joint-space moves (HW7 used 8-10)
-  line_speed_mps: 0.04        # descent / lift (HW7 lift_up 0.05)
+motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py); all use a quintic profile (zero speed and acceleration at both ends)
+  joint_speed_deg_s: 25       # average speed of the largest joint, joint-space moves (was 10: 2.5x faster; the quintic peak is 1.875 x this = 47 deg/s)
+  max_joint_vel_deg_s: 60     # peak joint speed never above this (the arm's limit is 92 deg/s): long moves are stretched to respect it
+  min_move_s: 1.0             # shortest joint move (was 2.0)
+  line_speed_mps: 0.05        # descent / lift average speed; arrives at the grasp point at rest (was 0.04)
+  min_line_s: 1.5             # shortest straight line (was 2.0)
 scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)
   table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
   home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here
+  icp: false                  # merge the views with trimmed ICP? OFF: measured 2026-11-10, the same sticker is 19 mm apart across the 7 views raw and 25 mm after ICP (flat table: only height/tilt observable). Real fix = hand-eye calibration (Code/Calibration)
   max_joint_dev_deg: 80       # a view/pre-grasp joint solution may differ this much per joint from where the arm starts (no wrist spinning)
   frames_per_view: 3          # depth frames per view, median-combined
   close_frames: 5             # depth frames median-combined for the close-view grasp (single frames leave holes on the glossy sticker)

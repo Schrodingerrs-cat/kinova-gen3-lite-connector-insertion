@@ -2,7 +2,6 @@
 (1) lowest point of the straight joint-space path home -> poses -> home, (2) can each pose see a given point (default: where the head was).
 python3 tools/check_scan_poses.py [x y z of the head, m]"""
 import pathlib
-import re
 import sys
 import xml.etree.ElementTree as ET
 

@@ -47,10 +47,16 @@ def icp(src, dst_tree, dst, iters=25, trim=0.7, max_dist=0.02):
     return T, float(np.sqrt(np.mean(d ** 2))) if len(d) else float("nan")
 
 
-def fuse_clouds(clouds, voxel_m=0.001, icp_voxel_m=0.003):
-    """clouds: list of Nx3 base-frame clouds (first = reference). Returns (fused Nx3, per-view info list)."""
+def fuse_clouds(clouds, voxel_m=0.001, icp_voxel_m=0.003, use_icp=True):
+    """clouds: list of Nx3 base-frame clouds (first = reference). Returns (fused Nx3, per-view info list).
+    use_icp=False: stack the views as the kinematics + hand-eye place them. On the 7-pose scans of 2026-11-10 the same sticker disagrees by 19 mm between views
+    raw and by 25 mm after this ICP (flat table: only height and tilt are observable, the rest drifts), so the scan service defaults to icp=False."""
     merged = clouds[0]
     info = [dict(view=0, shift_mm=0.0, rot_deg=0.0, rms_before_mm=None, rms_after_mm=None)]
+    if not use_icp:
+        info += [dict(view=k, shift_mm=0.0, rot_deg=0.0, rms_before_mm=None, rms_after_mm=None, T=np.eye(4).tolist()) for k in range(1, len(clouds))]
+        stacked = np.vstack(clouds)
+        return voxel_downsample(stacked, np.zeros(len(stacked), bool), voxel_m)[0], info
     for k, c in enumerate(clouds[1:], 1):
         dst, _ = voxel_downsample(merged, np.zeros(len(merged), bool), icp_voxel_m)
         src, _ = voxel_downsample(c, np.zeros(len(c), bool), icp_voxel_m)

@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Colour-marker pipeline end to end, with data collection into a Media/Grasp run folder.
+"""Grasp pipeline end to end for one or several cables, with data collection into a Media/Grasp run folder. Needs the stack and the grasp node running.
 
-python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud|model]
+python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud|model|cad]
+                                   [--connector NAME [NAME ...]] [--hint X,Y [X,Y ...]] [--between pause|release|stop]
 
-home -> scan 7 views (colour) -> merge + ICP -> table RANSAC, clusters, marker clusters (coarse target)
-     -> camera over the target -> marker-sticker grasp (close view) -> [--grasp] execute (+ wrist-camera hold check).
-Records camera video + joint trajectory the whole time. Needs the stack and the grasp node (dry_run:=false) running.
+head / cloud / model: home -> 7-pose scan -> colour target -> close view -> grasp plan -> [--grasp] execute.
+cad: home -> find the sticker -> 3 close views -> fit the connector's STEP model -> grasp plan -> [--grasp] execute.
+Every run starts with the arm at home and the gripper open. --connector (cad mode) picks the named connectors of config/connectors.yaml one after the
+other, each in its own sub-folder of RUN_DIR; see ros2_iface/pipeline.py for what happens between two cables. Exit status 0 = every cable planned / picked.
 """
-import argparse
-import json
 import os
 import pathlib
-import shutil
 import signal
 import subprocess
 import sys
@@ -21,119 +20,93 @@ import cv2
 import numpy as np
 import rclpy
 import yaml
+from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
+from rcl_interfaces.srv import SetParameters
 from std_srvs.srv import Trigger
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
 WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # where the node writes its scans / plan frames (same as grasp_node.py)
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(ROOT))
+import pipeline  # noqa: E402
+from housing_grasp import connectors  # noqa: E402
 from robot_ros import Robot  # noqa: E402
 
-ap = argparse.ArgumentParser()
-ap.add_argument("run_dir")
-ap.add_argument("--grasp", action="store_true")
-ap.add_argument("--skip-scan", action="store_true")
-ap.add_argument("--mode", choices=("head", "cloud", "model"), default="head", help="head = head cloud + grid search (default); cloud = marker region only + candidate search; model = STEP model + ArUco tag on the panel (config/panel_map.yaml)")
-args = ap.parse_args()
-RUN = pathlib.Path(args.run_dir)
-for sub in ("screenshots", "videos", "plots"):
-    (RUN / sub).mkdir(parents=True, exist_ok=True)
-T0 = time.time()
-metrics = dict(started=time.strftime("%Y-%m-%dT%H:%M:%S"), grasp_requested=args.grasp, stages={}, outcome="INCOMPLETE")
+OK_OUTCOMES = ("GRASP_REPORTED_HELD", "PERCEPTION_ONLY")
 
 
-def log(msg):
-    line = "[%6.1f s] %s" % (time.time() - T0, msg)
-    print(line, flush=True)
-    with open(RUN / "controller.log", "a") as f:
-        f.write(line + "\n")
+class Recorder:
+    def __init__(self, out_dir):
+        self.proc = subprocess.Popen([sys.executable, str(HERE / "record.py"), str(out_dir)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def stop(self):
+        self.proc.send_signal(signal.SIGTERM)
+        self.proc.wait(timeout=20)
 
 
-rclpy.init()
-robot = Robot("pipeline", background=True)
-assert robot.wait_ready(10), "no driver / controller"
-rec = subprocess.Popen([sys.executable, str(HERE / "record.py"), str(RUN)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-CLI = {}
+class RosIo(pipeline.Io):
+    def __init__(self, robot):
+        self.robot, self.clients = robot, {}
+
+    def call(self, service, timeout):
+        cli = self.clients.setdefault(service, self.robot.create_client(Trigger, "/grasp/" + service))
+        if not cli.wait_for_service(10.0):
+            raise RuntimeError("service /grasp/%s not available (is the grasp node running?)" % service)
+        fut, t = cli.call_async(Trigger.Request()), time.time()
+        while not fut.done() and time.time() - t < timeout:
+            time.sleep(0.2)
+        if not fut.done():
+            raise TimeoutError("/grasp/%s took longer than %d s" % (service, timeout))
+        r = fut.result()
+        return r.success, r.message
+
+    def set_node_params(self, **values):
+        cli = self.clients.setdefault("_set_parameters", self.robot.create_client(SetParameters, "/grasp_node/set_parameters"))
+        if not cli.wait_for_service(10.0):
+            raise RuntimeError("/grasp_node/set_parameters not available (is the grasp node running?)")
+        req = SetParameters.Request()
+        req.parameters = [Parameter(name=k, value=ParameterValue(type=ParameterType.PARAMETER_STRING, string_value=v)) for k, v in values.items()]
+        fut = cli.call_async(req)
+        t = time.time()
+        while not fut.done() and time.time() - t < 10:
+            time.sleep(0.05)
+        if not fut.done() or not all(r.successful for r in fut.result().results):
+            raise RuntimeError("could not set the grasp node parameters %s" % sorted(values))
+
+    def joints_deg(self):
+        return np.degrees(self.robot.q)
+
+    def snap(self, path):
+        m = self.robot._img.get("color")
+        if m is not None:
+            img = np.frombuffer(m.data, np.uint8).reshape(m.height, m.width, -1)
+            cv2.imwrite(str(path), np.ascontiguousarray(img[:, :, ::-1] if m.encoding == "rgb8" else img))
+
+    def start_recorder(self, out_dir):
+        return Recorder(out_dir)
+
+    def ask(self, prompt):
+        return input(prompt)
 
 
-def call(name, timeout):
-    cli = CLI.setdefault(name, robot.create_client(Trigger, "/grasp/" + name))
-    assert cli.wait_for_service(10.0), "service /grasp/%s not available" % name
-    t = time.time()
-    fut = cli.call_async(Trigger.Request())
-    while not fut.done() and time.time() - t < timeout:
-        time.sleep(0.2)
-    if not fut.done():
-        raise TimeoutError("/grasp/%s took longer than %d s" % (name, timeout))
-    r = fut.result()
-    metrics["stages"][name] = dict(ok=r.success, seconds=round(time.time() - t, 1), message=r.message)
-    log("%s -> %s: %s" % (name, "OK" if r.success else "FAILED", r.message))
-    return r.success, r.message
-
-
-def snap(name):
-    m = robot._img.get("color")
-    if m is None:
-        return
-    img = np.frombuffer(m.data, np.uint8).reshape(m.height, m.width, -1)
-    cv2.imwrite(str(RUN / "screenshots" / (name + ".png")), np.ascontiguousarray(img[:, :, ::-1] if m.encoding == "rgb8" else img))
-
-
-def newest(pattern):
-    found = sorted(WORK.glob(pattern), key=lambda p: p.stat().st_mtime)
-    return found[-1] if found else None
-
-
-try:
-    snap("00_start")
-    q = np.degrees(robot.q)
+def main():
+    opts = pipeline.parse_args()
+    for name in opts.connectors or ():
+        try:
+            connectors.load(name)           # validates config/connectors.yaml and the name before anything moves
+        except (KeyError, ValueError) as e:
+            sys.exit("connectors: %s" % (e.args[0] if e.args else e))
     home = (np.array(yaml.safe_load(open(ROOT / "config" / "grasp.yaml"))["scan"]["home_joints_deg"]) + 180) % 360 - 180
-    if np.abs(q - home).max() > 1.0:
-        log("arm is %.0f deg from home: going home first" % np.abs(q - home).max())
-        call("home", 120)
-    if not args.skip_scan:
-        ok, _ = call("scan", 1500)
-        assert ok, "scan failed"
-    scan_dir = newest("scans/*/marker_cloud.npy").parent
-    ok, _ = call("color_target", 300)
-    assert ok, "coarse colour-target stage failed"
-    ok, _ = call("view", 300)
-    assert ok, "camera could not go over the target"
-    time.sleep(1.0)
-    snap("03_close_view")
-    ok, _ = call(dict(head="head_grasp", cloud="cloud_grasp", model="model_grasp")[args.mode], 300)
-    snap("04_after_grasp_plan")
-    if not ok:
-        metrics["outcome"] = "STOPPED_BEFORE_GRASP: sticker grasp could not be computed"
-    elif not args.grasp:
-        metrics["outcome"] = "PERCEPTION_ONLY: grasp computed, not requested"
-    else:
-        call("allow_grasp", 20)
-        ok, msg = call("execute", 600)
-        snap("05_after_grasp")
-        metrics["outcome"] = ("GRASP_REPORTED_HELD" if ok else "GRASP_FAILED") + ": " + msg
-except Exception as e:  # keep the evidence of whatever happened
-    metrics["outcome"] = "ERROR: %s: %s" % (type(e).__name__, e)
-    log(metrics["outcome"])
-finally:
-    snap("99_end")
-    metrics["seconds_total"] = round(time.time() - T0, 1)
-    rec.send_signal(signal.SIGTERM)
-    rec.wait(timeout=20)
-    sc, rn = newest("scans/*/marker_cloud.npy"), newest("runs/2*/plan.json")
-    if sc is not None and not args.skip_scan:
-        shutil.copytree(sc.parent, RUN / "scan" / sc.parent.name, dirs_exist_ok=True)
-    elif sc is not None:
-        (RUN / "scan_used.txt").write_text(str(sc.parent) + "\n")
-    if rn is not None:
-        shutil.copytree(rn.parent, RUN / "plan" / rn.parent.name, dirs_exist_ok=True)
-        for p in (rn.parent / "plots").glob("*.png"):
-            shutil.copy(p, RUN / "plots" / ("plan_" + p.name))
-    if sc is not None:
-        for p in (sc.parent / "plots").glob("*.png"):
-            shutil.copy(p, RUN / "plots" / ("scan_" + p.name))
-    shutil.copy(ROOT / "config" / "grasp.yaml", RUN / "config_grasp.yaml")
-    shutil.copy(ROOT / "logs" / "grasp_node.log", RUN / "grasp_node.log")
-    json.dump(metrics, open(RUN / "metrics.json", "w"), indent=1)
-    log("outcome: " + metrics["outcome"])
-    os._exit(0)
+    rclpy.init()
+    robot = Robot("pipeline", background=True)
+    if not robot.wait_ready(10):
+        sys.exit("no driver / controller")
+    results = pipeline.Pipeline(opts, RosIo(robot), home, WORK, ROOT).run()
+    code = 0 if results and all(r.outcome.startswith(OK_OUTCOMES) for r in results) and len(results) == max(1, len(opts.connectors)) else 1
+    sys.stdout.flush()
+    os._exit(code)      # background rclpy threads would keep the process alive
+
+
+if __name__ == "__main__":
+    main()

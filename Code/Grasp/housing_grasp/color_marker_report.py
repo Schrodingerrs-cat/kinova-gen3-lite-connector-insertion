@@ -61,7 +61,6 @@ def report_color_target(out, P, r):
 def report_grid_search(out, P, N3, N2, G, c, cands, stats, finger_w, scene=None, finger_t=0.0077, finger_box_h=0.012):
     """Image mode grid search. Figures (mm): 01 head cloud with 3D normals, 02 head outline normals (top view, used for the pad contacts), 03 every valid candidate
     (jaw line at its centre, colour = cost) with the best opening, 04 grasp points in 3D (object, centroid, grasp points), 05 candidate counts per step, 06 best cost per yaw."""
-    from matplotlib.collections import LineCollection
     out.mkdir(parents=True, exist_ok=True)
     best = cands[0]
     jb, pb = best["jaw"][:2], best["p"]

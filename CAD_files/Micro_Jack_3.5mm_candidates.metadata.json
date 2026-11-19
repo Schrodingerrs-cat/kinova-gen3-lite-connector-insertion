@@ -1,0 +1,42 @@
+{
+ "connector": "micro_jack",
+ "step": "CAD_files/Micro_Jack_3.5mm.STEP",
+ "step_sha256": "fd51885396446e235f779973c4434652648ecaa0c06da903685ea7dc83bc94e9",
+ "count": 9,
+ "best": {
+  "yaw_deg": 0.0,
+  "s_mm": 0.0,
+  "mid_mm": 2.779469471736462e-05,
+  "u0_mm": 6.0,
+  "gap_mm": 6.4970781419555355,
+  "contact": 11030,
+  "face_mm": 3.459000954101705,
+  "anti": 0.9482082649890373,
+  "cost": 0.2782286681136293
+ },
+ "seat_u_mm": 2.1,
+ "body_u_mm": [
+  2.1,
+  22.1
+ ],
+ "u0_choices_mm": [
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14
+ ],
+ "pad_mm": [
+  6.0,
+  25.1
+ ],
+ "status": "OFFLINE_GEOMETRY_ONLY",
+ "limitations": [
+  "scores are geometric: no friction or grip force",
+  "panel clearance is checked again at run time against the measured plane"
+ ]
+}

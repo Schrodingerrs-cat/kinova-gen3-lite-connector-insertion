@@ -104,6 +104,13 @@ def test_fusion_recovers_height_error_between_views():
     assert abs(info[1]["shift_mm"] - 2.0) < 0.3 and info[1]["rms_after_mm"] < info[1]["rms_before_mm"]
 
 
+def test_fusion_without_icp_only_stacks_the_views():
+    pts, _, _ = scene(0.4, (0, 0), SIZES[0])
+    a, b = pts[::2], pts[1::2] + [0, 0, 0.002]
+    fused, info = fuse_clouds([a, b], use_icp=False)
+    assert all(i["shift_mm"] == 0.0 for i in info) and np.allclose(info[1]["T"], np.eye(4)) and len(fused) > 0
+
+
 def test_view_poses_place_the_camera_and_tilt_toward_the_centre():
     R = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1.0]])     # tool pointing down
     T0 = np.eye(4); T0[:3, :3] = R
