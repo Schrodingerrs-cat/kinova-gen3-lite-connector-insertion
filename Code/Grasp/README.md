@@ -10,14 +10,23 @@ measured from the colour image around the sticker. The earlier depth-based housi
 ```
 housing_grasp/        pure NumPy/SciPy library, no ROS
   cloud.py            depth -> cloud: edge filter, voxel grid, outlier removal
-  scan.py             fuse views from predefined poses into one dense cloud (ICP; reports calibration consistency)
+  scan.py             fuse views from predefined poses into one dense cloud (ICP optional, off by default; reports calibration consistency)
+  connectors.py       registry + validation of config/connectors.yaml (one entry per STEP-modelled connector)
+  cad_fit.py          cad mode: connector points, panel plane, STEP model fit with leave-one-view-out gate, close-view poses
+  cad_place.py        cad mode: candidates placed with the fitted pose, panel clearance + finger-box checks
+  cad_report.py       cad mode: overlay / side-view / held-out figures
+  model_grasp.py      grasp candidate search on a model cloud (also used by tools/make_candidates.py)
+  motion_profile.py   quintic joint / path profiles (smooth, zero velocity and acceleration at the ends)
   color_marker.py            marker mask, marker point cloud, table RANSAC, DBSCAN, marker clusters, housing footprint from the colour image
   color_marker_report.py     plots of the colour-marker stages
   gripper.py          gripper self-scan (finger size, jaw gap vs position) and grasp_held()
   config.py           loads config/grasp.yaml, refuses unmeasured (null) values
-ros2_iface/           grasp_node.py (services), arm.py (motion), robot_ros.py (HW7 hardware layer), run_pipeline.py (runner + data collection),
+ros2_iface/           grasp_node.py (services), arm.py (motion), robot_ros.py (HW7 hardware layer), pipeline.py (run orchestration, no ROS, tested with fakes),
+                      run_pipeline.py (thin runner wiring ROS into it + data collection),
                       export_evidence.py, record.py, smoke_test.py, go_home.py, open_gripper.py, launch/, grasp.rviz, grasp_clouds.rviz
 config/grasp.yaml     all parameters; sources of measured values are commented
+config/connectors.yaml  cad mode: views, fit gate, panel, placement and one entry per connector (STEP file, model frame, seat, sticker colour)
+tools/                make_candidates.py (offline grasp candidates per connector), scan_observability.py (how well do the views pin the pose down), check_scan_poses.py
 tests/                pytest, synthetic data (geometry only, not hardware evidence)
 archive/              the old depth-based pipeline (snapshot)
 logs/                 runtime logs of the stack (not in git)
@@ -52,19 +61,24 @@ QT_QPA_PLATFORM=xcb rviz2 -d ros2_iface/grasp_clouds.rviz    # point clouds and 
 ```bash
 python3 ros2_iface/smoke_test.py            # first: joints, TF, action servers, camera, IK (never moves)
 python3 ros2_iface/run_pipeline.py $PWD/../../Media/Grasp/run_$(date +%Y%m%d_%H%M%S)_mytest --grasp
-python3 ros2_iface/run_pipeline.py RUN_DIR --mode head|cloud|model       # grasp mode (default: head)
+python3 ros2_iface/run_pipeline.py RUN_DIR --mode head|cloud|model|cad       # grasp mode (default: head)
 python3 ros2_iface/run_pipeline.py RUN_DIR                         # no --grasp: perception only, computes the grasp, never moves to it
 python3 ros2_iface/run_pipeline.py RUN_DIR --grasp --skip-scan     # reuse the last scan (saves ~2.5 min)
+python3 ros2_iface/run_pipeline.py RUN_DIR --mode cad --connector micro_jack            # cad mode, one named connector of config/connectors.yaml
+python3 ros2_iface/run_pipeline.py RUN_DIR --mode cad --connector usb_a micro_jack --hint 0.26,-0.02 --grasp --between pause   # several cables in turn
 python3 ros2_iface/export_evidence.py RUN_DIR                            # afterwards: point clouds (PLY), perception overlays, annotated video
 ```
-The runner does: home -> 7-pose colour scan (recorded joint poses) -> merge/ICP/voxel 0.8 mm -> table RANSAC + DBSCAN -> colour marker (coarse target) -> camera over it -> grasp computation -> [with --grasp] `allow_grasp` + execute (open, descend, close, lift, hold check).
+Several cables (`--connector A B ...`, cad mode only): each gets its own sub-folder `NN_name/` and a `summary.json`; `--hint X,Y` (base frame, m) per cable if several stickers are in view (or give each connector its own sticker colour in `connectors.yaml`). After a cable that was picked up, `--between pause` (default) asks you to take it and press Enter before the gripper opens, `release` opens at once (the cable drops), `stop` ends the run. A cable that could not be planned does not block the next; a failed execute stops the run. Exit status 0 only if every cable was planned (picked with `--grasp`). Details: PIPELINE.md.
+
+Every run starts by checking the arm is at home (joints within 1 deg; if not, `/grasp/home`, then verified within 2 deg or the run stops) and the gripper is fully open (`/grasp/open_gripper`; a dry run only reports). The runner does: home -> 7-pose colour scan (recorded joint poses) -> merge/ICP/voxel 0.8 mm -> table RANSAC + DBSCAN -> colour marker (coarse target) -> camera over it -> grasp computation -> [with --grasp] `allow_grasp` + execute (open, descend, close, lift, hold check).
 Without the runner, the same steps are services: `ros2 service call /grasp/<name> std_srvs/srv/Trigger` with `home, scan, color_target, view, head_grasp | cloud_grasp, allow_grasp, execute, hold_check`, or all at once with `pick`.
 `execute` only checks the motion until `/grasp/allow_grasp` has been called AND the node runs with `dry_run:=false`. Finger-collision and optimizer limits are OFF in `config/grasp.yaml` by user decision (2026-11-07): nothing stops a grasp next to an obstacle.
 Other tools: keyboard jog of the arm `Code/Teleop/run.sh` (do not run it while the pipeline moves the arm); calibration scans / hand-eye / intrinsics `Code/Calibration/`; `python3 ros2_iface/go_home.py` joint move to home; `python3 ros2_iface/open_gripper.py`.
 
-## Three grasp modes (same scan, same coarse target, same execute; choose with `run_pipeline.py --mode ...` or `grasp_mode:=...` for `/grasp/pick`; default head). The sticker mode is archived in `archive/sticker_mode_20261110/`.
+## Four grasp modes (same scan, same coarse target, same execute; choose with `run_pipeline.py --mode ...` or `grasp_mode:=...` for `/grasp/pick`; default head). The sticker mode is archived in `archive/sticker_mode_20261110/`.
 - **head** (DEFAULT) = the IMAGE method (`--mode head`, `/grasp/head_grasp`): the same segmentation, but ONLY the head pixels are lifted to a head cloud with their OWN depth, then a GRID SEARCH (no on/off switch) generates thousands of candidates from that cloud: jaw centres every 1 mm x yaw every 5 deg, pad window and gap from the cloud, finger-collision test against the non-head scene points, cost from outline normals, width evenness, centring, contact and gap width. Details: `PIPELINE.md` section 5.2.
 - **model** (`--mode model`, `/grasp/model_grasp`): separate from the other two. STEP model of the plug + an ArUco tag on the panel: tag pose -> plug pose (stored offset, `config/panel_map.yaml`) -> candidates of the offline model search placed in the base frame. Offline-tested only; needs the printed tag (`tags/`), its measured size and the plug offset (`tools/calibrate_panel_map.py`). Details: `PIPELINE.md` 5.4.
+- **cad** (`--mode cad`, `/grasp/cad_scan` + `/grasp/cad_grasp`): no 7-pose scan. Finds the sticker, 3 close tilted views (fast joint moves), fits the connector's STEP model (panel plane + leave-one-view-out gate), places the model's grasp candidates. Any connector with a STEP file: `config/connectors.yaml` + `tools/make_candidates.py`; several cables in one run with `--connector usb_a micro_jack`. Offline-tested only. Details: `PIPELINE.md` 5.5.
 - **cloud** (`--mode cloud`, `/grasp/cloud_grasp`; candidate search on/off with `color_marker.candidate_search` or `-p candidate_search:=on|off`; faces with `color_marker.contact_faces`, sizes from `color_marker.extent_source`): COLOUR MARKER REGION ONLY, the black body is not used. Position and height = median of the marker 3D points (stray specks removed); sticker axes and size = min-area rectangle of the marker blob IN THE IMAGE (the 3D sticker points are distorted on the glossy head: plane tilted 73 deg although the sticker faces up). Candidate SEARCH: jaw along the sticker's long or short edge x yaw offsets (-10/0/+10 deg) x 5 pad positions x 2 flips, opening = sticker extent along the jaw + 2 x 12 mm, TCP 8 mm below the sticker; cost = edge prior + centring + yaw; ranked, `/grasp/execute` takes the first with a feasible IK chain.
   Limit: marker data alone cannot say which sticker edge the jaws should close along. `color_marker.jaw_edge: long` is a CONVENTION (the sticker's long edge lies across the head, true on the current head); the black footprint is what measures it in the other modes. If a head is stickered the other way round, set `jaw_edge: short` (the other edge is also in the candidate list, ranked lower).
 User observation 2026-11-10 (not measured): in the first head-mode run on the arm the pads were on the wider faces (see `Media/Grasp/run_20261110_133718_head_mode_grid_search_autonomous_rerun/README.md` section E).
