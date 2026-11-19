@@ -1,0 +1,92 @@
+status: USER_DEFINED_PIXELS
+feature_type: rectangle
+target_shape: square
+camera_topic_prefix: /eih_cam
+camera_frame_id: eih_cameih_cam_color_optical_frame
+image_size_px:
+- 848
+- 480
+corners_image_px:
+- - 374
+  - 190
+- - 474
+  - 190
+- - 474
+  - 290
+- - 374
+  - 290
+corner_order: top-left, top-right, bottom-right, bottom-left
+tolerance_px: 5.0
+converge_frames: 5
+max_step_m: 0.002
+max_step_deg: 0.4
+max_joint_increment_deg: 2.0
+joint_gains:
+- 1.0
+- 1.0
+- 1.0
+- 1.0
+- 1.0
+- 1.0
+max_steps: 800
+timeout_s: 900.0
+arrival_tolerance_deg: 0.3
+arrival_timeout_s: 5.0
+arrival_settle_s: 0.5
+error_growth_px: 5.0
+error_growth_frames: 5
+tracking_loss_tolerance_s: 0.25
+tracking_recovery_timeout_s: 12.0
+tracking_recovery_frames: 3
+max_tracking_recoveries: 10
+near_goal_hold_s: 0.7
+feature_tracking:
+  type: hole_rectangles
+  selected_rectangle: 1
+  hole_polarity: dark
+  intensity_thresholds:
+  - 48
+  - 72
+  - 96
+  - 120
+  - 144
+  - 168
+  - 192
+  min_hole_diameter_px: 3.0
+  max_hole_diameter_px: 50.0
+  max_hole_axis_ratio: 2.5
+  min_hole_circularity: 0.45
+  max_jump_px: 20.0
+  association_margin_px: 2.0
+  camera_stale_s: 0.5
+  canonical_target_order:
+  - 0
+  - 1
+  - 2
+  - 3
+  seed_rectangles_image_px:
+  - - - 342.6761490425709
+      - 99.99192811460635
+    - - 414.77936940119736
+      - 109.04809458460066
+    - - 407.6537476377875
+      - 181.14325350687787
+    - - 340.6901863530712
+      - 173.1858588687259
+  - - - 466.84278262235347
+      - 115.04879551150209
+    - - 542.929010830236
+      - 125.0359458293671
+    - - 528.939363124584
+      - 199.15063532154252
+    - - 456.8455186314404
+      - 189.1242020523399
+  - - - 599.0136503652597
+      - 132.10939580395728
+    - - 680.0957348425839
+      - 143.01201205822292
+    - - 657.098991550298
+      - 217.12704834750082
+    - - 580.9764580548596
+      - 206.1614580981074
+  template_file: hole_templates.npz

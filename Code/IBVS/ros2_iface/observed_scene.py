@@ -57,7 +57,8 @@ class ObservedScene:
         if resume_run is None:
             if target_depth <= near+separation:
                 raise RuntimeError('target too close for a new scene; use --resume-run with the earlier verified snapshot')
-            centers = observed_voxels(observation['depth_m'], observation['K'], observation['distortion'],
+            filtered = self.e.scene_depth(observation['depth_m'],observation['color'])
+            centers = observed_voxels(filtered, observation['K'], observation['distortion'],
                                       T, near, self.e.c['depth_max_m'])
             snapshot = dict(centers_base_m=centers, camera_in_base=T,
                             snapshot_joints_deg=np.degrees(self.e.r.q), snapshot_corners_px=observation['corners_px'],

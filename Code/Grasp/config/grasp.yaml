@@ -84,6 +84,10 @@ hold_check:                   # wrist camera check after the lift (HW7 rule: 0 f
 motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py)
   joint_speed_deg_s: 10       # largest joint, joint-space moves (HW7 used 8-10)
   line_speed_mps: 0.04        # descent / lift (HW7 lift_up 0.05)
+post_grasp:
+  # Captured from live Kortex joint feedback on 2026-11-18 08:32:36 UTC.
+  joint_waypoints_deg:        # J1-J6 in degrees; keep the grasp gripper position
+    - [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
 scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)
   table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
   home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here
@@ -104,8 +108,3 @@ scan:                         # predefined workspace scan (/grasp/scan): 7 recor
     - [308.879, 280.278, 29.212, 311.470, 229.871, 233.206]   # 14-52-48, tool (0.245, -0.198, 0.100) m
 workspace:                    # base-frame x0, x1, y0, y1 (m) where the grasp target may be
   region: [0.18, 0.58, -0.32, 0.32]
-
-post_grasp:
-  # Saved joint pose used by the IBVS home -> post-grasp -> alignment sequence.
-  joint_waypoints_deg:
-    - [8.08, 21.2791, 118.2989, -87.3795, 6.709, -82.6386]

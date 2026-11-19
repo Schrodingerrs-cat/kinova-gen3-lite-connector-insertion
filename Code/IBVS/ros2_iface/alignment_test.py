@@ -31,12 +31,12 @@ from ibvs.control import Convergence  # noqa: E402
 from ibvs.depth import corner_depths  # noqa: E402
 from ibvs.frames import matrix  # noqa: E402
 from ibvs.markers import Tracker  # noqa: E402
-from ibvs.rectangles import RectangleTracker, TrackingLost, mean_rectangle_depths  # noqa: E402
+from ibvs.rectangles import make_rectangle_tracker, TrackingLost, mean_rectangle_depths  # noqa: E402
 from ibvs.overlay import FeatureOverlay  # noqa: E402
 from ibvs.recording import TimedVideo  # noqa: E402
 
 
-def load_inputs(settings_path, reference_path):
+def load_inputs(settings_path, reference_path, rectangle_id=None):
     settings = yaml.safe_load(settings_path.read_text())
     for key, value in settings.items():
         if not isinstance(value, (int, float)) or not np.isfinite(value) or value <= 0:
@@ -50,6 +50,10 @@ def load_inputs(settings_path, reference_path):
         reference = yaml.safe_load(reference_path.read_text())
         if reference.get("feature_type") != "rectangle":
             raise ValueError("the YAML target must describe a rectangle")
+        if rectangle_id is not None:
+            if reference.get('feature_tracking', {}).get('type') != 'hole_rectangles':
+                raise ValueError('--rectangle requires the hole_rectangles reference')
+            reference['feature_tracking']['selected_rectangle'] = rectangle_id
         settings["damping"] = 0.0
         settings["max_servo_joint_step_deg"] = 5.5
         FeatureOverlay(reference)
@@ -72,6 +76,8 @@ def load_inputs(settings_path, reference_path):
                 raise ValueError("six positive joint gains are required")
             settings["joint_gains"] = gains.tolist()
     else:
+        if rectangle_id is not None:
+            raise ValueError('--rectangle requires the hole_rectangles reference')
         reference = json.loads(reference_path.read_text())
         image = reference_path.parent / reference["image_file"]
         if hashlib.sha256(image.read_bytes()).hexdigest() != reference["image_sha256"]:
@@ -114,6 +120,13 @@ class Experiment:
         self.record_correction = False
         self.record_sequence = getattr(args,'record_sequence',False)
         self.tracking_epoch = 0
+        from ibvs.self_depth import SelfDepthBank
+        self_depth_path = ROOT/'config/gripper_depth.npz'
+        self_depth_paths=[p for p in (self_depth_path,ROOT/'config/gripper_depth_aligned.npz',ROOT/'config/gripper_depth_post_grasp.npz') if p.exists()]
+        self.self_depth_template = SelfDepthBank(self_depth_paths) if self_depth_paths else None
+        if self.self_depth_template is not None:
+            (output/'source/config').mkdir(parents=True,exist_ok=True)
+            for path in self_depth_paths:shutil.copyfile(path,output/'source/config'/path.name)
         self.servo_steps = 0
         self.record_start_stamp = None
         self.poses_completed = []
@@ -179,6 +192,20 @@ class Experiment:
             self.pump()
             self.fresh(camera=True)
 
+    def scene_depth(self, depth, color=None):
+        """Exclude only sensor returns matching explicitly calibrated gripper surfaces."""
+        if self.self_depth_template is None:
+            return depth
+        try:
+            if color is None:color=self.bgr(self.r._img['color'])
+            mask,details=self.self_depth_template.exclude(depth,np.asarray(self.camera['K']),
+                np.asarray(self.camera['distortion']),self.reference['camera_frame_id'],self.r.grip_pos_msr,color=color)
+        except ValueError as error:
+            raise TrackingLost(str(error)) from error
+        with (self.output/'self_depth_filter.jsonl').open('a') as record:
+            record.write(json.dumps(dict(phase=self.phase,**details))+'\n')
+        return np.where(mask,np.nan,depth)
+
     def positioning_scene(self):
         from observed_scene import ObservedScene
         from ibvs.depth import observed_voxels
@@ -196,9 +223,10 @@ class Experiment:
             raise RuntimeError('positioning requires aligned 16UC1 depth')
         metres = np.frombuffer(depth.data,np.uint16).reshape(depth.height,depth.step//2)[:,:depth.width]*.001
         T = self.fk(self.r.q)@self.T_EC
-        centers = observed_voxels(metres,np.asarray(self.camera['K']),np.asarray(self.camera['distortion']),
+        centers = observed_voxels(self.scene_depth(metres),np.asarray(self.camera['K']),np.asarray(self.camera['distortion']),
                                   T,.11,self.c['depth_max_m'])
-        np.savez_compressed(self.output/'positioning_scene.npz',centers_base_m=centers,camera_in_base=T)
+        np.savez_compressed(self.output/'positioning_scene.npz',centers_base_m=centers,camera_in_base=T,
+                            depth_m=metres,K=np.asarray(self.camera['K']),distortion=np.asarray(self.camera['distortion']))
         scene = ObservedScene(self)
         scene.identifier += '_positioning'
         try:
@@ -260,7 +288,8 @@ class Experiment:
         if self.is_rectangle and self.tracker is not None:
             pixels, valid = np.full((1,4,2), np.nan), np.array([False])
             if self.phase == "ALIGN":
-                pixels, valid = self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+                pixels, valid = self.tracker.detect(image if self.reference['feature_tracking']['type']=='hole_rectangles'
+                                                     else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
                 if valid[0]:
                     self.last_rectangle_seen = time.monotonic()
                 else:
@@ -274,7 +303,7 @@ class Experiment:
             age = max(0., self.r.get_clock().now().nanoseconds*1e-9-self.stamp(msg))
             annotated = self.display.render(image, self.camera["K"], self.camera["distortion"],
                                              self.stamp(msg), age_s=age, observation=(pixels,valid), draw_target=True,
-                                             phase=getattr(self, 'visual_stage', self.phase))
+                                             phase=getattr(self, 'visual_stage', self.phase), feature_tracker=self.tracker)
             stamp = self.stamp(msg)
             if self.record_start_stamp is None:
                 self.record_start_stamp = stamp
@@ -367,7 +396,7 @@ class Experiment:
         if self.is_rectangle:
             if info.header.frame_id != self.reference["camera_frame_id"]:
                 raise RuntimeError("camera frame differs from the rectangle configuration")
-            self.tracker = RectangleTracker(self.camera, self.reference["feature_tracking"], self.reference["corners_image_px"])
+            self.tracker = make_rectangle_tracker(self.camera, self.reference["feature_tracking"], self.reference["corners_image_px"])
         else:
             self.tracker = Tracker(self.camera, {**self.reference, "min_side_px": self.c["min_marker_side_px"],
                                                  "max_jump_px": self.c["max_corner_jump_px"]})
@@ -505,12 +534,21 @@ class Experiment:
         drift = float(np.degrees(np.abs(self.r.q - path[0])).max())
         if drift > 0.5:
             raise RuntimeError("arm moved during planning; refusing the stale plan")
-        times = path_times(path, self.c["joint_speed_deg_s"])
-        times *= max(1.0, min_duration / times[-1])
-        times += max(0.1, 1.875 * drift / self.c["joint_speed_deg_s"]) - times[0]
+        planned_points=len(path)
+        precise = self.is_rectangle and self.phase == "ALIGN"
+        profile='segmented_quintic'
+        if precise and self.c.get('smooth_joint_segments',False):
+            from ibvs.alignment import straight_joint_path
+            if straight_joint_path(path):
+                # The complete planned curve has already passed all geometry checks.
+                # Two endpoints describe the identical line, without intermediate stops.
+                path=path[[0,-1]]
+                profile='continuous_quintic'
+        from ibvs.alignment import trajectory_times
+        times=trajectory_times(path,self.c['joint_speed_deg_s'],min_duration,
+                               max(.1,1.875*drift/self.c['joint_speed_deg_s']))
         request = self.action_type.Goal()
         request.trajectory.joint_names = JOINTS
-        precise = self.is_rectangle and self.phase == "ALIGN"
         if precise:
             request.goal_tolerance = [JointTolerance(name=j, position=float(np.radians(self.c["arrival_tolerance_deg"])))
                                       for j in JOINTS]
@@ -532,7 +570,8 @@ class Experiment:
                 raise RuntimeError("joint trajectory failed: " + result.result.error_string)
             finished = time.monotonic()
             if self.is_rectangle:
-                settle_until = finished + self.c["arrival_settle_s"]
+                settle_s=self.c["arrival_settle_s"] if precise else self.c.get('position_settle_s',self.c['arrival_settle_s'])
+                settle_until = finished + settle_s
                 while time.monotonic() < settle_until:
                     self.pump()
                     self.fresh(camera=self.phase in ("ALIGN", "CALIBRATE"))
@@ -557,6 +596,9 @@ class Experiment:
                                                  measured_joints_deg=np.degrees(self.r.q).tolist(),
                                                  error_deg=np.degrees(np.abs(self.r.q-path[-1])).tolist(),
                                                  tolerance_deg=self.c["arrival_tolerance_deg"],
+                                                 planned_waypoints=planned_points,sent_waypoints=len(path),
+                                                 profile=profile,command_duration_s=float(times[-1]),
+                                                 movement_duration_s=float(times[-1]-times[0]),
                                                  controller_result=result_code)) + "\n")
             self.pending = None
 
@@ -617,7 +659,15 @@ class Experiment:
             if self.is_rectangle:
                 raw = corner_depths(metres, pixels[0], self.c["depth_min_m"], self.c["depth_max_m"])
                 try:
-                    Z, support = mean_rectangle_depths(metres,pixels[0],self.c["depth_min_m"],self.c["depth_max_m"])
+                    if self.reference['feature_tracking']['type'] == 'hole_rectangles':
+                        from ibvs.hole_rectangles import hole_rim_depths
+                        Z, support = hole_rim_depths(metres, pixels[0],
+                            self.tracker.hole_radii[self.tracker.selected_rectangle-1],
+                            self.camera['K'], self.camera['distortion'],
+                            self.c['depth_min_m'], self.c['depth_max_m'], self.c['depth_plane_inlier_m'],
+                            self.c['min_depth_points'], self.c['min_depth_inlier_fraction'])
+                    else:
+                        Z, support = mean_rectangle_depths(metres,pixels[0],self.c["depth_min_m"],self.c["depth_max_m"])
                 except ValueError as error:
                     raise TrackingLost(str(error)) from error
             else:
@@ -850,6 +900,7 @@ def main():
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
     parser.add_argument("--settings", type=Path, default=ROOT / "config" / "alignment.yaml")
     parser.add_argument("--reference", type=Path, default=ROOT / "config" / "center_rectangle.yaml")
+    parser.add_argument('--rectangle', type=int, choices=(1, 2, 3), help='hole rectangle to track, numbered left to right at acquisition')
     parser.add_argument("--hand-eye", type=Path, help="reuse a local_hand_eye.json from this unchanged camera mount; default: measure local mapping")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -860,7 +911,7 @@ def main():
         os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
     if args.position_only and args.calibration_only:
         parser.error("choose either --position-only or --calibration-only")
-    settings, reference, grasp = load_inputs(args.settings, args.reference)
+    settings, reference, grasp = load_inputs(args.settings, args.reference, args.rectangle)
     rectangle = reference.get("feature_type") == "rectangle"
     if rectangle and (args.calibration_only or args.hand_eye):
         parser.error("rectangle mode uses standard IBVS and the existing transform; calibration probes/fitted mappings are disabled")
@@ -880,10 +931,12 @@ def main():
                      "ibvs/depth.py", "ibvs/frames.py", "ibvs/rectangles.py", "ibvs/overlay.py", "ibvs/shape_control.py",
                      "ros2_iface/joint2_priority_servo.py", "ros2_iface/observed_scene.py",
                      "ibvs/recording.py", "ibvs/kinematics.py",
+                     "ibvs/hole_rectangles.py", "ibvs/hole_templates.py", "ibvs/self_depth.py",
                      "config/alignment.yaml", "config/center_rectangle.yaml"]:
         snapshot = output / "source" / relative
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, snapshot)
+    shutil.copyfile(args.reference, output/'source'/('selected_reference'+args.reference.suffix))
     import rclpy
     from rclpy.signals import SignalHandlerOptions
     experiment = None

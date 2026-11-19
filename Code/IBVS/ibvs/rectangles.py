@@ -7,6 +7,13 @@ class TrackingLost(RuntimeError):
     """No fresh measured corners/depth; motion must hold until reacquisition."""
 
 
+def make_rectangle_tracker(camera, config, target):
+    if config.get('type') == 'hole_rectangles':
+        from .hole_rectangles import HoleRectangleTracker
+        return HoleRectangleTracker(camera, config, target)
+    return RectangleTracker(camera, config, target)
+
+
 class RectangleTracker:
     def __init__(self, camera, config, target):
         self.K = np.asarray(camera["K"], float).reshape(3, 3)

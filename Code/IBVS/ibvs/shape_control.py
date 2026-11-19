@@ -20,13 +20,31 @@ def center_size_features(xy):
     return np.r_[xy.mean(axis=0), .5*np.log(abs(area))], derivative
 
 
+def center_size_angle_features(xy):
+    """Center, log size, and the mean horizontal-edge angle, with image derivatives."""
+    xy=np.asarray(xy,float)
+    features,derivative=center_size_features(xy)
+    horizontal=.5*((xy[1]-xy[0])+(xy[2]-xy[3]))
+    squared=float(horizontal@horizontal)
+    if squared<1e-12:raise ValueError('rectangle horizontal direction is degenerate')
+    direction=np.array([-horizontal[1],horizontal[0]])/squared
+    angle_derivative=np.concatenate([weight*direction for weight in (-.5,.5,.5,-.5)])
+    return np.r_[features,np.arctan2(horizontal[1],horizontal[0])],np.vstack([derivative,angle_derivative])
+
+
+def angle_difference(current,desired):
+    return float(np.arctan2(np.sin(current-desired),np.cos(current-desired)))
+
+
 def shape_metrics(pixels, target):
     current, _ = center_size_features(pixels)
     desired, _ = center_size_features(target)
     errors = np.linalg.norm(np.asarray(pixels)-np.asarray(target), axis=1)
     return dict(center_error_px=float(np.linalg.norm(current[:2]-desired[:2])),
                 size_ratio=float(np.exp(current[2]-desired[2])),
-                rms_px=float(np.sqrt(np.mean(errors**2))), max_corner_px=float(errors.max()))
+                rms_px=float(np.sqrt(np.mean(errors**2))), max_corner_px=float(errors.max()),
+                orientation_error_deg=float(np.degrees(angle_difference(
+                    center_size_angle_features(pixels)[0][3],center_size_angle_features(target)[0][3]))))
 
 
 def task_cost(xy, target, focal, task):
@@ -34,8 +52,11 @@ def task_cost(xy, target, focal, task):
         return float(np.mean(np.sum(((xy-target)*focal)**2, axis=1)))
     current, _ = center_size_features(xy)
     desired, _ = center_size_features(target)
-    return float(np.sum(((current[:2]-desired[:2])*focal/5.)**2)
-                 + ((current[2]-desired[2])/.1)**2)
+    cost=float(np.sum(((current[:2]-desired[:2])*focal/5.)**2)+((current[2]-desired[2])/.1)**2)
+    if task=='center_size_angle':
+        angle=angle_difference(center_size_angle_features(xy)[0][3],center_size_angle_features(target)[0][3])
+        cost+=(angle/np.radians(5.))**2
+    return cost
 
 
 def shape_ibvs_step(xy, target, depths, camera_jacobian, gain, task,
@@ -52,10 +73,12 @@ def shape_ibvs_step(xy, target, depths, camera_jacobian, gain, task,
             or not all(np.isfinite(v) and v > 0 for v in (gain, max_translation, max_rotation))):
         raise ValueError("finite observations and positive depths/gains/limits are required")
     J = interaction(xy, depths) @ camera_jacobian
-    if task == "center_size":
-        current, derivative = center_size_features(xy)
-        desired, _ = center_size_features(target)
+    if task in ('center_size','center_size_angle'):
+        extract=center_size_angle_features if task=='center_size_angle' else center_size_features
+        current, derivative = extract(xy)
+        desired, _ = extract(target)
         J, error = derivative @ J, current-desired
+        if task=='center_size_angle':error[3]=angle_difference(current[3],desired[3])
     elif task == "corners":
         error = (xy-target).ravel()
     else:

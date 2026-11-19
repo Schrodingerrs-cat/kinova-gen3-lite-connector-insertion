@@ -6,14 +6,15 @@ from .control import damped_pinv, interaction
 from .frames import skew
 
 
-def marker_plane_depths(depth, pixels, K, distortion, lo, hi, inlier_m, min_points, min_fraction):
-    """Fit the dominant measured depth plane inside the marker; reject unsupported fits."""
+def marker_plane_depths(depth, pixels, K, distortion, lo, hi, inlier_m, min_points, min_fraction, mask=None):
+    """Fit a measured depth plane inside the marker or a supplied sampling mask."""
     import cv2
 
     pixels = np.asarray(pixels, float)
-    mask = np.zeros(depth.shape, np.uint8)
-    inner = pixels.mean(axis=0) + 0.8 * (pixels - pixels.mean(axis=0))
-    cv2.fillConvexPoly(mask, np.rint(inner).astype(np.int32), 1)
+    if mask is None:
+        mask = np.zeros(depth.shape, np.uint8)
+        inner = pixels.mean(axis=0) + 0.8 * (pixels - pixels.mean(axis=0))
+        cv2.fillConvexPoly(mask, np.rint(inner).astype(np.int32), 1)
     v, u = np.nonzero(mask & np.isfinite(depth) & (depth >= lo) & (depth <= hi))
     if len(u) < min_points:
         raise ValueError("too few valid marker depth pixels")
@@ -126,6 +127,37 @@ def path_times(q_rad, speed_deg_s, min_interval=0.05):
         raise ValueError("joint speed must be positive")
     distance = np.degrees(np.abs(np.diff(q, axis=0))).max(axis=1)
     return np.r_[0.1, 0.1 + np.cumsum(np.maximum(min_interval, 1.875 * distance / speed_deg_s))]
+
+
+def straight_joint_path(path,tolerance=1e-6):
+    """True only when removing intermediate knots preserves the exact joint-space curve."""
+    path=np.asarray(path,float)
+    if path.ndim!=2 or path.shape[1]!=6 or len(path)<2 or not np.isfinite(path).all():
+        raise ValueError('a finite six-joint path is required')
+    delta=path[-1]-path[0];length=float(delta@delta)
+    if length<1e-16:return bool(np.max(np.abs(path-path[0]))<=tolerance)
+    fractions=(path-path[0])@delta/length
+    residual=path-(path[0]+fractions[:,None]*delta)
+    return bool(np.max(np.abs(residual))<=tolerance and np.all(np.diff(fractions)>=-1e-9)
+                and fractions.min()>=-1e-9 and fractions.max()<=1+1e-9)
+
+
+def smooth_servo_path(path,max_segment_deg=.25):
+    """Densify a nearly straight local path; the caller must check every new sample."""
+    path=np.asarray(path,float)
+    if not straight_joint_path(path,tolerance=1e-4):return path
+    count=max(3,int(np.ceil(np.degrees(np.max(np.abs(path[-1]-path[0])))/max_segment_deg))+1)
+    return np.linspace(path[0],path[-1],count)
+
+
+def trajectory_times(path,speed_deg_s,min_duration=0.,start_delay=.1):
+    """Scale movement time independently of the trajectory's initial time offset."""
+    if not np.isfinite(min_duration) or min_duration<0 or not np.isfinite(start_delay) or start_delay<=0:
+        raise ValueError('invalid trajectory duration or start delay')
+    base=path_times(path,speed_deg_s)
+    elapsed=base-base[0]
+    elapsed*=max(1.,min_duration/elapsed[-1])
+    return elapsed+start_delay
 
 
 def within_limits(T_BE, T_EC, T_tcp, origin_BC, floor_z, max_travel, max_angle):
