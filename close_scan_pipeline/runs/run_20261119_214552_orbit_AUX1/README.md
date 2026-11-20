@@ -22,6 +22,9 @@ Board top -0.0125 m, plug top 0.0112 m (plug stands 24 mm). Grasp tcp z -0.0065 
 
 The software result is the wrist-camera rule only; physical hold is judged by the operator.
 
+## Operator observation
+Operator confirmed by eye that the aux jack was picked up properly out of the board. Camera rule said HELD (0.114 m between the tips, table 0.251 m). Put back at its seat afterwards with tools/put_back.py, arm homed.
+
 ## Plots (plots/)
 - `01_views_plug_overlay.png`
 - `02_board_yaw_per_view.png`
