@@ -12,9 +12,10 @@ from scipy.spatial.transform import Rotation as R
 
 from builtin_interfaces.msg import Duration
 from control_msgs.action import FollowJointTrajectory, GripperCommand
+from example_interfaces.msg import Bool
 from geometry_msgs.msg import PoseStamped
 from moveit_msgs.msg import MoveItErrorCodes, RobotState
-from moveit_msgs.srv import GetCartesianPath, GetPositionIK
+from moveit_msgs.srv import GetCartesianPath, GetPositionIK, GetStateValidity
 from sensor_msgs.msg import CameraInfo, Image, JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import tf2_ros
@@ -39,19 +40,22 @@ def matrix(p, q):
 class Robot(Node):
     def __init__(self, name='grasp_robot', background=False):
         """background=True: own thread keeps joints/TF/camera fresh (use inside a long-running node)."""
-        super().__init__(name)
+        super().__init__(name, use_global_arguments=False)   # the launch's -r __node:=grasp_node must not rename this helper too (two /grasp_node = failing set_parameters)
         self._ex = SingleThreadedExecutor()
         self._ex.add_node(self)
         self._bg = background
         self.q = None
         self.grip_pos_msr = None
+        self.fault = False
         self.create_subscription(JointState, '/joint_states', self._js, 10)
+        self.create_subscription(Bool, '/fault_controller/internal_fault', lambda m: setattr(self, 'fault', bool(m.data)), 10)
         self.tfbuf = tf2_ros.Buffer()
         self.tfl = tf2_ros.TransformListener(self.tfbuf, self)
         self.arm = ActionClient(self, FollowJointTrajectory, ARM_ACTION)
         self.grip = ActionClient(self, GripperCommand, GRIPPER_ACTION)
         self.ik_srv = self.create_client(GetPositionIK, '/compute_ik')
         self.cart_srv = self.create_client(GetCartesianPath, '/compute_cartesian_path')
+        self.valid_srv = self.create_client(GetStateValidity, '/check_state_validity')
         self._img = {}
         for name, topic, typ in (('color', COLOR, Image), ('depth', DEPTH, Image), ('info', INFO, CameraInfo)):
             self.create_subscription(typ, topic, lambda m, n=name: self._img.__setitem__(n, m), qos_profile_sensor_data)
@@ -124,6 +128,30 @@ class Robot(Node):
         """Joint-space move from the current joints to q_deg in `duration` s: quintic profile (zero speed and acceleration at both ends)."""
         t, p, v, a = joint_move(np.array(self.q), np.radians(q_deg), duration)
         self.send_joint_path(p, 0.05 + t, v, accelerations=a)
+
+    def path_collision(self, q_from_deg, q_to_deg, step_deg=2.0):
+        """None if every state on the straight joint-space line from q_from to q_to is valid in MoveIt's planning scene (self collision, the CAD fixture
+        and the table when add_fixture_to_scene.py has put them there), else a short text naming the first colliding pair. The quintic profile only changes
+        the timing, not the path. If the validity service is not there the move is not blocked (a warning is logged)."""
+        if not self.valid_srv.wait_for_service(timeout_sec=2.0):
+            self.get_logger().warn('/check_state_validity not available: path not checked against the planning scene')
+            return None
+        q0, q1 = np.asarray(q_from_deg, float), np.asarray(q_to_deg, float)
+        n = max(1, int(np.ceil(np.abs(q1 - q0).max() / step_deg)))
+        for i in range(n + 1):
+            req = GetStateValidity.Request()
+            req.group_name = GROUP
+            req.robot_state.joint_state.name = JOINTS
+            req.robot_state.joint_state.position = [float(v) for v in np.radians(q0 + (q1 - q0) * i / n)]
+            fut = self.valid_srv.call_async(req)
+            self.spin_until(fut.done, 5.0)
+            res = fut.result()
+            if res is None:
+                return 'validity check timed out at step %d of %d' % (i, n)
+            if not res.valid:
+                pairs = sorted({'%s / %s' % (c.contact_body_1, c.contact_body_2) for c in res.contacts})[:3]
+                return 'collision at %.0f %% of the move: %s' % (100.0 * i / n, ', '.join(pairs) or 'invalid state')
+        return None
 
     def ik(self, T, seed_deg=None, timeout=0.5, tries=3):
         """Joint angles (deg) for the tool pose T (4x4, base frame), or None. MoveIt's solver is randomized, so it is retried."""

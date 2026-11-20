@@ -53,11 +53,11 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # scratch output of the nod
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "ros2_iface"))
 from housing_grasp.config import load_config  # noqa: E402
+from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_grid_search, report_model_overlay  # noqa: E402  must be first: fixes mpl_toolkits before any pyplot import, else 3d plots fail
 from housing_grasp import cad_fit, cad_place  # noqa: E402
 from housing_grasp.cad_report import report_cad_fit  # noqa: E402
 from housing_grasp.model_mode import detect_tag_pose, load_panel_map, place_candidates, plug_pose, plug_pose_from_sticker, tag_plane_height  # noqa: E402
 from housing_grasp.color_marker import wide_face_offset, analyze_scan, marker_mask, marker_points, head_points, housing_footprint, merge_views, sticker_candidates, sticker_rect, grid_grasp_search, oriented_normals, outline_normals, scene_points  # noqa: E402
-from housing_grasp.color_marker_report import report_cloud_candidates, report_color_target, report_grid_search, report_model_overlay  # noqa: E402
 from housing_grasp.gripper import finger_points, grasp_held, measure_fingers, summarize  # noqa: E402
 from housing_grasp.scan import fuse_clouds, view_cloud, view_poses  # noqa: E402
 from arm import Arm  # noqa: E402
@@ -254,6 +254,11 @@ class GraspNode(Node):
         for k, T in enumerate(poses):
             q = (np.array(jv[k], float) + 180) % 360 - 180 if jv is not None else self.arm.ik_near(T, [self.home_q, last], sc["max_joint_dev_deg"])  # else: near home or near the previous view
             if q is None:
+                skipped.append(k)
+                continue
+            bad = self.arm.joint_limit_error(q)
+            if bad:
+                self.get_logger().warn("scan pose %d skipped, outside the joint limits: %s" % (k + 1, bad))
                 skipped.append(k)
                 continue
             last = q

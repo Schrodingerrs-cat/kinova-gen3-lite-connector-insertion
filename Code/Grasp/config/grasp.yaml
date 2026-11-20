@@ -82,11 +82,16 @@ hold_check:                   # wrist camera check after the lift (HW7 rule: 0 f
   tip_max_m: 0.20             # depth between the fingertips below this
   margin_m: 0.08              # and the table in the lower image corners at least this much farther
 motion:                       # joint moves and straight lines go to the controller directly (ros2_iface/arm.py); all use a quintic profile (zero speed and acceleration at both ends)
-  joint_speed_deg_s: 25       # average speed of the largest joint, joint-space moves (was 10: 2.5x faster; the quintic peak is 1.875 x this = 47 deg/s)
-  max_joint_vel_deg_s: 60     # peak joint speed never above this (the arm's limit is 92 deg/s): long moves are stretched to respect it
-  min_move_s: 1.0             # shortest joint move (was 2.0)
-  line_speed_mps: 0.05        # descent / lift average speed; arrives at the grasp point at rest (was 0.04)
-  min_line_s: 1.5             # shortest straight line (was 2.0)
+  joint_speed_deg_s: 16       # average speed of the largest joint, joint-space moves; the quintic peak is 1.875 x this = 30 deg/s. 2026-11-18: 35% slower than 25 (user: too quick between waypoints)
+  max_joint_vel_deg_s: 39     # peak joint speed never above this (was 60; the arm's limit is 92 deg/s): long moves are stretched to respect it
+  min_move_s: 1.5             # shortest joint move (was 1.0)
+  line_speed_mps: 0.033       # descent / lift average speed; arrives at the grasp point at rest (was 0.05)
+  min_line_s: 2.3             # shortest straight line (was 1.5)
+  joint_limits_deg: [153.6, 149.5, 149.5, 149.0, 145.0, 149.0]   # +- limit per joint, from the robot description (kortex_description gen3_lite)
+  joint_margin_deg: 3         # a commanded joint target must stay this far inside. Not more: working runs reached joint 3 = 145.2. 2026-11-18 a target of 161.1 faulted the arm
+  scene_collision_check: true # before every joint move: sample the path every scene_check_step_deg and ask MoveIt (/check_state_validity) about self collision, the CAD fixture and the table (tools/add_fixture_to_scene.py puts those in the scene); refuse the move on a hit
+  scene_check_step_deg: 2
+  reach_tol_deg: 2            # after a joint move every joint must be within this of its target, else stop (a faulted arm ignores moves but the controller still says success)
 scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)
   table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
   home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here
