@@ -16,7 +16,7 @@ Naming: no people's names in files or folders. The two existing grasp pipelines 
                   plug_points.py, plug_box.py, fit_plug_local.py, clean_scan.py, align_views.py   helpers/diagnostics behind it (plug-only points, box fit, CAD fit around the board prior, depth cleaning, per-view ICP)
                   report_run.py            plots, metrics.json and README.md for a run folder (run automatically after stage 1 and after a grasp)
                   put_back.py              reverse of a pick: down to the grasp pose, open, lift clear
-                  connector.py + connectors/usb.yaml, aux.yaml   per-connector settings; every tool takes --connector
+                  connector.py + connectors/usb.yaml, aux.yaml, power.yaml   per-connector settings; every tool takes --connector
                   grasp_plug.py            grasp from a PASSED stage 1 close scan: measured depth, jaws across the thin axis, straight-down approach; plan only unless --execute (--fresh = scan, check, grasp)
                   scan_orbit.py            close scan: detect marker, close pose centred over it, sweep left to right tilted toward it (plan-only by default); add_fixture_to_scene.py --include-plugs for scans
                   scan_grid.py             grid of camera views (front-back x left-right, small steps) saved like method 2's views; plan-only by default; then the stage 1 check

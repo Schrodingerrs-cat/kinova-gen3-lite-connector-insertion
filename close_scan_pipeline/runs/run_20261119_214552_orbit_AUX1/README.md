@@ -28,7 +28,6 @@ Operator confirmed by eye that the aux jack was picked up properly out of the bo
 ## Plots (plots/)
 - `01_views_plug_overlay.png`
 - `02_board_yaw_per_view.png`
-- `03_plug_wide_face_yaw.png`
 - `04_plug_points_top_view.png`
 - `05_grasp_depth.png`
 - `06_grasp_sequence.png`

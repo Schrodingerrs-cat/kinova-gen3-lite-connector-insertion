@@ -65,7 +65,7 @@ def hold_check(robot, h):
     return bool(tips < h["tip_max_m"] and table - tips > h["margin_m"]), tips, table
 
 
-def sticker_top(views, res, board):
+def sticker_top(views, res, board, spread=0.006):
     """Barrel top: per view the 90th percentile height of the bright sticker blob nearest the plug centre, median over views."""
     tops = []
     for v in views:
@@ -88,18 +88,19 @@ def sticker_top(views, res, board):
         if len(P) >= 25:
             tops.append(float(np.percentile(P[:, 2], 90)))
     print("barrel top per view above the board (mm): %s" % [round((t - board) * 1e3, 1) for t in tops])
-    if len(tops) < 3 or np.ptp(tops) > 0.006:
+    if len(tops) < 3 or np.ptp(tops) > spread:
         raise SystemExit("barrel top not consistent between views: no grasp")
     return float(np.median(tops)), len(tops)
 
 
 def measure(run, prof):
+    gr = prof["grasp"]
     views = sorted((run / "method2_perception/scan").glob("view_*.npz"))
     pr = pp.prior(views, prof["part"])
-    data = pp.points(views, pr, prof["points"]["radius_m"])
+    data = pp.points(views, pr, prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
     res = json.loads((run / "stage1_close.json").read_text())
     if prof["grasp"]["top_rule"] == "sticker_p90":
-        top, n = sticker_top(views, res, pr["board_top"])
+        top, n = sticker_top(views, res, pr["board_top"], gr.get("top_spread_m", 0.006))
         return pr["board_top"], top, n, res
     core = np.vstack([d["pts"] for d in data])
     core = core[np.hypot(core[:, 0] - res["x"], core[:, 1] - res["y"]) <= 0.006]
@@ -113,6 +114,7 @@ def main():
     ap.add_argument("--execute", action="store_true")
     ap.add_argument("--name", default="grasp")
     ap.add_argument("--connector", default="usb", help="profile in ~/kinova/work/connectors")
+    ap.add_argument("--hold-then-open", type=float, default=0.0, help="after the camera says HELD, wait this many s (operator looks), then just open the jaws where the arm is. 0 = keep holding")
     a = ap.parse_args()
     prof = connector.load(a.connector)
     gr = prof["grasp"]
@@ -141,6 +143,8 @@ def main():
     z_tcp = board + CLEAR
     print("depth: board top %.4f m, plug top %.4f m (rule %s, %d samples) -> stands %.0f mm above the board" % (board, top, gr["top_rule"], ncore, exposed * 1e3))
     print("       fingertip z %.4f (%.0f mm above the board), jaw band to %.4f, plug top %.0f mm above the band" % (z_tcp, CLEAR * 1e3, z_tcp + BAND, (top - z_tcp - BAND) * 1e3))
+    if gr.get("min_exposed_m") and exposed < gr["min_exposed_m"]:
+        sys.exit("measured stand-off %.0f mm is below the plausible minimum %.0f mm: no grasp" % (exposed * 1e3, gr["min_exposed_m"] * 1e3))
     if ncore < 3 or top - (z_tcp + BAND) < TOP_MARGIN:
         sys.exit("plug top not measured well enough or too low for this jaw band: no grasp")
     def chain(flip):
@@ -192,7 +196,7 @@ def main():
 
     out = run / "grasp"
     out.mkdir(exist_ok=True)
-    log = dict(started=time.strftime("%Y-%m-%dT%H:%M:%S"), connector=a.connector, board_top=board, plug_top=top, T_BG=T_BG.tolist(), open_width_m=width, stages=[])
+    log = dict(started=time.strftime("%Y-%m-%dT%H:%M:%S"), connector=a.connector, standoff_m=STANDOFF, board_top=board, plug_top=top, T_BG=T_BG.tolist(), open_width_m=width, stages=[])
 
     def snap(name):
         color, depth, _ = robot.grab()
@@ -254,6 +258,10 @@ def main():
         if not held:
             arm.grip_to(open_pos, gp["close_effort"], rate=0.3)
             stage("camera: nothing between the tips, jaws opened")
+        elif a.hold_then_open > 0:
+            robot.spin_until(lambda: False, a.hold_then_open)
+            arm.grip_to(0.0, gp["close_effort"], rate=0.3)
+            stage("held for %.0f s, then jaws opened where the arm is (no put-back)" % a.hold_then_open)
     except Exception as e:
         stage("STOPPED", reason=str(e))
         print("STOPPED: %s. Not moving further." % e, flush=True)

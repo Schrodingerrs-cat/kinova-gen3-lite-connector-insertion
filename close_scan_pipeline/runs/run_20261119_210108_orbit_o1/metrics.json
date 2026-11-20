@@ -36,7 +36,8 @@
     "detail": "largest shift 2.3 mm (<= 3)"
    }
   ],
-  "passed": true
+  "passed": true,
+  "yaw_cue": "wide_faces"
  },
  "grasp": null
 }

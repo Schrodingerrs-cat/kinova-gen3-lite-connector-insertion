@@ -22,6 +22,7 @@ import numpy as np  # noqa: E402
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import board_yaw as by  # noqa: E402
+import connector  # noqa: E402
 import plug_points as pp  # noqa: E402
 
 plt.rcParams.update({"font.size": 11, "axes.titlesize": 12, "axes.grid": True, "grid.alpha": 0.3})
@@ -35,9 +36,12 @@ def circ_mean(a):
 def build(run):
     views = sorted((run / "method2_perception/scan").glob("view_*.npz"))
     s1 = json.loads((run / "stage1_close.json").read_text())
+    if "yaw_cue" not in s1:
+        s1["yaw_cue"] = "wide_faces" if "yaw_left" in s1 else "none"
     part = s1.get("part", "NAUO49")
+    prof = connector.load(s1.get("connector", "usb"))
     pr = pp.prior(views, part)
-    data = pp.points(views, pr)
+    data = pp.points(views, pr, prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
     boards = [by.board(v) for v in views]
     wf = pp.wide_face_yaw(views, data, pr["board_yaw"])
     offs = json.loads((run / "orbit.json").read_text())["offsets_m"] if (run / "orbit.json").exists() else [0] * len(views)
@@ -102,7 +106,7 @@ def plot_top(run, data, s1, pr):
     fig, ax = plt.subplots(figsize=(6.2, 5.2))
     for k, d in enumerate(data):
         ax.scatter(d["pts"][:, 1] * 1e3, d["pts"][:, 0] * 1e3, s=3, color=COL[k % len(COL)], alpha=0.5, label="view %d" % k)
-    if "yaw_deg" in s1:
+    if s1.get("yaw_cue") == "wide_faces":
         a_ = np.radians(s1["yaw_deg"] - 90)
         ex, ey = np.array([np.cos(a_), np.sin(a_)]) * 7.5e-3, np.array([-np.sin(a_), np.cos(a_)]) * 3.75e-3
         c = np.array([s1["x"], s1["y"]])
@@ -138,8 +142,8 @@ def plot_depth(run, data, g, pr):
     plt.close(fig)
 
 
-def plot_sequence(run, folder):
-    names = [("1_pregrasp", "pre-grasp 90 mm above"), ("1b_20mm_above", "20 mm above"), ("2_at_grasp", "at the grasp pose"), ("3_closed", "jaws closed"), ("4_lifted", "lifted 80 mm")]
+def plot_sequence(run, folder, standoff=0.09):
+    names = [("1_pregrasp", "pre-grasp %.0f mm above" % (standoff * 1e3)), ("1b_20mm_above", "20 mm above"), ("2_at_grasp", "at the grasp pose"), ("3_closed", "jaws closed"), ("4_lifted", "lifted 80 mm")]
     items = [(n, t) for n, t in names if (folder / (n + ".png")).exists()]
     fig, ax = plt.subplots(2, 3, figsize=(12, 5.6))
     for a in ax.ravel():
@@ -175,14 +179,17 @@ def main(run, note=None):
     views, s1, pr, data, boards, wf, offs = build(run)
     plot_views(run, data, offs, s1)
     plot_board(run, boards)
-    plot_faces(run, wf, pr["board_yaw"])
+    made = ["01_views_plug_overlay", "02_board_yaw_per_view"]
+    if s1.get("yaw_cue") == "wide_faces":
+        plot_faces(run, wf, pr["board_yaw"])
+        made.append("03_plug_wide_face_yaw")
     plot_top(run, data, s1, pr)
-    made = ["01_views_plug_overlay", "02_board_yaw_per_view", "03_plug_wide_face_yaw", "04_plug_points_top_view"]
+    made.append("04_plug_points_top_view")
     gj = run / "grasp/grasp.json"
     g = json.loads(gj.read_text()) if gj.exists() else None
     if g:
         plot_depth(run, data, g, pr)
-        plot_sequence(run, run / "grasp")
+        plot_sequence(run, run / "grasp", g.get("standoff_m", 0.09))
         made += ["05_grasp_depth", "06_grasp_sequence"]
         chk = [s for s in g["stages"] if "camera check" in s["name"]]
         if chk:

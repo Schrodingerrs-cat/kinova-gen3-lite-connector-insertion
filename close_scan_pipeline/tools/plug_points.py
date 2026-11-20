@@ -37,7 +37,7 @@ def prior(views, part="NAUO49"):
     return dict(board_yaw=yaw_b, board_centre=cen_b, board_top=zb, plug_centre=np.r_[mp.bounds.mean(axis=0)[:2], 0.0], plug_top=float(mp.bounds[1][2]))
 
 
-def points(views, pr, radius=0.020, max_pts=1500):
+def points(views, pr, radius=0.020, max_pts=1500, top_tol=0.006, open_mm=None, mode="teal_or_dark"):
     out = []
     for v in views:
         f = np.load(v)
@@ -46,15 +46,28 @@ def points(views, pr, radius=0.020, max_pts=1500):
         ok = (d > 0.08) & (d < 0.8) & (np.abs(d - med) < 0.004)
         hsv = cv2.cvtColor(c, cv2.COLOR_BGR2HSV)
         teal = (hsv[..., 0] >= 80) & (hsv[..., 0] <= 105) & (hsv[..., 1] >= 70) & (hsv[..., 2] >= 35) & (hsv[..., 2] <= 140)
-        cand = (teal | (hsv[..., 2] < 90)) & ok
+        if mode == "sticker":
+            bright = ((hsv[..., 0] >= 75) & (hsv[..., 0] <= 105) & (hsv[..., 1] >= 100) & (hsv[..., 2] >= 80)).astype(np.uint8)
+            cand = (cv2.morphologyEx(bright, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) > 0) & ok
+        else:
+            cand = (teal | (hsv[..., 2] < 90)) & ok
         vv, uu = np.nonzero(cand)
         z = d[vv, uu]
         P = np.c_[(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z] @ T[:3, :3].T + T[:3, 3]
         pc = pr["plug_centre"]
-        keep = (np.hypot(P[:, 0] - pc[0], P[:, 1] - pc[1]) <= radius) & (P[:, 2] >= pr["board_top"] + 0.003) & (P[:, 2] <= pr["plug_top"] + 0.006)
+        keep = (np.hypot(P[:, 0] - pc[0], P[:, 1] - pc[1]) <= radius) & (P[:, 2] >= pr["board_top"] + 0.003) & (P[:, 2] <= pr["plug_top"] + top_tol)
         mask = np.zeros(d.shape, bool)
         mask[vv[keep], uu[keep]] = True
         pts = P[keep]
+        if open_mm and keep.sum() > 50:
+            rng = float(np.median(z[keep]))
+            k = max(3, int(round(open_mm * K[0, 0] / rng / 1000)))
+            op = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
+            n, lab, st, _ = cv2.connectedComponentsWithStats(op)
+            if n > 1:
+                body = lab == (1 + int(np.argmax(st[1:, 4])))
+                sel = body[vv[keep], uu[keep]]
+                mask, pts = body, P[keep][sel]
         if len(pts) > max_pts:
             pts = pts[np.random.default_rng(0).choice(len(pts), max_pts, replace=False)]
         out.append(dict(name=v.stem, pts=pts, mask=mask, color=c, K=K, T=T))

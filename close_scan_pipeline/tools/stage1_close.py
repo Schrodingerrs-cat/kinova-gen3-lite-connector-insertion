@@ -35,7 +35,7 @@ def evaluate(run, ref=None, name="usb"):
     gates, out = [], dict(run=str(run), views=len(views), connector=name, part=prof["part"], yaw_cue=prof["yaw_cue"])
     B = [by.board(v) for v in views]
     pr = pp.prior(views, prof["part"])
-    data = pp.points(views, pr, prof["points"]["radius_m"])
+    data = pp.points(views, pr, prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
     npts = [len(d["pts"]) for d in data]
     byaw = (np.array([b["yaw"] for b in B]) + 90) % 180 - 90
     bspread = float(np.ptp(byaw))
@@ -69,7 +69,8 @@ def evaluate(run, ref=None, name="usb"):
     full = pp.fit_box(merged(set(range(len(data)))))
     cen = np.array([pp.fit_box(merged(set(range(len(data))) - {k}))["centre"] for k in range(len(data))])
     loo = float(max(np.linalg.norm(a - b) for a in cen for b in cen) * 1e3)
-    gates.append(("plug centre repeatable leaving a view out", loo <= 3.0, "largest shift %.1f mm (<= 3)" % loo))
+    loo_tol = prof.get("loo_mm", 3.0)
+    gates.append(("plug centre repeatable leaving a view out", loo <= loo_tol, "largest shift %.1f mm (<= %g)" % (loo, loo_tol)))
     yb = np.radians(strip - 90)
     u, v = np.array([-np.sin(yb), np.cos(yb)]), np.array([np.cos(yb), np.sin(yb)])
     rel = full["centre"] - pr["board_centre"]

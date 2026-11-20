@@ -1,0 +1,33 @@
+# Power plug with a thick black cable, first try 2026-11-19. The CAD (NAUO56, 26.5 x 25.6 x 91 mm, a big IEC body) does NOT match the real part. Measured on POW1:
+#   the real part is a lumpy bright-teal body, about 15 mm along the jaw axis and 21 mm across, spanning ~7-30 mm above the board (top p90 26-32 mm per view), with a thick black cable (~10 mm)
+#   leaving its top toward the arm (offset x -17..-24 mm) and rising to 45-90 mm. The CAD position was right to about 3 mm; the size was not.
+# So: the body is found from the bright teal pixels only, tolerances are wide, and the grasp sits on the teal body below the cable.
+name: power
+part: NAUO56              # only for the position prior (CAD position was close)
+thickness_m: 0.015        # measured along the jaw axis
+yaw_cue: none             # lumpy body: jaws along the board strip direction
+min_points: 200
+loo_mm: 6.0               # leave-one-view-out tolerance: each view sees only its own side of the lump (centre spread across views is large); the opening has ~18 mm slack each side
+scene_include_plugs: true # USB and aux stand 50 mm to the right
+scan:
+  height_m: 0.260
+  lateral_m: 0.08
+  n: 5
+  aim_z_m: 0.025
+  min_tcp_dist_m: 0.06
+  min_tcp_z_m: 0.10
+points:
+  radius_m: 0.045         # the CAD position can be 10+ mm off
+  top_tol_m: 0.060        # wide height window: the CAD height is wrong
+  mode: sticker           # bright teal pixels only (hue 75-105, S >= 100, V >= 80): leaves the black cable out
+grasp:
+  clear_m: 0.010          # fingertip above the board: pad band 10-22 mm, inside the teal body (7-30 mm), below the cable boot
+  band_m: 0.012
+  top_margin_m: 0.005
+  top_spread_m: 0.008     # per-view top heights were 26-32 mm
+  min_exposed_m: 0.020
+  standoff_m: 0.12        # taller surroundings: pre-grasp higher
+  open_width_m: 0.052     # user: leave space, the connector is big. 15 mm body + ~18 mm each side. Not wider: the aux stands 52 mm away and the -y finger would sit ~6 mm from it at 60 mm
+  lift_test_m: 0.005
+  lift_m: 0.08
+  top_rule: sticker_p90   # 90th percentile height of the bright teal blob nearest the centre, median over views
