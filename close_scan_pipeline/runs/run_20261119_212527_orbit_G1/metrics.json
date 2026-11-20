@@ -1,0 +1,122 @@
+{
+ "run": "run_20261119_212527_orbit_G1",
+ "stage1": {
+  "run": "/home/pinaka/kinova/work/grasp_runs/run_20261119_212527_orbit_G1",
+  "views": 5,
+  "yaw_deg": 91.9382093742787,
+  "yaw_left": 90.56389339137235,
+  "yaw_right": 92.5704951241973,
+  "yaw_vs_strip": -2.770493919569006,
+  "x": 0.26176612261402804,
+  "y": -0.023843169921311417,
+  "z0": -0.006845766921927069,
+  "z1": 0.03372715511012471,
+  "footprint_mm": [
+   16.586672681942776,
+   11.394474747927607
+  ],
+  "along_strip_mm": -47.86734170935039,
+  "across_strip_mm": -0.8939648922680928,
+  "loo_mm": 2.802778565669397,
+  "strip_dir": 94.7087032938477,
+  "gates": [
+   {
+    "name": "plug points and board in every view",
+    "ok": true,
+    "detail": "plug points per view [488, 1123, 738, 855, 1225] (>= 200), board [(151, 51), (151, 51), (150, 51)] mm, board yaw spread 0.86 deg (<= 2)"
+   },
+   {
+    "name": "wide-face yaw agrees left vs right and with the strip",
+    "ok": true,
+    "detail": "left face 90.6 deg (347 px), right face 92.6 deg (754 px), difference 2.0 (<= 5); mean 91.9 deg, -2.8 from the strip (<= 10)"
+   },
+   {
+    "name": "plug centre repeatable leaving a view out",
+    "ok": true,
+    "detail": "largest shift 2.8 mm (<= 3)"
+   }
+  ],
+  "passed": true
+ },
+ "grasp": {
+  "started": "2026-11-19T21:26:43",
+  "board_top": -0.012499999999999978,
+  "plug_top": 0.033513310435762854,
+  "T_BG": [
+   [
+    0.9994278831965825,
+    0.03382168371323853,
+    0.0,
+    0.26176612261402804
+   ],
+   [
+    0.03382168371323853,
+    -0.9994278831965825,
+    0.0,
+    -0.023843169921311417
+   ],
+   [
+    0.0,
+    -0.0,
+    -1.0,
+    -0.0004999999999999779
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "open_width_m": 0.0315,
+  "stages": [
+   {
+    "name": "at pre-grasp",
+    "t": 1795141609.0,
+    "gripper": -4.8967631952837113e-05
+   },
+   {
+    "name": "jaws open",
+    "t": 1795141612.2,
+    "gripper": 0.6174940498352052,
+    "position": 0.6174940498352052
+   },
+   {
+    "name": "20 mm above the grasp point",
+    "t": 1795141615.3,
+    "gripper": 0.6163970100402832,
+    "tcp": [
+     0.2608,
+     -0.0238,
+     0.0191
+    ]
+   },
+   {
+    "name": "at grasp pose",
+    "t": 1795141618.9,
+    "gripper": 0.6163923133850098,
+    "tcp": [
+     0.2611,
+     -0.0238,
+     -0.0008
+    ]
+   },
+   {
+    "name": "closed",
+    "t": 1795141620.6,
+    "gripper": 0.8120274101257325,
+    "position": 0.8120274101257325,
+    "contact": false,
+    "gap_mm": 0.4,
+    "held": false
+   },
+   {
+    "name": "not held: opened and lifted clear",
+    "t": 1795141624.1,
+    "gripper": 0.6163932403564454
+   }
+  ],
+  "finished": "2026-11-19T21:27:04",
+  "note": "Physical hold is NOT verified by software: judge from the images and the operator."
+ }
+}

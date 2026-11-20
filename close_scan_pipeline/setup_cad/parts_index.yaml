@@ -1,0 +1,736 @@
+- id: NAUO16
+  file: part_NAUO16.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.1271
+  - 0.0825
+  - -0.0243
+  size_m:
+  - 0.295
+  - 0.015
+  - 0.0549
+- id: NAUO15
+  file: part_NAUO15.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.1305
+  - 0.0825
+  - -0.0045
+  size_m:
+  - 0.295
+  - 0.015
+  - 0.0549
+- id: NAUO14
+  file: part_NAUO14.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.1271
+  - -0.0825
+  - -0.0243
+  size_m:
+  - 0.295
+  - 0.015
+  - 0.0549
+- id: NAUO13
+  file: part_NAUO13.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.1305
+  - -0.0825
+  - -0.0045
+  size_m:
+  - 0.295
+  - 0.015
+  - 0.0549
+- id: NAUO12
+  file: part_NAUO12.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.0
+  - 0.0451
+  - 0.0075
+  size_m:
+  - 0.109
+  - 0.0898
+  - 0.0242
+- id: NAUO11
+  file: part_NAUO11.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.0
+  - -0.0451
+  - 0.0075
+  size_m:
+  - 0.109
+  - 0.0898
+  - 0.0242
+- id: NAUO35
+  file: part_NAUO35.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.56
+  - 0.1075
+  - 0.172
+  size_m:
+  - 0.014
+  - 0.025
+  - 0.01
+- id: NAUO34
+  file: part_NAUO34.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.563
+  - 0.0
+  - 0.1795
+  size_m:
+  - 0.008
+  - 0.238
+  - 0.005
+- id: NAUO33
+  file: part_NAUO33.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.56
+  - -0.1075
+  - 0.172
+  size_m:
+  - 0.014
+  - 0.025
+  - 0.01
+- id: NAUO32
+  file: part_NAUO32.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.642
+  - 0.0
+  - -0.0405
+  size_m:
+  - 0.008
+  - 0.238
+  - 0.005
+- id: NAUO31
+  file: part_NAUO31.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.642
+  - 0.11
+  - -0.048
+  size_m:
+  - 0.018
+  - 0.02
+  - 0.01
+- id: NAUO30
+  file: part_NAUO30.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.642
+  - -0.11
+  - -0.048
+  size_m:
+  - 0.018
+  - 0.02
+  - 0.01
+- id: NAUO29
+  file: part_NAUO29.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.557
+  - 0.116
+  - 0.0615
+  size_m:
+  - 0.008
+  - 0.008
+  - 0.008
+- id: NAUO28
+  file: part_NAUO28.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.557
+  - 0.116
+  - -0.023
+  size_m:
+  - 0.008
+  - 0.008
+  - 0.008
+- id: NAUO27
+  file: part_NAUO27.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.557
+  - -0.116
+  - 0.0615
+  size_m:
+  - 0.008
+  - 0.008
+  - 0.008
+- id: NAUO26
+  file: part_NAUO26.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.557
+  - -0.116
+  - -0.023
+  size_m:
+  - 0.008
+  - 0.008
+  - 0.008
+- id: NAUO25
+  file: part_NAUO25.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.6025
+  - 0.1225
+  - 0.0678
+  size_m:
+  - 0.099
+  - 0.005
+  - 0.2416
+- id: NAUO24
+  file: part_NAUO24.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.6025
+  - -0.1225
+  - 0.0678
+  size_m:
+  - 0.099
+  - 0.005
+  - 0.2416
+- id: NAUO23
+  file: part_NAUO23.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.534
+  - 0.0
+  - -0.0405
+  size_m:
+  - 0.018
+  - 0.185
+  - 0.005
+- id: NAUO22
+  file: part_NAUO22.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.5375
+  - 0.0995
+  - -0.0405
+  size_m:
+  - 0.025
+  - 0.035
+  - 0.025
+- id: NAUO21
+  file: part_NAUO21.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.5375
+  - -0.0995
+  - -0.0405
+  size_m:
+  - 0.025
+  - 0.035
+  - 0.025
+- id: NAUO20
+  file: part_NAUO20.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.409
+  - 0.0825
+  - -0.0405
+  size_m:
+  - 0.267
+  - 0.0682
+  - 0.005
+- id: NAUO19
+  file: part_NAUO19.stl
+  role: acrylic
+  rgba:
+  - 0.65
+  - 0.82
+  - 1.0
+  - 0.35
+  centre_m:
+  - 0.409
+  - -0.0825
+  - -0.0405
+  size_m:
+  - 0.267
+  - 0.0682
+  - 0.005
+- id: NAUO42
+  file: part_NAUO42.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.5505
+  - 0.075
+  - 0.127
+  size_m:
+  - 0.005
+  - 0.052
+  - 0.052
+- id: NAUO41
+  file: part_NAUO41.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.5505
+  - 0.0
+  - 0.127
+  size_m:
+  - 0.005
+  - 0.052
+  - 0.052
+- id: NAUO40
+  file: part_NAUO40.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.5505
+  - -0.075
+  - 0.127
+  size_m:
+  - 0.005
+  - 0.052
+  - 0.052
+- id: NAUO49_1
+  file: part_NAUO49_1.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.5401
+  - -0.075
+  - 0.127
+  size_m:
+  - 0.0503
+  - 0.0075
+  - 0.015
+- id: NAUO48_1
+  file: part_NAUO48_1.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.5591
+  - -0.075
+  - 0.127
+  size_m:
+  - 0.0122
+  - 0.05
+  - 0.05
+- id: NAUO54_1
+  file: part_NAUO54_1.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.5004
+  - 0.0
+  - 0.127
+  size_m:
+  - 0.05
+  - 0.003
+  - 0.003
+- id: NAUO53_1
+  file: part_NAUO53_1.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.5392
+  - 0.0
+  - 0.127
+  size_m:
+  - 0.0276
+  - 0.0065
+  - 0.0065
+- id: NAUO52_1
+  file: part_NAUO52_1.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.561
+  - 0.0
+  - 0.127
+  size_m:
+  - 0.0161
+  - 0.005
+  - 0.005
+- id: NAUO50_1
+  file: part_NAUO50_1.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.561
+  - 0.0
+  - 0.127
+  size_m:
+  - 0.0161
+  - 0.05
+  - 0.05
+- id: NAUO56_1
+  file: part_NAUO56_1.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.5285
+  - 0.075
+  - 0.1277
+  size_m:
+  - 0.091
+  - 0.0256
+  - 0.0265
+- id: NAUO55_1
+  file: part_NAUO55_1.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.5615
+  - 0.075
+  - 0.127
+  size_m:
+  - 0.017
+  - 0.05
+  - 0.05
+- id: NAUO36
+  file: part_NAUO36.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.5515
+  - 0.0
+  - 0.072
+  size_m:
+  - 0.003
+  - 0.25
+  - 0.25
+- id: NAUO47
+  file: part_NAUO47.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.3494
+  - 0.0
+  - -0.043
+  size_m:
+  - 0.1488
+  - 0.1375
+  - 0.02
+- id: NAUO49
+  file: part_NAUO49.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.25
+  - -0.05
+  - -0.0051
+  size_m:
+  - 0.015
+  - 0.0075
+  - 0.0503
+- id: NAUO48
+  file: part_NAUO48.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.25
+  - -0.05
+  - -0.0241
+  size_m:
+  - 0.05
+  - 0.05
+  - 0.0122
+- id: NAUO54
+  file: part_NAUO54.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.25
+  - -0.0
+  - 0.0346
+  size_m:
+  - 0.003
+  - 0.003
+  - 0.05
+- id: NAUO53
+  file: part_NAUO53.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.25
+  - -0.0
+  - -0.0042
+  size_m:
+  - 0.0065
+  - 0.0065
+  - 0.0276
+- id: NAUO52
+  file: part_NAUO52.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.25
+  - -0.0
+  - -0.026
+  size_m:
+  - 0.005
+  - 0.005
+  - 0.0161
+- id: NAUO50
+  file: part_NAUO50.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.25
+  - -0.0
+  - -0.026
+  size_m:
+  - 0.05
+  - 0.05
+  - 0.0161
+- id: NAUO56
+  file: part_NAUO56.stl
+  role: plug_or_socket
+  rgba:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 1.0
+  centre_m:
+  - 0.2507
+  - 0.05
+  - 0.0065
+  size_m:
+  - 0.0265
+  - 0.0256
+  - 0.091
+- id: NAUO55
+  file: part_NAUO55.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.25
+  - 0.05
+  - -0.0265
+  size_m:
+  - 0.05
+  - 0.05
+  - 0.017
+- id: NAUO43
+  file: part_NAUO43.stl
+  role: white_part
+  rgba:
+  - 0.93
+  - 0.93
+  - 0.93
+  - 1.0
+  centre_m:
+  - 0.254
+  - -0.0
+  - -0.038
+  size_m:
+  - 0.058
+  - 0.18
+  - 0.03
+- id: NAUO8
+  file: part_NAUO8.stl
+  role: other
+  rgba:
+  - 0.55
+  - 0.55
+  - 0.58
+  - 1.0
+  centre_m:
+  - 0.0
+  - 0.0
+  - -0.0265
+  size_m:
+  - 0.11
+  - 0.11
+  - 0.053

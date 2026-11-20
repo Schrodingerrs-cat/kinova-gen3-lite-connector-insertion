@@ -1,0 +1,64 @@
+diff --git a/Code/Grasp/ros2_iface/robot_ros.py b/Code/Grasp/ros2_iface/robot_ros.py
+index f276d2d..85e63ee 100644
+--- a/Code/Grasp/ros2_iface/robot_ros.py
++++ b/Code/Grasp/ros2_iface/robot_ros.py
+@@ -1,4 +1,5 @@
+ """ROS 2 hardware layer: joint states, TF, trajectories, MoveIt IK, gripper and camera topics."""
++import os
+ import threading
+ import time
+ 
+@@ -14,7 +15,7 @@ from builtin_interfaces.msg import Duration
+ from control_msgs.action import FollowJointTrajectory, GripperCommand
+ from geometry_msgs.msg import PoseStamped
+ from moveit_msgs.msg import MoveItErrorCodes, RobotState
+-from moveit_msgs.srv import GetCartesianPath, GetPositionIK
++from moveit_msgs.srv import GetCartesianPath, GetPositionIK, GetStateValidity
+ from sensor_msgs.msg import CameraInfo, Image, JointState
+ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+ import tf2_ros
+@@ -47,6 +48,7 @@ class Robot(Node):
+         self.grip = ActionClient(self, GripperCommand, GRIPPER_ACTION)
+         self.ik_srv = self.create_client(GetPositionIK, '/compute_ik')
+         self.cart_srv = self.create_client(GetCartesianPath, '/compute_cartesian_path')
++        self.valid_srv = self.create_client(GetStateValidity, '/check_state_validity')
+         self._img = {}
+         for name, topic, typ in (('color', COLOR, Image), ('depth', DEPTH, Image), ('info', INFO, CameraInfo)):
+             self.create_subscription(typ, topic, lambda m, n=name: self._img.__setitem__(n, m), qos_profile_sensor_data)
+@@ -114,8 +116,35 @@ class Robot(Node):
+         if res.result().result.error_code != 0:
+             raise RuntimeError(f'arm trajectory failed: {res.result().result.error_string}')
+ 
++    def path_collision(self, q_from_deg, q_to_deg, step_deg=2.0):
++        """None if every state on the straight joint-space line is valid in MoveIt's planning scene (self collision, the CAD fixture and the table when
++        ~/kinova/work/tools/add_fixture_to_scene.py has put them there), else a short text naming the first colliding pair. No validity service = not blocked, warning."""
++        if not self.valid_srv.wait_for_service(timeout_sec=2.0):
++            self.get_logger().warn('/check_state_validity not available: path not checked against the planning scene')
++            return None
++        q0, q1 = np.asarray(q_from_deg, float), np.asarray(q_to_deg, float)
++        n = max(1, int(np.ceil(np.abs(q1 - q0).max() / step_deg)))
++        for i in range(n + 1):
++            req = GetStateValidity.Request()
++            req.group_name = GROUP
++            req.robot_state.joint_state.name = JOINTS
++            req.robot_state.joint_state.position = [float(v) for v in np.radians(q0 + (q1 - q0) * i / n)]
++            fut = self.valid_srv.call_async(req)
++            self.spin_until(fut.done, 5.0)
++            res = fut.result()
++            if res is None:
++                return 'validity check timed out at step %d of %d' % (i, n)
++            if not res.valid:
++                pairs = sorted({'%s / %s' % (c.contact_body_1, c.contact_body_2) for c in res.contacts})[:3]
++                return 'collision at %.0f %% of the move: %s' % (100.0 * i / n, ', '.join(pairs) or 'invalid state')
++        return None
++
+     def move_joints(self, q_deg, duration):
+-        """Joint-space move from the current joints to q_deg in `duration` s."""
++        """Joint-space move from the current joints to q_deg in `duration` s. Refused first if the straight joint path collides in the planning scene (env GRASP_NO_SCENE_CHECK=1 skips)."""
++        if not os.environ.get('GRASP_NO_SCENE_CHECK'):
++            hit = self.path_collision(np.degrees(self.q), q_deg)
++            if hit:
++                raise RuntimeError('joint move refused, not moving: ' + hit)
+         q0, q1 = np.array(self.q), np.radians(q_deg)
+         n = max(8, int(duration * 8))
+         s = np.linspace(0.0, 1.0, n + 1)

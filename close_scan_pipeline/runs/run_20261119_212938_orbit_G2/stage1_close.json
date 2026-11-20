@@ -1,0 +1,41 @@
+{
+ "run": "/home/pinaka/kinova/work/grasp_runs/run_20261119_212938_orbit_G2",
+ "views": 5,
+ "connector": "usb",
+ "part": "NAUO49",
+ "yaw_cue": "wide_faces",
+ "yaw_deg": 92.9220492494684,
+ "yaw_left": 91.1464882483781,
+ "yaw_right": 93.80363200081045,
+ "yaw_vs_strip": -1.8096305626460634,
+ "x": 0.2619459666600738,
+ "y": -0.024087255824171976,
+ "z0": -0.007440039716627739,
+ "z1": 0.033643033695611085,
+ "footprint_mm": [
+  16.85475361056523,
+  11.612174005701043
+ ],
+ "along_strip_mm": -48.1679726897995,
+ "across_strip_mm": -1.0024573475391343,
+ "loo_mm": 2.618413248853738,
+ "strip_dir": 94.73167981211446,
+ "gates": [
+  {
+   "name": "plug points and board in every view",
+   "ok": true,
+   "detail": "plug points per view [541, 1192, 807, 906, 1260] (>= 200), board [(151, 52), (152, 51), (151, 51)] mm, board yaw spread 0.53 deg (<= 2)"
+  },
+  {
+   "name": "wide-face yaw agrees left vs right and with the strip",
+   "ok": true,
+   "detail": "left face 91.1 deg (382 px), right face 93.8 deg (769 px), difference 2.7 (<= 5); mean 92.9 deg, -1.8 from the strip (<= 10)"
+  },
+  {
+   "name": "plug centre repeatable leaving a view out",
+   "ok": true,
+   "detail": "largest shift 2.6 mm (<= 3)"
+  }
+ ],
+ "passed": true
+}

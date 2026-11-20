@@ -1,0 +1,38 @@
+{
+ "run": "/home/pinaka/kinova/work/grasp_runs/run_20261119_210108_orbit_o1",
+ "views": 5,
+ "yaw_deg": 93.7780284978662,
+ "yaw_left": 93.2896620856372,
+ "yaw_right": 94.05429525483831,
+ "yaw_vs_strip": -0.9852836920496344,
+ "x": 0.26242957454240684,
+ "y": -0.026167349119854976,
+ "z0": -0.007371437457462802,
+ "z1": 0.03308273259122795,
+ "footprint_mm": [
+  15.333660225059244,
+  13.929717903159565
+ ],
+ "along_strip_mm": -48.961806663227726,
+ "across_strip_mm": -0.792697616203666,
+ "loo_mm": 2.260849412945037,
+ "strip_dir": 94.76331218991584,
+ "gates": [
+  {
+   "name": "plug points and board in every view",
+   "ok": true,
+   "detail": "plug points per view [363, 1178, 775, 547, 1146] (>= 200), board [(150, 52), (151, 51), (151, 51)] mm, board yaw spread 1.15 deg (<= 2)"
+  },
+  {
+   "name": "wide-face yaw agrees left vs right and with the strip",
+   "ok": true,
+   "detail": "left face 93.3 deg (396 px), right face 94.1 deg (700 px), difference 0.8 (<= 5); mean 93.8 deg, -1.0 from the strip (<= 10)"
+  },
+  {
+   "name": "plug centre repeatable leaving a view out",
+   "ok": true,
+   "detail": "largest shift 2.3 mm (<= 3)"
+  }
+ ],
+ "passed": true
+}

@@ -1,0 +1,26 @@
+diff --git a/Code/Grasp/ros2_iface/run_fresh_nearby_pickup.py b/Code/Grasp/ros2_iface/run_fresh_nearby_pickup.py
+index be84222..5047e45 100644
+--- a/Code/Grasp/ros2_iface/run_fresh_nearby_pickup.py
++++ b/Code/Grasp/ros2_iface/run_fresh_nearby_pickup.py
+@@ -44,7 +44,7 @@ def fresh_frame(robot,X):
+ 
+ 
+ def main():
+-    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--fit-profile',choices=['strict','supervised_pickup'],default='strict');ap.add_argument('--execute',action='store_true');ap.add_argument('--plan-scan',action='store_true',help='check camera paths only, never move');ap.add_argument('--sideways',action='store_true',help='use proposed50mm base+Y middle view');args=ap.parse_args()
++    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--fit-profile',choices=['strict','supervised_pickup'],default='strict');ap.add_argument('--execute',action='store_true');ap.add_argument('--plan-scan',action='store_true',help='check camera paths only, never move');ap.add_argument('--sideways',action='store_true',help='use proposed50mm base+Y middle view');ap.add_argument('--allow-pickup',action='store_true',help='without it the run ends after the CAD fit, never grasps');args=ap.parse_args()
+     if args.execute and args.plan_scan:ap.error('choose --plan-scan or --execute')
+     if not args.execute and not args.plan_scan:
+         print('NO MOTION. --execute: home ->3 nearby Cartesian camera poses ->home ->fresh CAD fit ->gated Cartesian pickup.')
+@@ -111,9 +111,11 @@ def main():
+         stage(ROOT/'tools/find_scan_target_rois.py',[scan,'--radius-mm','15','--out',detection],run)
+         stage(ROOT/'tools/fit_cad_multiview.py',[scan,'--rois',detection/'rois.json','--dark-v','90','--fit-profile',args.fit_profile,'--clean-depth','--raw-poses','--out',fit],run)
+         result=json.loads((fit/'fit.json').read_text())
+-        if result.get('accepted') is not True:
++        if result.get('accepted') is not True and args.allow_pickup:
+             metadata['outcome']='NEW_FIT_REJECTED_NO_PICKUP'
+             raise RuntimeError('Fresh CAD fit rejected; no pickup. Inspect '+str(fit))
++        if not args.allow_pickup:
++            metadata['outcome']='FIT_ACCEPTED_PICKUP_NOT_REQUESTED' if result['accepted'] else 'FIT_REJECTED';print('Fit accepted: %s. No --allow-pickup: stopping before any grasp.'%result['accepted'],flush=True);return
+         shutil.copy2(fit/'fit.npz',fit/'joint_fit.npz')
+         stage(ROOT/'ros2_iface/run_pickup_video.py',['--execute','--fit-dir',fit],run)
+         metadata['outcome']='SEQUENCE_COMPLETED_PHYSICAL_HOLD_REQUIRES_VIDEO_CONFIRMATION'

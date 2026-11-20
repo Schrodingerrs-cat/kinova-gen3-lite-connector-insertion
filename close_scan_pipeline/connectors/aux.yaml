@@ -1,0 +1,27 @@
+# Aux (6.35 mm audio jack) settings, first try 2026-11-19. Round barrel: no flat faces, so no yaw cue; position only, jaws along the board strip direction.
+# CAD (setup_cad/parts_index.yaml): barrel NAUO53 6.5 x 6.5 x 27.6 mm, thin cable boot NAUO54 3 mm above it; the barrel sits 5 mm above the board top in the CAD.
+# Values marked (first try) are not measured yet: the scan result decides before any grasp.
+name: aux
+part: NAUO53              # barrel
+thickness_m: 0.0065
+yaw_cue: none
+min_points: 100
+scene_include_plugs: true   # keep the neighbouring plugs (USB 50 mm away) as hulls in the planning scene during the grasp
+scan:
+  height_m: 0.200         # closer than the USB scan (small, thin part)  (first try)
+  lateral_m: 0.05         # smaller sweep: the USB plug stands 50 mm to the side  (first try)
+  n: 5
+  aim_z_m: 0.000          # barrel middle (first try)
+  min_tcp_dist_m: 0.05     # closest fingertip to the aim point during the scan
+  min_tcp_z_m: 0.05       # fingertips about 70 mm above the board; checked against the USB plug hull in the scene
+points:
+  radius_m: 0.015
+grasp:
+  clear_m: 0.006          # fingertip above the board top. Measured on AUX1: barrel spans ~2-8 mm to ~24 mm above the board, the cable joins at 27-34 mm
+  band_m: 0.012
+  top_margin_m: 0.005     # band top to barrel top. Measured top 23.7 mm (per view spread 2.8 mm), cable joins at 27-34 mm, so the band (6-18 mm) stays 9 mm below the cable
+  standoff_m: 0.09
+  open_width_m: 0.0315    # same opening as the USB descent so the jaws never go down narrow (user)
+  lift_test_m: 0.005
+  lift_m: 0.08
+  top_rule: sticker_p90   # barrel top = median over views of the 90th percentile height of the bright sticker pixels (hue 75-105, S >= 100, V >= 80) near the centre

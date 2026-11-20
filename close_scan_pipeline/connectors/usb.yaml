@@ -1,0 +1,24 @@
+# USB-A plug settings, as used for the confirmed pick (2026-11-19, runs G1/G2). Do not change these values: snapshots/usb_pipeline_20261119 has the code that used them.
+name: usb
+part: NAUO49              # CAD part used as the plug prior: 15 x 7.5 x 50 mm, wide faces face left/right
+thickness_m: 0.0075       # across the jaws (thin axis)
+yaw_cue: wide_faces       # yaw from the surface normals of the flat faces seen from the left and right
+min_points: 200           # plug points per view
+scan:
+  height_m: 0.228         # camera above the board top
+  lateral_m: 0.07         # sweep half width
+  n: 5
+  aim_z_m: 0.005          # aim point height (about the middle of the plug)
+  min_tcp_dist_m: 0.09     # closest fingertip to the aim point during the scan
+  min_tcp_z_m: 0.08       # lowest fingertip height during the scan
+points:
+  radius_m: 0.020         # plug points within this of the predicted plug (plan view)
+grasp:
+  clear_m: 0.012          # fingertip above the board top
+  band_m: 0.012           # jaw band height above the fingertip
+  top_margin_m: 0.008     # plug top must stay this far above the band
+  standoff_m: 0.09        # pre-grasp above the grasp point
+  open_width_m: 0.0315    # jaw opening during the descent (7.5 mm + 2 x 12 mm)
+  lift_test_m: 0.005
+  lift_m: 0.08
+  top_rule: core_p90      # plug top = 90th percentile of plug points within 6 mm of the centre

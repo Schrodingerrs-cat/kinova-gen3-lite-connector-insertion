@@ -1,0 +1,32 @@
+diff --git a/Code/Grasp/config/grasp.yaml b/Code/Grasp/config/grasp.yaml
+index 92cbacb..43eb424 100644
+--- a/Code/Grasp/config/grasp.yaml
++++ b/Code/Grasp/config/grasp.yaml
+@@ -7,6 +7,10 @@ cloud:                        # stage 1: clean cloud (all sizes in metres, indep
+   outlier_radius_m: 0.003     # a point needs outlier_min_nb neighbours within this radius
+   outlier_min_nb: 4
+   edge_jump_m: 0.003          # depth discontinuity (3x3) above which a pixel is dropped
++find_target_color:                   # read only by tools/find_scan_target_rois.py (overrides color_marker there). 2026-11-19: on the real plug the sticker is dark teal (median S 97-120, V 61-69), the strict S>=140 gate kept 16-110 px per view and the detection failed. v_max keeps the pale blue board (high V) out
++  s_min: 70
++  v_min: 35
++  v_max: 140
+ color_marker:                        # the marker sticker on the head's top face (colour thresholding in the image). HSV measured on the real head 2026-11-07: H 93, S 219, V 138
+   h: [80, 105]                # OpenCV hue range (0-179)
+   s_min: 140                  # handwriting on the label strip is the same hue but paler / flat on the table (removed by table RANSAC)
+diff --git a/Code/Grasp/tools/find_scan_target_rois.py b/Code/Grasp/tools/find_scan_target_rois.py
+index 139939e..2be95de 100644
+--- a/Code/Grasp/tools/find_scan_target_rois.py
++++ b/Code/Grasp/tools/find_scan_target_rois.py
+@@ -6,10 +6,10 @@ import argparse,json
+ from pathlib import Path
+ import cv2,numpy as np,yaml
+ ap=argparse.ArgumentParser();ap.add_argument('scan',type=Path);ap.add_argument('--radius-mm',type=float,default=18.);ap.add_argument('--out',type=Path,required=True);a=ap.parse_args();a.out.mkdir(parents=True,exist_ok=True)
+-cfg=yaml.safe_load((Path(__file__).resolve().parents[1]/'config/grasp.yaml').read_text());g=cfg['color_marker'];bounds=cfg['workspace']['region'];views=[];centers=[]
++cfg=yaml.safe_load((Path(__file__).resolve().parents[1]/'config/grasp.yaml').read_text());g={**cfg['color_marker'],**cfg.get('find_target_color',{})};bounds=cfg['workspace']['region'];views=[];centers=[]
+ for file in sorted(a.scan.glob('view_*.npz')):
+  f=np.load(file);d,c,K,T=[f[k] for k in ('depth','color','K','T_BC')];hsv=cv2.cvtColor(c,cv2.COLOR_BGR2HSV);h=hsv[...,0];h0,h1=g['h'];hue=(h>=h0)&(h<=h1) if h0<=h1 else (h>=h0)|(h<=h1)
+- strict=hue&(hsv[...,1]>=g['s_min'])&(hsv[...,2]>=g['v_min'])&np.isfinite(d)&(d>0);v,u=np.nonzero(strict);z=d[v,u];P=np.c_[(u-K[0,2])*z/K[0,0],(v-K[1,2])*z/K[1,1],z]@T[:3,:3].T+T[:3,3]
++ strict=hue&(hsv[...,1]>=g['s_min'])&(hsv[...,2]>=g['v_min'])&(hsv[...,2]<=g.get('v_max',255))&np.isfinite(d)&(d>0);v,u=np.nonzero(strict);z=d[v,u];P=np.c_[(u-K[0,2])*z/K[0,0],(v-K[1,2])*z/K[1,1],z]@T[:3,:3].T+T[:3,3]
+  good=(P[:,0]>=bounds[0])&(P[:,0]<=bounds[1])&(P[:,1]>=bounds[2])&(P[:,1]<=bounds[3])&(P[:,2]>cfg['scan']['table_z_m']+.003)&(P[:,2]<cfg['scan']['table_z_m']+.12)
+  limited=np.zeros(d.shape,np.uint8);limited[v[good],u[good]]=1;limited=cv2.morphologyEx(limited,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8));n,lab,stats,_=cv2.connectedComponentsWithStats(limited);choices=[i for i in range(1,n) if stats[i,cv2.CC_STAT_AREA]>=15];center=None
+  if choices:
