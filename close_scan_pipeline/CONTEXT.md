@@ -11,7 +11,7 @@ This folder holds the tools, the per-connector settings, the run results and the
 | USB plug, stage 1 (find) | passed on 4 close scans, same layout |
 | USB plug, grasp | 1 pick confirmed by eye (run G2, camera rule HELD). G1 closed on the plug but the old script released it from the finger reading (bug, fixed) |
 | Aux jack, stage 1 and grasp | 1 pick confirmed by eye (run AUX1): stage 1 passed, camera rule HELD, operator confirmed the jack was picked up properly; put back with `put_back.py` afterwards |
-| Power plug, stage 1 and grasp | 1 pick by the camera rule (run POW1): stage 1 passed, HELD, held 8 s then the jaws opened where the arm was (no put-back). Operator confirmation of the hold pending when this was written |
+| Power plug, stage 1 and grasp | 1 pick confirmed by eye (run POW1): stage 1 passed, camera rule HELD, held 8 s, then the jaws opened where the arm was (no put-back) |
 | Placement and cable trials (3 x 3, pass at 7 of 9) | not started |
 | Repeatability numbers | none yet. All runs are one layout |
 
@@ -63,7 +63,7 @@ Safety layers: joint limits minus a margin, joint-step screen (<= 5 deg per 2 mm
 - The raw scan frames (`method2_perception/scan/*.npz`) stay on the lab laptop and are not committed (size). Stage 1 can be re-run offline from them.
 - Run G1 (closed on the plug, then released by a software bug) is kept in `runs/` and labelled in its README, not moved to a `Failed_runs/` folder. Its photos are in `runs/run_20261119_212527_orbit_G1/grasp/`.
 - Leaving out CAD-fit stage 1 (method 2) in favour of the close scan with side views was decided with the user, with the evidence above, and is a deviation from method 2's approach.
-- The three picks (USB G2, aux AUX1, power POW1) are single attempts on one layout. The hold was judged by the wrist-camera rule; the USB and aux holds were confirmed by the operator by eye, the power hold was pending when this was written. There is no independent sensor.
+- The three picks (USB G2, aux AUX1, power POW1) are single attempts on one layout. The hold was judged by the wrist-camera rule and confirmed by the operator by eye for all three. There is no independent sensor.
 
 ## Run it
 

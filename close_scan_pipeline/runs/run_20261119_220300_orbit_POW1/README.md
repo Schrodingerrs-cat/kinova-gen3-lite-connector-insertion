@@ -24,7 +24,7 @@ Board top -0.0143 m, plug top 0.0153 m (plug stands 30 mm). Grasp tcp z -0.0043 
 The software result is the wrist-camera rule only; physical hold is judged by the operator.
 
 ## Operator observation
-Power plug (thick black cable, teal body). CAD size did not match the real part (CAD 26.5 mm square, real teal body ~15 x 21 mm, top 30 mm above the board), so the body was found from bright teal pixels only. Camera rule HELD (0.111 m between the tips, table 0.254 m). Held 8 s, then the jaws were opened where the arm was (no put-back, as the operator asked). Images show the pin slots empty where the plug sat. Physical hold: operator to confirm.
+Power plug (thick black cable, teal body). CAD size did not match the real part (CAD 26.5 mm square, real teal body ~15 x 21 mm, top 30 mm above the board), so the body was found from bright teal pixels only. Camera rule HELD (0.111 m between the tips, table 0.254 m). Held 8 s, then the jaws were opened where the arm was (no put-back, as the operator asked). Images show the pin slots empty where the plug sat. Operator confirmed by eye that the plug was picked up and then released by opening.
 
 ## Plots (plots/)
 - `01_views_plug_overlay.png`
