@@ -19,13 +19,17 @@ def fake(tmp_path, wall=.29, held_depth=.10, follows=True):   # fingers closer t
     e = SimpleNamespace()
     e.last_observation = dict(depth_m=depth, K=K, distortion=np.zeros(5), color=np.zeros((480, 848, 3), np.uint8),
                               corners_px=np.array([[404, 183], [450, 183], [450, 229], [404, 229]], float))
-    e.reference, e.c = dict(camera_frame_id='f'), dict(depth_min_m=.07, depth_max_m=1., min_move_s=.1, arrival_settle_s=.5)
+    e.reference, e.c = dict(camera_frame_id='f'), dict(depth_min_m=.07, depth_max_m=1., min_move_s=.1, arrival_settle_s=.5, max_servo_joint_step_deg=5.5)
     e.T_EC, e.T_tcp = np.eye(4), np.eye(4)
     e.T_tcp[2, 3] = .035
     e.output, e.moves, e.events, e.paths = tmp_path, [], [], []
     e.r = SimpleNamespace(q=np.zeros(6), grip_pos_msr=.8)
     e.fk = lambda q: np.block([[np.eye(3), np.asarray(q[:3])[:, None]], [np.zeros((1, 3)), 1]])
-    e.r.ik = lambda T, seed_deg: np.r_[np.degrees(T[:3, 3]), np.zeros(3)]
+    def line_path(T, q):                                           # MoveIt Cartesian path: start state first, then a point every 5 mm
+        start, goal = np.asarray(q[:3]), T[:3, 3]
+        n = int(np.ceil(np.linalg.norm(goal - start) / .005 - 1e-9))
+        return [np.r_[start + (goal - start) * k / n, np.zeros(3)] for k in range(0, n + 1)]
+    e.r.line_path = line_path
     e.check_joint_path = lambda path, local=False: path
     e.event = lambda name, **kw: e.events.append(name)
 
@@ -92,13 +96,26 @@ def test_advance_off_by_default(tmp_path):
     assert 'advance' not in report and not e.moves
 
 
-def test_chunks_flow_through_centimetre_waypoints_and_settle_is_restored(tmp_path):
+def test_each_chunk_is_one_straight_cartesian_trajectory_and_settle_is_restored(tmp_path):
     e, report = fake(tmp_path), {}
     a = args(.09); a.advance_step_m = .03
     advance(e, Scene(), a, report, execute=True)
-    assert len(e.moves) == 3 and all(len(p) == 4 for p in e.paths)             # start + 3 waypoints per 3 cm chunk
-    assert np.allclose(np.diff(e.paths[0][:, 2]), .01, atol=1e-4)               # one waypoint per centimetre along +z
+    assert len(e.moves) == 3 and all(len(p) == 7 for p in e.paths)             # start + a point every 5 mm over 3 cm (service's repeated start dropped)
+    assert np.allclose(np.diff(e.paths[0][:, 2]), .005, atol=1e-6) and np.allclose(e.paths[0][:, :2], 0)   # straight along +z, orientation/lateral held
     assert report['advance']['executed_m'] == pytest.approx(.09, abs=.002) and e.c['arrival_settle_s'] == .5
+
+
+def test_a_joint_jump_along_the_line_or_no_line_stops_before_moving(tmp_path):
+    e, report = fake(tmp_path), {'status': 'CONVERGED'}
+    base = e.r.line_path
+    e.r.line_path = lambda T, q: [p + (np.r_[0, 0, 0, np.radians(9), 0, 0] if i == 3 else 0) for i, p in enumerate(base(T, q))]   # 9 deg on joint 4, like the failed run
+    a = args(); a.advance_step_m = .05
+    run_advance(e, Scene(), a, report, execute=True)
+    assert report['status'] == 'ADVANCE_FAILED' and '9.0 deg joint jump' in report['advance']['error'] and not e.moves
+    e2, report2 = fake(tmp_path), {'status': 'CONVERGED'}
+    e2.r.line_path = lambda T, q: None
+    run_advance(e2, Scene(), args(), report2, execute=True)
+    assert 'no straight Cartesian path' in report2['advance']['error'] and not e2.moves
 
 
 def test_no_checks_does_the_full_stroke_without_collision_checks(tmp_path):

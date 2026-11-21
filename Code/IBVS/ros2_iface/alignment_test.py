@@ -976,7 +976,7 @@ def scale_speeds(settings, scale):
 def add_advance_arguments(parser):
     parser.add_argument("--speed-scale", type=float, default=1., help="multiply joint, linear and angular speed limits (1..3)")
     parser.add_argument("--advance-m", type=float, default=0., help="after convergence, move this far forward along the measured wall normal (0 = off)")
-    parser.add_argument("--advance-step-m", type=float, default=.03, help="chunk length of the forward move; the arm must follow each chunk or the move stops")
+    parser.add_argument("--advance-step-m", type=float, default=.05, help="chunk length of the forward move (one straight Cartesian trajectory each); the arm must follow each chunk or the move stops")
     parser.add_argument("--advance-speed-mps", type=float, default=.01, help="forward speed")
     parser.add_argument("--advance-margin-m", type=float, default=.015, help="stay this far from the wall unless --allow-contact")
     parser.add_argument("--allow-contact", action="store_true", help="do the full forward distance even if the gripper/plug reaches the wall (insertion stroke)")

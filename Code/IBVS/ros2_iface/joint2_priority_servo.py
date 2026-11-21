@@ -169,9 +169,9 @@ def acquire(e, deadline, frames=1):
 
 
 def move_along(e, scene, direction, distance, speed, step_m, progress, key, label):
-    """Guarded straight move of the tool along a base-frame unit vector: chunks of step_m, IK waypoints every ~1 cm,
-    one flowing trajectory per chunk, the arm must follow each chunk. scene=None skips the collision check.
-    progress[key] is updated as it goes, so a failure still reports how far it got."""
+    """Straight Cartesian move of the tool along a base-frame unit vector, orientation held: MoveIt's Cartesian path service gives
+    the straight line (a joint waypoint every 5 mm), sent as one flowing trajectory per chunk of step_m. The arm must follow each
+    chunk. scene=None skips the collision check. progress[key] is updated as it goes, so a failure still reports how far it got."""
     total, ax, settle = 0., dict(max_travel_m=distance + .01, min_progress_frac=.5), e.c['arrival_settle_s']
     e.c['arrival_settle_s'] = min(settle, .1)                          # the trajectory itself is smooth: no long wait per chunk
     try:
@@ -179,16 +179,18 @@ def move_along(e, scene, direction, distance, speed, step_m, progress, key, labe
             step = min(step_m, distance - total)
             q = e.r.q.copy()
             T0 = e.fk(q)
-            count = max(1, int(np.ceil(step / .01 - 1e-9)))
-            waypoints = [q]
-            for k in range(1, count + 1):
-                T = T0.copy()
-                T[:3, 3] += step * k / count * direction
-                q_ik = e.r.ik(T, np.degrees(waypoints[-1]))
-                if q_ik is None:
-                    raise RuntimeError('%s: no IK %.0f mm into the next chunk (after %.0f mm)' % (label, step * k / count * 1e3, total * 1e3))
-                waypoints.append(waypoints[-1] + np.radians((q_ik - np.degrees(waypoints[-1]) + 180) % 360 - 180))
-            path = e.check_joint_path(np.array(waypoints), local=True)
+            T = T0.copy()
+            T[:3, 3] += step * direction
+            points = e.r.line_path(T, q)
+            if points is None:
+                raise RuntimeError('%s: no straight Cartesian path for the next %.0f mm (after %.0f mm)' % (label, step * 1e3, total * 1e3))
+            path = np.vstack([q, np.array(points)])
+            if np.abs(path[1] - q).max() < 1e-6:
+                path = path[1:]                                          # the service repeats the start state as its first point
+            jump = float(np.degrees(np.abs(np.diff(path, axis=0)).max()))
+            if jump > e.c['max_servo_joint_step_deg']:
+                raise RuntimeError('%s: the straight line needs a %.1f deg joint jump between 5 mm steps (singularity or branch flip)' % (label, jump))
+            e.check_joint_path(path)
             if scene is not None:
                 for sample in path:
                     scene.check(sample)
@@ -198,7 +200,7 @@ def move_along(e, scene, direction, distance, speed, step_m, progress, key, labe
             total += max(measured, 0.)
             progress[key] = total
             with (e.output / (label + '.jsonl')).open('a') as record:
-                record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
+                record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, waypoints=len(path), joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
             print('%s %.0f / %.0f mm' % (label.capitalize(), total * 1e3, distance * 1e3), flush=True)
             if why:
                 raise RuntimeError('%s stopped after %.0f mm: %s (the arm did not follow the command)' % (label, total * 1e3, why))
