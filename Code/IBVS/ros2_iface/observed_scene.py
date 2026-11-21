@@ -44,7 +44,7 @@ class ObservedScene:
         self.applied = not remove
 
     def install(self, target_depth, resume_run=None):
-        observation = np.load(self.e.output/'last_observation.npz')
+        observation = self.e.last_observation
         T = self.e.fk(self.e.r.q) @ self.e.T_EC
         # Robot fingers are in the near field. Freeze only surfaces beyond them,
         # then retain those same obstacles throughout the entire approach.

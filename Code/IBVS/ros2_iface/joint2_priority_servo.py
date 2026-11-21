@@ -30,6 +30,15 @@ def smooth_profile(settings,control_hz=2.):
         min_move_s=.35,arrival_settle_s=.10,position_settle_s=.5,near_goal_hold_s=.4,final_verify_hold_s=.5)
 
 
+def fast_profile(settings):
+    """UNVALIDATED software tuning: bigger steps, no rate cap, short settling. First run supervised, e-stop in reach."""
+    settings.update(align_orientation=True,smooth_joint_segments=True,collision_segment_deg=1.,gain=.6,
+        joint_speed_deg_s=20.,linear_speed_m_s=.03,angular_speed_deg_s=10.,min_move_s=.15,
+        arrival_settle_s=.05,position_settle_s=.3,near_goal_hold_s=.25,final_verify_hold_s=.3,
+        max_step_m=.006,max_step_deg=1.5,approach_limits_deg=[2.5,5.,2.5,2.5,2.5,2.5],
+        fine_limits_deg=[.6,1.5,.6,.6,.6,.6])
+
+
 def approach_task(e):
     return 'center_size_angle' if e.c.get('align_orientation',False) else 'center_size'
 
@@ -41,7 +50,8 @@ def choose_step(e, q, xy, Z, task, previous_command=None):
     desired = e.tracker.star[0]
     target_px = e.tracker.target_px[0]
     Jcam = camera_joint_jacobian(e.fk, q, e.T_EC)
-    limits = np.radians([1., 5., 1., 1., 1., 1.] if task != 'corners' else [.25, 1., .25, .25, .25, .25])
+    limits = np.radians(e.c.get('approach_limits_deg',[1.,5.,1.,1.,1.,1.]) if task != 'corners'
+                        else e.c.get('fine_limits_deg',[.25,1.,.25,.25,.25,.25]))
     dq = shape_ibvs_step(xy, desired, Z, Jcam, e.c['gain'], task,
                          [1., 4., 1., 1., 1., 1.], limits,
                          e.c['max_step_m'], np.radians(e.c['max_step_deg']))
@@ -101,13 +111,14 @@ def reach_check(e, scene, xy, Z):
             metrics = shape_metrics(pixels, target)
             records.append(dict(step=step, joints_deg=np.degrees(q).tolist(), **metrics))
             if metrics['max_corner_px'] <= e.c['tolerance_px']:
+                scene.check(q)
                 result = dict(status='PREDICTED_REACHABLE', steps=step, **metrics,
                               note='Model/depth prediction only; physical convergence still required.')
                 print('Stationary reach/clearance check passed: predicted max corner %.2f px.' % metrics['max_corner_px'], flush=True)
                 return result
             if (len(records) >= 30 and metrics['max_corner_px'] <= e.c['tolerance_px']+1.
                     and np.ptp([row['rms_px'] for row in records[-20:]]) < .02):
-                return model_residual(metrics,step)
+                scene.check(q);return model_residual(metrics,step)
             if time.monotonic()-started > 120:
                 raise RuntimeError('stationary reach check time limit')
             if metrics['center_error_px'] < 5 and .9 < metrics['size_ratio'] < 1.1:
@@ -116,20 +127,21 @@ def reach_check(e, scene, xy, Z):
                 _, proposed, _, _, _ = choose_step(e, q, e.tracker.normalize(pixels), points[:, 2], task)
             except RuntimeError as error:
                 if str(error).startswith('undamped IBVS has no improving') and metrics['max_corner_px'] <= e.c['tolerance_px']+1.:
-                    return model_residual(metrics,step)
+                    scene.check(q);return model_residual(metrics,step)
                 raise
             # Check swept configurations as well as endpoints, including the gripper.
             for fraction in (.25, .5, .75, 1.):
                 sample = q+(proposed-q)*fraction
                 within_limits(e.fk(sample), e.T_EC, e.T_tcp, e.origin, e.floor,
                               e.c['max_camera_travel_m'], np.radians(e.c['max_camera_rotation_deg']))
-                scene.check(sample)
+            if step % e.c.get('preflight_check_every',1) == 0:
+                scene.check(proposed)
             q = proposed
             if step % 25 == 0:
                 print('Stationary check %d: center %.1f px, size %.1f%%, max %.1f px' %
                       (step, metrics['center_error_px'], metrics['size_ratio']*100, metrics['max_corner_px']), flush=True)
         if metrics['max_corner_px'] <= e.c['tolerance_px']+1.:
-            return model_residual(metrics,step)
+            scene.check(q);return model_residual(metrics,step)
         raise RuntimeError('stationary reach check did not reach the requested image')
     finally:
         (e.output/'reach_check.json').write_text(json.dumps(records, indent=2)+'\n')
@@ -244,8 +256,9 @@ def servo(e, args, report):
                 e.visual_stage = 'IBVS: center, size and orientation' if task=='center_size_angle' else ('IBVS: center and size' if task=='center_size' else 'IBVS: four-corner alignment')
                 q = e.r.q.copy()
                 _,target,dq,predicted_metrics,scale = choose_step(e,q,xy,Z,task,commanded)
-                path = e.joint_plan(np.degrees(target),local=True)
-                if e.c.get('smooth_joint_segments',False):path=smooth_servo_path(path)
+                chosen=time.monotonic()
+                path = e.direct_path(target)
+                if e.c.get('smooth_joint_segments',False):path=smooth_servo_path(path,e.c.get('collision_segment_deg',.25))
                 if np.degrees(np.abs(path-path[0])).max(axis=0)[[0,2,3,4,5]].max() > 3:
                     raise RuntimeError('other joint path exceeds 3-degree guard')
                 for sample in path:
@@ -272,7 +285,7 @@ def servo(e, args, report):
                 report['ibvs_elapsed_s']=time.monotonic()-started
                 with (e.output/'loop_timing.jsonl').open('a') as record:
                     record.write(json.dumps(dict(step=motion_steps,task=task,requested_hz=e.c.get('control_hz'),
-                        period_s=interval,plan_s=planned-cycle_started,move_s=moved-planned,
+                        period_s=interval,choose_s=chosen-cycle_started,check_s=planned-chosen,move_s=moved-planned,
                         observation_s=elapsed-(moved-cycle_started),cycle_s=elapsed))+'\n')
                 with (e.output/'priority_commands.jsonl').open('a') as record:
                     record.write(json.dumps(dict(step=motion_steps,task=task,scale=scale,
@@ -325,6 +338,7 @@ def main():
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
     parser.add_argument('--reference', type=Path, default=ROOT/'config/center_rectangle.yaml')
     parser.add_argument('--rectangle', type=int, choices=(1, 2, 3), help='hole rectangle to track, numbered left to right at acquisition')
+    parser.add_argument('--fast',action='store_true',help='UNVALIDATED faster profile: bigger steps, short settling, coarser collision sampling')
     parser.add_argument('--smooth',action='store_true',help='orientation-aware approach, continuous straight servo segments and shorter settling')
     parser.add_argument('--control-hz',type=float,help='maximum step-loop frequency; actual rate is limited by planning, motion and fresh feedback')
     args = parser.parse_args()
@@ -338,7 +352,9 @@ def main():
     c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.rectangle)
     if args.control_hz is not None and (not np.isfinite(args.control_hz) or not .2<=args.control_hz<=3.):
         parser.error('control-hz must be between 0.2 and 3')
-    if args.smooth:smooth_profile(c,2. if args.control_hz is None else args.control_hz)
+    if args.fast and (args.smooth or args.control_hz is not None):parser.error('--fast replaces --smooth and --control-hz')
+    if args.fast:fast_profile(c)
+    elif args.smooth:smooth_profile(c,2. if args.control_hz is None else args.control_hz)
     elif args.control_hz is not None:c['control_hz']=args.control_hz
     c['max_servo_joint_step_deg'] = 5.5
     if args.near_scene:
@@ -352,7 +368,7 @@ def main():
                     'GDK_PIXBUF_MODULEDIR', 'GDK_PIXBUF_MODULE_FILE', 'GTK_MODULES'):
             os.environ.pop(key, None)
         os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
-    report = dict(status='INCOMPLETE', process_id=os.getpid(), method=('Center/size/angle IBVS then four-corner IBVS; bounded quintic motion' if args.smooth else 'Undamped center/size IBVS then four-corner IBVS; weighted joint mobility'),
+    report = dict(status='INCOMPLETE', process_id=os.getpid(), method=('Center/size/angle IBVS then four-corner IBVS; bounded quintic motion' if (args.smooth or args.fast) else 'Undamped center/size IBVS then four-corner IBVS; weighted joint mobility'),
                   live=args.live, settings=c, reference=ref,
                   recording_scope='full sequence and IBVS' if args.record_sequence else 'IBVS only',
                   resume_run=str(args.resume_run.expanduser().resolve()) if args.resume_run else None)

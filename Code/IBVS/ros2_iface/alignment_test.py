@@ -114,6 +114,7 @@ class Experiment:
         self.is_rectangle = reference.get("feature_type") == "rectangle"
         self.display = FeatureOverlay(reference) if self.is_rectangle else None
         self.detection = None
+        self.last_observation = self.initial_observation = None
         self.last_rectangle_seen = 0.0
         self.overlay_video = None
         self.correction_video = None
@@ -466,6 +467,13 @@ class Experiment:
             raise RuntimeError("MoveIt returned an empty path or missing joints")
         order = [trajectory.joint_names.index(name) for name in JOINTS]
         path = np.vstack([self.r.q.copy(), [[point.positions[i] for i in order] for point in trajectory.points]])
+        return self.check_joint_path(path, local)
+
+    def direct_path(self, target_rad, local=True):
+        """Straight joint-space move from the current joints; same limits as a planned path, no MoveIt planning call."""
+        return self.check_joint_path(np.vstack([self.r.q.copy(), target_rad]), local)
+
+    def check_joint_path(self, path, local=False):
         if not np.isfinite(path).all():
             raise RuntimeError("non-finite planned joints")
         changes = np.degrees(np.abs(path - path[0])).max(axis=0)
@@ -636,14 +644,12 @@ class Experiment:
                 continue
             self.last_image_stamp = stamp
             image = self.bgr(color)
-            cv2.imwrite(str(self.output / "latest.png"), image)
-            if not (self.output / "start_alignment.png").exists():
+            if self.initial_observation is None:
                 cv2.imwrite(str(self.output / "start_alignment.png"), image)
             if self.is_rectangle:
                 if self.detection is None or self.detection[0] != stamp:
                     continue
                 pixels, valid = self.detection[1:]
-                cv2.imwrite(str(self.output / "latest_features.png"), self.latest_annotated)
             else:
                 pixels, valid = self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
             if not valid.all():
@@ -653,8 +659,9 @@ class Experiment:
             metres = np.frombuffer(depth.data, np.uint16).reshape(depth.height, depth.step//2)[:, :depth.width] * 0.001
             observation = dict(color=image, depth_m=metres, corners_px=pixels[0], K=np.asarray(self.camera["K"]),
                                distortion=np.asarray(self.camera["distortion"]))
-            np.savez_compressed(self.output / "last_observation.npz", **observation)
-            if not (self.output / "initial_observation.npz").exists():
+            self.last_observation = observation
+            if self.initial_observation is None:
+                self.initial_observation = observation
                 np.savez_compressed(self.output / "initial_observation.npz", **observation)
             if self.is_rectangle:
                 raw = corner_depths(metres, pixels[0], self.c["depth_min_m"], self.c["depth_max_m"])
@@ -870,6 +877,8 @@ class Experiment:
             self.overlay_video.release()
         if hasattr(self, "latest_annotated"):
             cv2.imwrite(str(self.output / "latest_features.png"), self.latest_annotated)
+        if self.last_observation is not None:
+            np.savez_compressed(self.output / "last_observation.npz", **self.last_observation)
         if self.window:
             cv2.destroyAllWindows()
         self.csv_file.close()

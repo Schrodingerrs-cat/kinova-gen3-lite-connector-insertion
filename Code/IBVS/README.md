@@ -24,7 +24,7 @@ Home/post-grasp poses and camera-to-tool calibration come from [`../Grasp/config
 Run these commands from the repository root. Hardware tests require the arm, D405, ROS 2, and the installed Kinova/MoveIt workspace.
 
 ```bash
-cd /home/sri/kinova-gen3-lite-connector-insertion-master
+cd <repo root>   # the insertion_task folder
 source Code/IBVS/ros_env.sh
 ```
 
@@ -96,6 +96,17 @@ Click setup also saves color templates for the 12 holes, including pale holes. K
 The measured `config/gripper_depth*.npz` references identify the visible fingers by color and depth. The best matching independently measured reference is used for the current pose. Matching finger pixels and farther returns occluded by those fingers are excluded from collision snapshots. Closer returns or changed appearance remain obstacles; occluded areas remain unobserved. A different camera setup, gripper opening, or poor calibration match blocks the run. Collision checks still include the entire robot.
 
 Depth is fitted around the selected hole rims, excluding the open holes. Check that measured depth corresponds to the acrylic sheet: transparent acrylic can return background depth. Missing hole features or insufficient depth cause a tracking hold.
+
+## Archive and speed changes (2026-11-20)
+
+- `archive/aruco_state_machine/`: the earlier ArUco design (state machine B0/A1/A2, guards, bounded search, seating check, 22 tests). Not used by the runners here.
+- Speed work on the rectangle servo (offline tests only, **not yet run on the arm**; use `loop_timing.jsonl` from a supervised run to see the effect):
+  - `capture()` no longer writes `latest.png`, `latest_features.png` and a compressed `last_observation.npz` every frame (about 120 ms per frame measured on a saved 848x480 frame). The first observation is still saved once, the last one at shutdown.
+  - Each step uses a straight joint path from the current joints (`Experiment.direct_path`) instead of a MoveIt planning call. Same step limit, same geometric limits, same collision service on the samples.
+  - Collision samples per step use `collision_segment_deg` (default stays 0.25 in the default profile; 1.0 in `--fast`). The stationary preflight checks collisions every `preflight_check_every` simulated steps (default 5) and always at the final state.
+  - Per-step joint caps are now config (`approach_limits_deg`, `fine_limits_deg`); defaults are the old fixed values.
+  - `loop_timing.jsonl` now splits `choose_s`, `check_s`, `move_s`, `observation_s`.
+- `--fast` (opt-in, UNVALIDATED): bigger steps (6 mm, 1.5 deg), joint/linear/angular speed 20 deg/s, 30 mm/s, 10 deg/s, 0.15 s minimum move, 0.05 s settling, gain 0.6, collision samples every 1 deg, no step-rate cap. The 3-degree guard on joints 1,3-6 and the 5.5-degree step guard are unchanged. First run supervised with the e-stop in reach, in preview first (`run_joint2_priority.sh` without `--live`).
 
 ## Expected result
 

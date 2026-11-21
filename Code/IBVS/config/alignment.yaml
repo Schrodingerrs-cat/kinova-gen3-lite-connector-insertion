@@ -27,3 +27,4 @@ tolerance_px: 2.0
 converge_frames: 5
 timeout_s: 300.0
 max_steps: 400
+preflight_check_every: 5        # collision service every 5th simulated step in the stationary preflight
