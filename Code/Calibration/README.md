@@ -27,3 +27,6 @@ Fill `chessboard.square_size_m` (measured) and `inner_corners` first. Reports th
 ## Tests (synthetic, true answer known; NOT hardware evidence)
 `python3 -m pytest tests -q`: hand-eye exact without noise and within 3 mm / 0.7 deg with marker noise, plane tilt and height, intrinsics recovery (< 1%), ArUco detection and distance, view poses.
 Verified offline: the hand-eye `--from` path recovered a planted 3 mm / 1 deg error (marker spread 2.5-3.0 mm -> 0.35-0.53 mm std); the intrinsics solver matched the factory values within 1.8 px. NOT yet run on the real arm: the capture sessions and a calibration scan with the robot (arm driver and camera were down).
+
+## Results from the close-scan work (Sahil Gajera, 2026-11-19)
+`results/sahil_20261119/`: ArUco hand-eye (16 samples) and chessboard (19 poses) checks on the arm. Outcome: the hand-eye in `calibration.yaml` / `Grasp/config/grasp.yaml` and the factory intrinsics were kept (held-out error 4.9 mm marker, 8.3 mm board; reprojection 0.245 px), nothing here changed a config. The file also lists the candidate hand-eye values that were NOT applied (marker and board agree with each other within 4.2 mm / 0.16 deg and sit about 10 mm from the one in use in y). Their finding: the 3-14 mm scatter between views is not explained by a rigid hand-eye offset; arm kinematics is the untested suspect.

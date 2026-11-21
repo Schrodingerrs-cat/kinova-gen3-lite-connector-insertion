@@ -1,0 +1,128 @@
+# Camera calibration values and decisions. Generated from test1_marker_hand_eye/solve.json and test2_chessboard/solve.json.
+status: 'FINAL for now (2026-11-19): keep the hand-eye in use and the factory intrinsics. Nothing was changed in any config.'
+frames: hand-eye = transform tool_frame -> camera colour optical frame (x right, y down, z forward); xyz in m, quaternion x y z w
+hand_eye_in_use:
+  xyz_m:
+  - -0.0080293
+  - -0.0495603
+  - -0.0909769
+  quat_xyzw:
+  - 0.0097493
+  - -0.0046708
+  - -0.0127007
+  - 0.9998609
+  where_it_lives:
+  - Code/Grasp/config/grasp.yaml (camera:)
+  - Code/Calibration/calibration.yaml (camera:)
+  - 'method 2 source: same two files'
+  origin: inherited from the earlier course-project calibration; re-checked on 2026-11-19
+  check_marker_test1:
+    held_out_error_mm: 4.887187979625115
+    marker_spread_std_mm:
+    - 3.77
+    - 4.06
+    - 1.37
+    max_mm: 8.9
+  check_board_test2_factory_intrinsics:
+    held_out_error_mm: 8.250737053207423
+    spread_std_mm:
+    - 4.37
+    - 6.01
+    - 2.44
+    max_mm: 12.6
+hand_eye_candidates_not_applied:
+  marker_test1_all_samples:
+    xyz_m:
+    - -0.0083
+    - -0.0589386
+    - -0.0880649
+    quat_xyzw:
+    - -0.0104019
+    - 0.0012264
+    - -0.0025236
+    - 0.999942
+    held_out_error_mm_new_vs_current:
+    - 4.06046900776261
+    - 4.887187979625115
+  board_test2_factory_intrinsics:
+    xyz_m:
+    - -0.0077232
+    - -0.0602824
+    - -0.0841768
+    quat_xyzw:
+    - -0.0106968
+    - -0.0001564
+    - -0.0026294
+    - 0.9999393
+    held_out_error_mm_new_vs_current:
+    - 9.663248134984974
+    - 8.250737053207423
+  board_test2_calibrated_intrinsics:
+    xyz_m:
+    - -0.0078322
+    - -0.0605214
+    - -0.0796832
+    quat_xyzw:
+    - -0.0073117
+    - -0.0018136
+    - -0.0028938
+    - 0.9999674
+    held_out_error_mm_new_vs_current:
+    - 9.656106348053864
+    - 9.683409985795393
+  why_not_applied: none is clearly better than the one in use on held-out poses; marker and board agree with each other to 4.2 mm / 0.16 deg and
+    both sit about 10 mm from the one in use in y
+intrinsics_in_use_factory:
+  K:
+  - - 435.03948974609375
+    - 0.0
+    - 426.5322265625
+  - - 0.0
+    - 434.42132568359375
+    - 238.1904296875
+  - - 0.0
+    - 0.0
+    - 1.0
+  distortion:
+  - -0.0516357421875
+  - 0.052858754992485046
+  - 0.0008795959292910993
+  - -0.00021346555149648339
+  - -0.017710227519273758
+  image_size:
+  - 848
+  - 480
+  source: camera_info of the RealSense D405 colour stream
+  held_out_reprojection_rms_px: 0.245
+intrinsics_calibrated_candidate_not_applied:
+  model: K + k1, k2
+  K:
+  - - 430.16874109719964
+    - 0.0
+    - 425.2249629019536
+  - - 0.0
+    - 428.7964682776773
+    - 234.9198341398331
+  - - 0.0
+    - 0.0
+    - 1.0
+  distortion:
+  - -0.05938695366312315
+  - 0.038673214703803506
+  - 0.0
+  - 0.0
+  - 0.0
+  held_out_reprojection_rms_px: 0.225
+  note: not meaningfully better than the factory values
+targets:
+  marker: ArUco DICT_4X4_50 id 0, black square 100 mm, flat on the table
+  chessboard: 8 x 6 squares of 30 mm = 7 x 5 inner corners, flat on the table
+conclusions:
+- Intrinsics are not the limiting factor (factory 0.245 px held-out reprojection).
+- The marker or board position still scatters 3 to 14 mm between camera poses; a rigid hand-eye offset does not explain it. Arm kinematics (tool
+  pose from the joint angles) is the untested leading suspect.
+- Plan pipelines around a few millimetres of view-to-view inconsistency.
+how_to_repeat:
+- 'marker: python3 ~/kinova/work/tools/auto_hand_eye.py (plan only), then --execute'
+- 'chessboard: python3 ~/kinova/work/tools/auto_chessboard_cal.py (plan only), then --execute'
+- both print the full procedure with --help
