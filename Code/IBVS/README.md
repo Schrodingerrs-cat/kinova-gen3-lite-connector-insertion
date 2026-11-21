@@ -26,7 +26,7 @@ Home/post-grasp poses and camera-to-tool calibration come from [`../Grasp/config
 
 ## Marker setup and teaching
 
-1. Print DICT_4X4_50 markers with ids from `sockets:` in `config/marker_goal.yaml` (`usb_a` 10, `audio` 11, `ac` 12; id 0 is the hand-eye calibration marker). Stick each flat, in the socket's plane, above its socket, and do not move it afterwards.
+1. Print `markers/aruco_markers.pdf` (page 1: ids 10/11/12, 30 mm black square; page 2: hand-eye marker id 0, 100 mm; regenerate with `markers/make_markers.py`; print at 100 %). These are DICT_4X4_50 markers with the ids from `sockets:` in `config/marker_goal.yaml` (`usb_a` 10, `audio` 11, `ac` 12; id 0 is the hand-eye calibration marker). Stick each flat, in the socket's plane, above its socket, and do not move it afterwards.
 2. For each socket, jog the arm (Code/Teleop) until the plug is aligned at the pre-insertion pose, keep it still, then:
 
 ```bash
