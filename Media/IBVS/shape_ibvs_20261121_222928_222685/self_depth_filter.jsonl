@@ -1,0 +1,1 @@
+{"phase": "ALIGN", "method": "labelled visible gripper and self-occluded depth", "template_pixels": 2559, "valid_template_pixels": 2420, "excluded_pixels": 2417, "support_fraction": 0.9987603305785124, "tolerance_m": 0.003, "source_template": "gripper_depth.npz"}

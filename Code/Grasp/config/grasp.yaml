@@ -88,7 +88,8 @@ motion:                       # joint moves and straight lines go to the control
   line_speed_mps: 0.05        # descent / lift average speed; arrives at the grasp point at rest (was 0.04)
   min_line_s: 1.5             # shortest straight line (was 2.0)
 post_grasp:
-  # Captured from live Kortex joint feedback on 2026-11-18 08:32:36 UTC.
+  # Leveled on the wall 2026-11-21 from the camera: wall-normal tilt <0.5 deg and marker row level, wall 289 mm away.
+  # Previous pose (2026-11-18, tilted 19.5/11.8/4.5 deg against the wall): [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
   joint_waypoints_deg:        # J1-J6 in degrees; keep the grasp gripper position
     - [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
 scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)

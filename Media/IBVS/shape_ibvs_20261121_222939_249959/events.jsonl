@@ -1,0 +1,2 @@
+{"event": "IBVS_START", "timestamp_ns": 1795300180841101990, "process_id": 33095, "rms_px": 43.572442906546414, "max_corner_px": 43.739233269592944}
+{"event": "CONVERGED", "timestamp_ns": 1795300193014187511, "process_id": 33095, "center_error_px": 4.576834452152199, "size_ratio": 1.001147255093976, "rms_px": 4.578753480634715, "max_corner_px": 4.724569784296844, "orientation_error_deg": -0.07197363895624267, "fresh_observations": 5}

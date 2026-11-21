@@ -69,6 +69,25 @@ The measured `config/gripper_depth*.npz` references identify the visible fingers
 
 Depth is the mean measured depth inside the marker (flat paper, one depth for all four corners). A missing marker or too little valid depth causes a tracking hold.
 
+## End to end from home (what the first hardware run did, plus the home move)
+
+Stack up first (arm driver, MoveIt `allow_trajectory_execution:=false`, camera `eih_cam`), gripper open and empty, e-stop in reach. From the `insertion_task` folder:
+
+```bash
+source Code/IBVS/ros_env.sh
+bash Code/IBVS/run_alignment.sh --socket audio --show-image                 # preview: no motion
+bash Code/IBVS/run_alignment.sh --socket audio --show-image --live          # home -> leveled post-grasp pose -> servo to marker 11
+```
+
+The post-grasp pose (`Code/Grasp/config/grasp.yaml`, `post_grasp`) was leveled on the wall with the camera (evidence: `Media/IBVS/run_*_leveling_post_grasp/`) and the goal in `config/taught_goals.yaml` was taught there, so the arm arrives almost aligned and the run may end `ALREADY_ALIGNED` with 0 steps. To exercise the servo, offset the arm first (the first hardware run used joint 1 by +3 deg) and run from the current pose:
+
+```bash
+python3 Code/IBVS/ros2_iface/nudge_joint.py --joint 1 --deg 3
+bash Code/IBVS/run_joint2_priority.sh --socket audio --show-image --wait-target-s 30 --live
+```
+
+First hardware run: `Media/IBVS/shape_ibvs_20261121_222939_249959` (CONVERGED, 8 steps, 12.2 s). The home -> post-grasp move through `run_alignment.sh` has not been run with markers yet.
+
 ## Archive and speed changes (2026-11-20)
 
 - `archive/aruco_state_machine/`: the earlier ArUco design (state machine B0/A1/A2, guards, bounded search, seating check, 22 tests). Not used by the runners here.

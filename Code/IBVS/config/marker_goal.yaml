@@ -31,7 +31,7 @@ feature_tracking:
   max_jump_px: 20.0
   camera_stale_s: 0.5
   canonical_target_order: [0, 1, 2, 3]   # ArUco corner order is already canonical (marker's own top-left first)
-sockets:                              # marker id per socket (not the hand-eye calibration marker, id 0)
-  usb_a: 10
+sockets:                              # marker id per socket, as physically placed (left AC, centre audio, right USB-A seen from the robot)
+  usb_a: 12
   audio: 11
-  ac: 12
+  ac: 10

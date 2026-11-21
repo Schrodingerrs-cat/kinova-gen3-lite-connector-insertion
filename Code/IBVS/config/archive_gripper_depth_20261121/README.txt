@@ -1,0 +1,1 @@
+old references (appearance no longer matched the current lighting, support 0.13-0.23) archived; new reference measured 2026-11-21 from 10 stationary frames, gripper open, support 0.91-0.98 on frames from other poses

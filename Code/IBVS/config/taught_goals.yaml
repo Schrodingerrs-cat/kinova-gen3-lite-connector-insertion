@@ -1,2 +1,25 @@
 # Written by ros2_iface/teach_goal.py. Corners are pixels of the marker at the taught pre-insertion pose, camera_K is the
 # intrinsics they were taught with. Re-teach after any camera, mount or marker change.
+audio:
+  camera_K:
+  - - 435.03948974609375
+    - 0.0
+    - 426.5322265625
+  - - 0.0
+    - 434.42132568359375
+    - 238.1904296875
+  - - 0.0
+    - 0.0
+    - 1.0
+  corner_std_px: 0.0594582080951687
+  corners_image_px:
+  - - 433.8214569091797
+    - 206.6766357421875
+  - - 479.55584716796875
+    - 206.4285659790039
+  - - 478.9355773925781
+    - 251.44895935058594
+  - - 433.9930725097656
+    - 251.19182586669922
+  marker_id: 11
+  taught_utc: '2026-11-21T22:27:30+00:00'
