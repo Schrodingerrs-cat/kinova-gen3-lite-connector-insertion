@@ -13,9 +13,11 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from alignment_test import Experiment, ROOT, PROJECT, load_inputs
+from alignment_test import Experiment, ROOT, PROJECT, load_inputs, add_advance_arguments
+from ibvs.advance import backproject, clearance, fit_wall, plan_travel
 from ibvs.alignment import camera_joint_jacobian, within_limits, smooth_servo_path
 from ibvs.control import Convergence
+from ibvs.guards import check_axial
 from ibvs.markers import TrackingLost
 from ibvs.shape_control import shape_ibvs_step, shape_metrics, task_cost, project_motion, STEP_SCALES
 from observed_scene import ObservedScene
@@ -165,6 +167,75 @@ def acquire(e, deadline, frames=1):
     raise TrackingLost('marker was not recovered before the stationary hold timeout')
 
 
+def advance(e, scene, args, report, execute):
+    """After alignment: move straight toward the wall along the measured wall normal in short guarded steps.
+    The wall plane and the clearance of everything the gripper holds come from the depth image. No force sensing:
+    each step must be followed by the arm (progress check), and without --allow-contact the travel stops short of the wall."""
+    obs = e.last_observation
+    depth, K, D = obs['depth_m'], obs['K'], obs['distortion']
+    if e.self_depth_template is None:
+        raise RuntimeError('advance needs a gripper self-depth reference (what the gripper holds must be known)')
+    held, _ = e.self_depth_template.exclude(depth, K, D, e.reference['camera_frame_id'], e.r.grip_pos_msr, color=obs['color'])
+    corners = obs['corners_px']
+    x0, y0 = int(corners[:, 0].mean()), int(corners[:, 1].max()) + 20
+    n, d, support = fit_wall(depth, (x0 - 160, y0, x0 + 160, min(depth.shape[0], y0 + 240)), held, K, D,
+                             e.c['depth_min_m'], e.c['depth_max_m'])
+    tilt = float(np.degrees(np.arccos(np.clip(-n[2], -1, 1))))
+    if tilt > 10.:
+        raise RuntimeError('wall normal is %.1f deg from the camera axis: not a plausible wall view' % tilt)
+    tip = (np.linalg.inv(e.T_EC) @ e.T_tcp[:, 3])[:3]
+    free = clearance(np.vstack([backproject(depth, held, K, D), tip]), n, d)
+    planned, trimmed = plan_travel(free, args.advance_m, args.advance_margin_m, args.allow_contact)
+    report['advance'] = info = dict(requested_m=args.advance_m, planned_m=planned, clearance_m=free, wall_tilt_deg=tilt,
+                                    wall_support_points=support, margin_m=args.advance_margin_m,
+                                    allow_contact=bool(args.allow_contact), trimmed=bool(trimmed), executed_m=0.)
+    print('ADVANCE: gripper and held object are %.0f mm from the wall (plane %.1f deg off the camera axis). '
+          'Requested %.0f mm -> %.0f mm%s' % (free * 1e3, tilt, args.advance_m * 1e3, planned * 1e3,
+                                              ' TRIMMED to stay %.0f mm short of the wall; --allow-contact does the full stroke' % (args.advance_margin_m * 1e3) if trimmed else ''), flush=True)
+    if not execute or planned < .002:
+        return
+    e.phase, e.visual_stage = 'ADVANCE', 'ADVANCE: forward along the wall normal'
+    e.event('ADVANCE_START', **info)
+    direction = (e.fk(e.r.q)[:3, :3] @ e.T_EC[:3, :3]) @ -n          # base-frame unit vector, fixed for the whole move
+    total, ax = 0., dict(max_travel_m=planned + .01, min_progress_frac=.5)
+    while total < planned - 1e-6:
+        step = min(args.advance_step_m, planned - total)
+        q = e.r.q.copy()
+        T = e.fk(q)
+        T[:3, 3] += step * direction
+        q_ik = e.r.ik(T, np.degrees(q))
+        if q_ik is None:
+            raise RuntimeError('advance: no IK for the next %.0f mm step (after %.0f mm)' % (step * 1e3, total * 1e3))
+        target = q + np.radians((q_ik - np.degrees(q) + 180) % 360 - 180)
+        path = smooth_servo_path(e.direct_path(target), e.c.get('collision_segment_deg', .25))
+        if not args.allow_contact:
+            for sample in path:
+                scene.check(sample)
+        start = e.fk(q)[:3, 3]
+        e.move(path, max(e.c['min_move_s'], step / args.advance_speed_mps))
+        measured = float((e.fk(e.r.q)[:3, 3] - start) @ direction)
+        why = check_axial(step, measured, total, ax)
+        total += max(measured, 0.)
+        info['executed_m'] = total
+        with (e.output / 'advance.jsonl').open('a') as record:
+            record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
+        print('Advance %.0f / %.0f mm' % (total * 1e3, planned * 1e3), flush=True)
+        if why:
+            raise RuntimeError('advance stopped after %.0f mm: %s (the arm did not follow the command)' % (total * 1e3, why))
+    e.event('ADVANCE_DONE', executed_m=total)
+
+
+def run_advance(e, scene, args, report, execute):
+    if getattr(args, 'advance_m', 0.) <= 0:
+        return
+    try:
+        advance(e, scene, args, report, execute)
+    except Exception as error:
+        report.setdefault('advance', {})['error'] = str(error)
+        report['status'] = 'ADVANCE_FAILED' if execute else report.get('status', 'PREVIEW')
+        print('ADVANCE STOPPED:', error, flush=True)
+
+
 def servo(e, args, report):
     e.servo_report = report
     report.update(recoveries=0, steps=0, motion_attempts=0)
@@ -177,6 +248,7 @@ def servo(e, args, report):
         report['preflight'] = reach_check(e, scene, xy, Z)
         if not args.live:
             report['status'] = 'PREVIEW'
+            run_advance(e, scene, args, report, execute=False)
             return
         e.record_correction = True
         xy, Z, rms, maximum = acquire(e, time.monotonic()+e.c.get('tracking_recovery_timeout_s', 12.))
@@ -234,6 +306,7 @@ def servo(e, args, report):
                     e.event('CONVERGED', **metrics, fresh_observations=convergence.n)
                     cv2.imwrite(str(e.output/'converged.png'),e.bgr(e.r._img['color']))
                     cv2.imwrite(str(e.output/'converged_features.png'),e.latest_annotated)
+                    run_advance(e, scene, args, report, execute=True)
                     return
                 if maximum <= e.c['tolerance_px']:
                     xy,Z,rms,maximum = acquire(e,time.monotonic()+e.c.get('tracking_recovery_timeout_s',12.))
@@ -338,6 +411,8 @@ def main():
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
     parser.add_argument('--reference', type=Path, default=ROOT/'config/marker_goal.yaml')
     parser.add_argument('--socket', required=True, help='socket whose marker and taught goal to use (usb_a, audio, ac)')
+    add_advance_arguments(parser)
+    parser.add_argument('--close-gripper',action='store_true',help='close the gripper before the servo (needs a self-depth reference for that state)')
     parser.add_argument('--fast',action='store_true',help='UNVALIDATED faster profile: bigger steps, short settling, coarser collision sampling')
     parser.add_argument('--smooth',action='store_true',help='orientation-aware approach, continuous straight servo segments and shorter settling')
     parser.add_argument('--control-hz',type=float,help='maximum step-loop frequency; actual rate is limited by planning, motion and fresh feedback')
@@ -352,6 +427,8 @@ def main():
     c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket)
     if args.control_hz is not None and (not np.isfinite(args.control_hz) or not .2<=args.control_hz<=3.):
         parser.error('control-hz must be between 0.2 and 3')
+    if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .02 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
+        parser.error('advance: distance 0..0.30 m, step 0..0.02 m, speed 0..0.02 m/s, margin >= 0')
     if args.fast and (args.smooth or args.control_hz is not None):parser.error('--fast replaces --smooth and --control-hz')
     if args.fast:fast_profile(c)
     elif args.smooth:smooth_profile(c,2. if args.control_hz is None else args.control_hz)
@@ -390,13 +467,18 @@ def main():
     try:
         e = Experiment(SimpleNamespace(live=args.live, bringup=args.bringup, shutdown=False,
                                       show_image=args.show_image,from_post_grasp=False,position_only=False,
-                                      calibration_only=False,hand_eye=None,record_sequence=args.record_sequence), c, ref, g, out)
+                                      calibration_only=False,hand_eye=None,record_sequence=args.record_sequence,
+                                      close_gripper=args.close_gripper,advance_m=args.advance_m,advance_step_m=args.advance_step_m,
+                                      advance_speed_mps=args.advance_speed_mps,advance_margin_m=args.advance_margin_m,
+                                      allow_contact=args.allow_contact), c, ref, g, out)
         if args.home_first:
             if not args.live:
                 raise RuntimeError('--home-first requires --live; preview checks the current pose without moving')
             report.update(e.run())
         else:
             e.startup()
+            if args.close_gripper:
+                e.close_gripper()
             e.phase = 'ALIGN'
             e.visual_stage = 'STATIONARY reach/clearance check'
             e.origin = e.fk(np.radians(g['post_grasp']['joint_waypoints_deg'][-1])) @ e.T_EC

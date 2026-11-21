@@ -105,6 +105,6 @@ class SelfDepthBank:
                 mask,details=model.exclude(*args,**kwargs)
                 accepted.append((details['support_fraction'],mask,dict(details,source_template=name)))
             except ValueError as error:errors.append(str(error))
-        if not accepted:raise ValueError('no measured gripper reference matches: '+'; '.join(errors))
+        if not accepted:raise ValueError('no measured gripper reference matches: '+'; '.join(errors)+' (measure one for this gripper state: ros2_iface/measure_gripper_depth.py)')
         _,mask,details=max(accepted,key=lambda item:item[0])
         return mask,details

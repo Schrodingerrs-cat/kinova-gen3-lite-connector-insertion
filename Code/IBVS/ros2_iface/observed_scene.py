@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from ibvs.depth import observed_voxels, validate_frozen_target
+from ibvs.depth import observed_voxels, scene_near_depth, validate_frozen_target
 
 
 class ObservedScene:
@@ -49,7 +49,7 @@ class ObservedScene:
         # Robot fingers are in the near field. Freeze only surfaces beyond them,
         # then retain those same obstacles throughout the entire approach.
         tcp_in_camera = np.linalg.inv(self.e.T_EC) @ self.e.T_tcp
-        near = self.e.c.get('scene_min_depth_m', max(.18, float(tcp_in_camera[2, 3])+.04))
+        near = scene_near_depth(self.e.c, self.e.T_EC, self.e.T_tcp)
         separation = .02 if 'scene_min_depth_m' in self.e.c else .04
         info = dict(voxel_m=.01, collision_box_m=.02, min_snapshot_depth_m=near,
                     camera_to_tcp_m=tcp_in_camera[:3, 3].tolist(),

@@ -1,0 +1,186 @@
+{
+  "status": "INCOMPLETE",
+  "started_utc": "20261121_224503_623166",
+  "process_id": 37514,
+  "live": true,
+  "from_post_grasp": false,
+  "recording_scope": "IBVS only",
+  "settings": {
+    "gain": 0.35,
+    "damping": 0.0,
+    "max_step_m": 0.002,
+    "max_step_deg": 0.4,
+    "joint_speed_deg_s": 5.0,
+    "linear_speed_m_s": 0.005,
+    "angular_speed_deg_s": 2.0,
+    "min_move_s": 0.6,
+    "max_servo_joint_step_deg": 5.5,
+    "max_camera_travel_m": 0.3,
+    "max_camera_rotation_deg": 45.0,
+    "table_clearance_m": 0.03,
+    "depth_min_m": 0.07,
+    "depth_max_m": 0.5,
+    "depth_plane_inlier_m": 0.008,
+    "min_depth_points": 30,
+    "min_depth_inlier_fraction": 0.6,
+    "feedback_stale_s": 0.5,
+    "camera_sync_s": 0.05,
+    "min_marker_side_px": 20.0,
+    "max_corner_jump_px": 20.0,
+    "calibration_translation_m": 0.004,
+    "calibration_rotation_deg": 1.0,
+    "observation_frames": 5,
+    "tolerance_px": 5.0,
+    "converge_frames": 5,
+    "timeout_s": 900.0,
+    "max_steps": 800,
+    "preflight_check_every": 5,
+    "arrival_tolerance_deg": 0.3,
+    "arrival_timeout_s": 5.0,
+    "arrival_settle_s": 0.5,
+    "error_growth_px": 5.0,
+    "error_growth_frames": 5,
+    "max_joint_increment_deg": 2.0,
+    "tracking_loss_tolerance_s": 0.25,
+    "tracking_recovery_timeout_s": 12.0,
+    "tracking_recovery_frames": 3,
+    "max_tracking_recoveries": 10,
+    "near_goal_hold_s": 0.7,
+    "joint_gains": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "reference": {
+    "feature_type": "marker",
+    "target_shape": "marker",
+    "camera_topic_prefix": "/eih_cam",
+    "camera_frame_id": "eih_cameih_cam_color_optical_frame",
+    "image_size_px": [
+      848,
+      480
+    ],
+    "tolerance_px": 5.0,
+    "converge_frames": 5,
+    "max_step_m": 0.002,
+    "max_step_deg": 0.4,
+    "max_joint_increment_deg": 2.0,
+    "joint_gains": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "max_steps": 800,
+    "timeout_s": 900.0,
+    "arrival_tolerance_deg": 0.3,
+    "arrival_timeout_s": 5.0,
+    "arrival_settle_s": 0.5,
+    "error_growth_px": 5.0,
+    "error_growth_frames": 5,
+    "tracking_loss_tolerance_s": 0.25,
+    "tracking_recovery_timeout_s": 12.0,
+    "tracking_recovery_frames": 3,
+    "max_tracking_recoveries": 10,
+    "near_goal_hold_s": 0.7,
+    "feature_tracking": {
+      "type": "aruco",
+      "aruco_dict": "DICT_4X4_50",
+      "detect_inverted_marker": false,
+      "min_side_px": 20.0,
+      "max_jump_px": 20.0,
+      "camera_stale_s": 0.5,
+      "canonical_target_order": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "ids": [
+        11
+      ]
+    },
+    "sockets": {
+      "usb_a": 12,
+      "audio": 11,
+      "ac": 10
+    },
+    "corners_image_px": [
+      [
+        433.8214569091797,
+        206.6766357421875
+      ],
+      [
+        479.55584716796875,
+        206.4285659790039
+      ],
+      [
+        478.9355773925781,
+        251.44895935058594
+      ],
+      [
+        433.9930725097656,
+        251.19182586669922
+      ]
+    ],
+    "camera_K": [
+      [
+        435.03948974609375,
+        0.0,
+        426.5322265625
+      ],
+      [
+        0.0,
+        434.42132568359375,
+        238.1904296875
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "socket": "audio"
+  },
+  "home_deg": [
+    3.0266,
+    356.8712,
+    93.4037,
+    271.4634,
+    272.3364,
+    277.3673
+  ],
+  "post_grasp": {
+    "joint_waypoints_deg": [
+      [
+        36.1993,
+        -81.9997,
+        134.2784,
+        -49.1608,
+        122.4039,
+        -66.7142
+      ]
+    ]
+  },
+  "hand_eye": {
+    "hand_eye_xyz_m": [
+      -0.0080293,
+      -0.0495603,
+      -0.0909769
+    ],
+    "hand_eye_quat_xyzw": [
+      0.0097493,
+      -0.0046708,
+      -0.0127007,
+      0.9998609
+    ]
+  },
+  "hand_eye_status": "existing estimate; bounded free-space test only",
+  "method": "Undamped center/size IBVS then four-corner IBVS; weighted joint mobility; measured mean depth"
+}

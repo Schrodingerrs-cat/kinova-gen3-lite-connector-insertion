@@ -1,0 +1,2 @@
+{"event": "SEQUENCE_START", "timestamp_ns": 1795301104020721133, "process_id": 37514}
+{"event": "GRIPPER_CLOSED", "timestamp_ns": 1795301106477654211, "process_id": 37514, "position": 0.8350139533996582, "empty_closes_to": 0.81}

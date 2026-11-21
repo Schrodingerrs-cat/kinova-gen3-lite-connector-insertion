@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(GRASP / "ros2_iface"))
 from ibvs.alignment import camera_step, fit_camera_tool_mapping, marker_plane_depths, path_times, within_limits  # noqa: E402
 from ibvs.control import Convergence  # noqa: E402
-from ibvs.depth import corner_depths  # noqa: E402
+from ibvs.depth import corner_depths, observed_voxels, scene_near_depth  # noqa: E402
 from ibvs.frames import matrix  # noqa: E402
 from ibvs.markers import Tracker, TrackingLost, mean_marker_depth  # noqa: E402
 from ibvs.overlay import FeatureOverlay  # noqa: E402
@@ -133,8 +133,7 @@ class Experiment:
         self.record_sequence = getattr(args,'record_sequence',False)
         self.tracking_epoch = 0
         from ibvs.self_depth import SelfDepthBank
-        self_depth_path = ROOT/'config/gripper_depth.npz'
-        self_depth_paths=[p for p in (self_depth_path,ROOT/'config/gripper_depth_aligned.npz',ROOT/'config/gripper_depth_post_grasp.npz') if p.exists()]
+        self_depth_paths=sorted((ROOT/'config').glob('gripper_depth*.npz'))
         self.self_depth_template = SelfDepthBank(self_depth_paths) if self_depth_paths else None
         if self.self_depth_template is not None:
             (output/'source/config').mkdir(parents=True,exist_ok=True)
@@ -235,8 +234,9 @@ class Experiment:
             raise RuntimeError('positioning requires aligned 16UC1 depth')
         metres = np.frombuffer(depth.data,np.uint16).reshape(depth.height,depth.step//2)[:,:depth.width]*.001
         T = self.fk(self.r.q)@self.T_EC
+        near = scene_near_depth(self.c, self.T_EC, self.T_tcp)       # same rule as the servo scene: gripper and held plug are not scene
         centers = observed_voxels(self.scene_depth(metres),np.asarray(self.camera['K']),np.asarray(self.camera['distortion']),
-                                  T,.11,self.c['depth_max_m'])
+                                  T,near,self.c['depth_max_m'])
         np.savez_compressed(self.output/'positioning_scene.npz',centers_base_m=centers,camera_in_base=T,
                             depth_m=metres,K=np.asarray(self.camera['K']),distortion=np.asarray(self.camera['distortion']))
         scene = ObservedScene(self)
@@ -247,7 +247,7 @@ class Experiment:
         except BaseException:
             scene.close()
             raise
-        self.event('POSITIONING_SCENE_READY',minimum_depth_m=.11,voxels=len(centers))
+        self.event('POSITIONING_SCENE_READY',minimum_depth_m=near,voxels=len(centers))
         return scene
 
     def wait(self, future, timeout=10.0, monitor=False):
@@ -299,7 +299,7 @@ class Experiment:
         annotated = None
         if self.is_marker and self.tracker is not None:
             pixels, valid = np.full((1,4,2), np.nan), np.array([False])
-            if self.phase == "ALIGN":
+            if self.phase in ("ALIGN", "ADVANCE"):
                 pixels, valid = self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
                 if valid[0]:
                     self.last_marker_seen = time.monotonic()
@@ -373,8 +373,8 @@ class Experiment:
         self.fresh()
         if not self.r.arm.wait_for_server(timeout_sec=5):
             raise RuntimeError("arm trajectory action is unavailable")
-        if self.r.grip_pos_msr is None or self.r.grip_pos_msr > 0.05:
-            raise RuntimeError("empty-gripper test requires the gripper open and empty; prepare it before running")
+        if self.r.grip_pos_msr is None:
+            raise RuntimeError("no gripper joint state")
         if not self.plan_cli.wait_for_service(timeout_sec=2.0):
             if not self.args.bringup:
                 raise RuntimeError("MoveIt is unavailable; run with --bringup or start move_group.launch.py")
@@ -416,6 +416,17 @@ class Experiment:
         (self.output / "camera_info.json").write_text(json.dumps(self.camera, indent=2) + "\n")
         self.prepare_local_fk()
         print("Arm, MoveIt and camera are ready.", flush=True)
+
+    def close_gripper(self):
+        gripper = self.grasp["gripper"]
+        if not self.args.live:
+            print("PREVIEW: the gripper would be closed (command %.2f)." % gripper["close_cmd"], flush=True)
+            return
+        self.r.gripper(gripper["close_cmd"], gripper["close_effort"])
+        self.r.spin_until(lambda: False, 1.0)
+        position = float(self.r.grip_pos_msr)
+        self.event("GRIPPER_CLOSED", position=position, empty_closes_to=gripper["close_cmd"])
+        print("Gripper closed: position %.3f (an empty gripper closes to about %.2f)." % (position, gripper["close_cmd"]), flush=True)
 
     def state(self, q=None):
         from moveit_msgs.msg import RobotState
@@ -776,6 +787,8 @@ class Experiment:
         self.poses_completed = []
         self.event('SEQUENCE_START')
         self.startup()
+        if getattr(self.args, "close_gripper", False):
+            self.close_gripper()
         home = (np.array(self.grasp["scan"]["home_joints_deg"]) + 180) % 360 - 180
         waypoints = [home] + [np.asarray(q, float) for q in self.grasp["post_grasp"]["joint_waypoints_deg"]]
         if not self.args.live:
@@ -808,7 +821,10 @@ class Experiment:
             from joint2_priority_servo import servo
             self.visual_stage = 'STATIONARY reach/clearance check'
             result = dict(status='INCOMPLETE')
-            servo(self, SimpleNamespace(live=self.args.live, steps=int(self.c['max_steps']), wait_target_s=30.), result)
+            servo(self, SimpleNamespace(live=self.args.live, steps=int(self.c['max_steps']), wait_target_s=30.,
+                                        advance_m=self.args.advance_m, advance_step_m=self.args.advance_step_m,
+                                        advance_speed_mps=self.args.advance_speed_mps, advance_margin_m=self.args.advance_margin_m,
+                                        allow_contact=self.args.allow_contact), result)
             return result
         xy, Z, rms, maximum = self.capture()
         initial = rms
@@ -901,9 +917,19 @@ class Experiment:
             log.close()
 
 
+def add_advance_arguments(parser):
+    parser.add_argument("--advance-m", type=float, default=0., help="after convergence, move this far forward along the measured wall normal (0 = off)")
+    parser.add_argument("--advance-step-m", type=float, default=.01, help="guarded step length of the forward move")
+    parser.add_argument("--advance-speed-mps", type=float, default=.01, help="forward speed")
+    parser.add_argument("--advance-margin-m", type=float, default=.015, help="stay this far from the wall unless --allow-contact")
+    parser.add_argument("--allow-contact", action="store_true", help="do the full forward distance even if the gripper/plug reaches the wall (insertion stroke)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true", help="execute joint positioning and image-based alignment")
+    parser.add_argument("--close-gripper", action="store_true", help="close the gripper before moving (needs a self-depth reference for that state)")
+    add_advance_arguments(parser)
     parser.add_argument("--bringup", action="store_true", help="start missing driver, MoveIt and camera processes")
     parser.add_argument("--shutdown", action="store_true", help="stop ROS processes started by this run when it finishes")
     parser.add_argument("--position-only", action="store_true", help="stop after positioning and checking marker/depth")
@@ -924,6 +950,8 @@ def main():
         os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
     if args.position_only and args.calibration_only:
         parser.error("choose either --position-only or --calibration-only")
+    if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .02 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
+        parser.error("advance: distance 0..0.30 m, step 0..0.02 m, speed 0..0.02 m/s, margin >= 0")
     settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket)
     marker = reference.get("feature_type") == "marker"
     if marker and (args.calibration_only or args.hand_eye):

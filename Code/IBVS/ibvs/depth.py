@@ -52,3 +52,9 @@ def fill_depths(Z):
     if not ok.any():
         return None
     return np.where(ok, Z, np.median(Z[ok]))
+
+
+def scene_near_depth(settings, T_EC, T_tcp):
+    """Nearest range (m) from the camera that is treated as scene: closer returns are the gripper and what it holds."""
+    tcp_in_camera = np.linalg.inv(T_EC) @ T_tcp
+    return settings.get('scene_min_depth_m', max(.18, float(tcp_in_camera[2, 3]) + .04))
