@@ -575,19 +575,23 @@ class Experiment:
                 # Two endpoints describe the identical line, without intermediate stops.
                 path=path[[0,-1]]
                 profile='continuous_quintic'
-        from ibvs.alignment import trajectory_times
+        from ibvs.alignment import smooth_velocities, trajectory_times
+        # Alignment steps stop at their end (quintic). Positioning and advance moves flow through their waypoints (cubic, no stops).
         times=trajectory_times(path,self.c['joint_speed_deg_s'],min_duration,
-                               max(.1,1.875*drift/self.c['joint_speed_deg_s']))
+                               max(.1,1.875*drift/self.c['joint_speed_deg_s']),peak_factor=1.875 if precise else 1.25)
+        velocities=np.zeros_like(path) if precise else smooth_velocities(path,times)
         request = self.action_type.Goal()
         request.trajectory.joint_names = JOINTS
         if precise:
             request.goal_tolerance = [JointTolerance(name=j, position=float(np.radians(self.c["arrival_tolerance_deg"])))
                                       for j in JOINTS]
             request.goal_time_tolerance = Duration(sec=int(self.c["arrival_timeout_s"]))
-        for q, t in zip(path, times):
+        for q, v, t in zip(path, velocities, times):
             ns = int(round(t * 1e9))
-            point = JointTrajectoryPoint(positions=q.tolist(), velocities=[0.0]*6, accelerations=[0.0]*6,
+            point = JointTrajectoryPoint(positions=q.tolist(), velocities=v.tolist(),
                                          time_from_start=Duration(sec=ns//1000000000, nanosec=ns%1000000000))
+            if precise:
+                point.accelerations = [0.0]*6
             request.trajectory.points.append(point)
         self.pending = self.r.arm.send_goal_async(request)
         result_code = None
@@ -917,9 +921,18 @@ class Experiment:
             log.close()
 
 
+def scale_speeds(settings, scale):
+    """Multiply the software speed limits; shorter minimum move and settling so the faster moves are not eaten by waiting."""
+    for key in ("joint_speed_deg_s", "linear_speed_m_s", "angular_speed_deg_s"):
+        settings[key] *= scale
+    for key, floor in (("min_move_s", .2), ("arrival_settle_s", .15)):
+        settings[key] = max(floor, settings[key] / scale) if scale > 1 else settings[key]
+
+
 def add_advance_arguments(parser):
+    parser.add_argument("--speed-scale", type=float, default=1., help="multiply joint, linear and angular speed limits (1..3)")
     parser.add_argument("--advance-m", type=float, default=0., help="after convergence, move this far forward along the measured wall normal (0 = off)")
-    parser.add_argument("--advance-step-m", type=float, default=.01, help="guarded step length of the forward move")
+    parser.add_argument("--advance-step-m", type=float, default=.03, help="chunk length of the forward move; the arm must follow each chunk or the move stops")
     parser.add_argument("--advance-speed-mps", type=float, default=.01, help="forward speed")
     parser.add_argument("--advance-margin-m", type=float, default=.015, help="stay this far from the wall unless --allow-contact")
     parser.add_argument("--allow-contact", action="store_true", help="do the full forward distance even if the gripper/plug reaches the wall (insertion stroke)")
@@ -950,9 +963,13 @@ def main():
         os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
     if args.position_only and args.calibration_only:
         parser.error("choose either --position-only or --calibration-only")
-    if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .02 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
-        parser.error("advance: distance 0..0.30 m, step 0..0.02 m, speed 0..0.02 m/s, margin >= 0")
+    if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .05 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
+        parser.error("advance: distance 0..0.30 m, step 0..0.05 m, speed 0..0.02 m/s, margin >= 0")
+    if not 1. <= args.speed_scale <= 3.:
+        parser.error("--speed-scale must be between 1 and 3")
     settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket)
+    scale_speeds(settings, args.speed_scale)
+    args.advance_speed_mps = min(.03, args.advance_speed_mps * args.speed_scale)
     marker = reference.get("feature_type") == "marker"
     if marker and (args.calibration_only or args.hand_eye):
         parser.error("marker mode uses standard IBVS and the existing transform; calibration probes/fitted mappings are disabled")

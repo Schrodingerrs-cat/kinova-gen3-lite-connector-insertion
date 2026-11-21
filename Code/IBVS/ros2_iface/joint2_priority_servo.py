@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from alignment_test import Experiment, ROOT, PROJECT, load_inputs, add_advance_arguments
+from alignment_test import Experiment, ROOT, PROJECT, load_inputs, add_advance_arguments, scale_speeds
 from ibvs.advance import backproject, clearance, fit_wall, plan_travel
 from ibvs.alignment import camera_joint_jacobian, within_limits, smooth_servo_path
 from ibvs.control import Convergence
@@ -197,31 +197,38 @@ def advance(e, scene, args, report, execute):
     e.phase, e.visual_stage = 'ADVANCE', 'ADVANCE: forward along the wall normal'
     e.event('ADVANCE_START', **info)
     direction = (e.fk(e.r.q)[:3, :3] @ e.T_EC[:3, :3]) @ -n          # base-frame unit vector, fixed for the whole move
-    total, ax = 0., dict(max_travel_m=planned + .01, min_progress_frac=.5)
-    while total < planned - 1e-6:
-        step = min(args.advance_step_m, planned - total)
-        q = e.r.q.copy()
-        T = e.fk(q)
-        T[:3, 3] += step * direction
-        q_ik = e.r.ik(T, np.degrees(q))
-        if q_ik is None:
-            raise RuntimeError('advance: no IK for the next %.0f mm step (after %.0f mm)' % (step * 1e3, total * 1e3))
-        target = q + np.radians((q_ik - np.degrees(q) + 180) % 360 - 180)
-        path = smooth_servo_path(e.direct_path(target), e.c.get('collision_segment_deg', .25))
-        if not args.allow_contact:
-            for sample in path:
-                scene.check(sample)
-        start = e.fk(q)[:3, 3]
-        e.move(path, max(e.c['min_move_s'], step / args.advance_speed_mps))
-        measured = float((e.fk(e.r.q)[:3, 3] - start) @ direction)
-        why = check_axial(step, measured, total, ax)
-        total += max(measured, 0.)
-        info['executed_m'] = total
-        with (e.output / 'advance.jsonl').open('a') as record:
-            record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
-        print('Advance %.0f / %.0f mm' % (total * 1e3, planned * 1e3), flush=True)
-        if why:
-            raise RuntimeError('advance stopped after %.0f mm: %s (the arm did not follow the command)' % (total * 1e3, why))
+    total, ax, settle = 0., dict(max_travel_m=planned + .01, min_progress_frac=.5), e.c['arrival_settle_s']
+    e.c['arrival_settle_s'] = min(settle, .1)                          # the trajectory itself is smooth: no long wait per chunk
+    try:
+        while total < planned - 1e-6:
+            step = min(args.advance_step_m, planned - total)
+            q = e.r.q.copy()
+            T0 = e.fk(q)
+            count = max(1, int(np.ceil(step / .01 - 1e-9)))              # IK waypoint every ~1 cm, one flowing trajectory per chunk
+            waypoints = [q]
+            for k in range(1, count + 1):
+                T = T0.copy()
+                T[:3, 3] += step * k / count * direction
+                q_ik = e.r.ik(T, np.degrees(waypoints[-1]))
+                if q_ik is None:
+                    raise RuntimeError('advance: no IK %.0f mm into the next chunk (after %.0f mm)' % (step * k / count * 1e3, total * 1e3))
+                waypoints.append(waypoints[-1] + np.radians((q_ik - np.degrees(waypoints[-1]) + 180) % 360 - 180))
+            path = e.check_joint_path(np.array(waypoints), local=True)
+            if not args.allow_contact:
+                for sample in path:
+                    scene.check(sample)
+            e.move(path, max(e.c['min_move_s'], step / args.advance_speed_mps))
+            measured = float((e.fk(e.r.q)[:3, 3] - T0[:3, 3]) @ direction)
+            why = check_axial(step, measured, total, ax)
+            total += max(measured, 0.)
+            info['executed_m'] = total
+            with (e.output / 'advance.jsonl').open('a') as record:
+                record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
+            print('Advance %.0f / %.0f mm' % (total * 1e3, planned * 1e3), flush=True)
+            if why:
+                raise RuntimeError('advance stopped after %.0f mm: %s (the arm did not follow the command)' % (total * 1e3, why))
+    finally:
+        e.c['arrival_settle_s'] = settle
     e.event('ADVANCE_DONE', executed_m=total)
 
 
@@ -427,12 +434,16 @@ def main():
     c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket)
     if args.control_hz is not None and (not np.isfinite(args.control_hz) or not .2<=args.control_hz<=3.):
         parser.error('control-hz must be between 0.2 and 3')
-    if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .02 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
-        parser.error('advance: distance 0..0.30 m, step 0..0.02 m, speed 0..0.02 m/s, margin >= 0')
+    if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .05 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
+        parser.error('advance: distance 0..0.30 m, step 0..0.05 m, speed 0..0.02 m/s, margin >= 0')
+    if not 1. <= args.speed_scale <= 3.:
+        parser.error('--speed-scale must be between 1 and 3')
     if args.fast and (args.smooth or args.control_hz is not None):parser.error('--fast replaces --smooth and --control-hz')
     if args.fast:fast_profile(c)
     elif args.smooth:smooth_profile(c,2. if args.control_hz is None else args.control_hz)
     elif args.control_hz is not None:c['control_hz']=args.control_hz
+    scale_speeds(c, args.speed_scale)
+    args.advance_speed_mps = min(.03, args.advance_speed_mps * args.speed_scale)
     c['max_servo_joint_step_deg'] = 5.5
     if args.near_scene:
         c['scene_min_depth_m'] = .11

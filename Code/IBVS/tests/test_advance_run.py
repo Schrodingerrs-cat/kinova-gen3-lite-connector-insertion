@@ -21,18 +21,19 @@ def fake(tmp_path, wall=.29, held_depth=.10, follows=True):
     e.last_observation = dict(depth_m=depth, K=K, distortion=np.zeros(5), color=np.zeros((480, 848, 3), np.uint8),
                               corners_px=np.array([[404, 183], [450, 183], [450, 229], [404, 229]], float))
     e.self_depth_template = SimpleNamespace(exclude=lambda *a, **k: (held, {}))
-    e.reference, e.c = dict(camera_frame_id='f'), dict(depth_min_m=.07, depth_max_m=1., min_move_s=.1)
+    e.reference, e.c = dict(camera_frame_id='f'), dict(depth_min_m=.07, depth_max_m=1., min_move_s=.1, arrival_settle_s=.5)
     e.T_EC, e.T_tcp = np.eye(4), np.eye(4)
     e.T_tcp[2, 3] = .035
-    e.output, e.moves, e.events = tmp_path, [], []
+    e.output, e.moves, e.events, e.paths = tmp_path, [], [], []
     e.r = SimpleNamespace(q=np.zeros(6), grip_pos_msr=.8)
     e.fk = lambda q: np.block([[np.eye(3), np.asarray(q[:3])[:, None]], [np.zeros((1, 3)), 1]])
     e.r.ik = lambda T, seed_deg: np.r_[np.degrees(T[:3, 3]), np.zeros(3)]
-    e.direct_path = lambda target: np.vstack([e.r.q, target])
+    e.check_joint_path = lambda path, local=False: path
     e.event = lambda name, **kw: e.events.append(name)
 
     def move(path, duration):
         e.moves.append(path[-1].copy())
+        e.paths.append(np.array(path))
         if follows:
             e.r.q = path[-1].copy()
     e.move = move
@@ -95,3 +96,12 @@ def test_advance_off_by_default(tmp_path):
     e, report = fake(tmp_path), {'status': 'CONVERGED'}
     run_advance(e, Scene(), args(0.), report, execute=True)
     assert 'advance' not in report and not e.moves
+
+
+def test_chunks_flow_through_centimetre_waypoints_and_settle_is_restored(tmp_path):
+    e, report = fake(tmp_path), {}
+    a = args(.09); a.advance_step_m = .03
+    advance(e, Scene(), a, report, execute=True)
+    assert len(e.moves) == 3 and all(len(p) == 4 for p in e.paths)             # start + 3 waypoints per 3 cm chunk
+    assert np.allclose(np.diff(e.paths[0][:, 2]), .01, atol=1e-4)               # one waypoint per centimetre along +z
+    assert report['advance']['executed_m'] == pytest.approx(.09, abs=.002) and e.c['arrival_settle_s'] == .5

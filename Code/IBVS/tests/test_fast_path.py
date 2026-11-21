@@ -67,3 +67,29 @@ def test_fast_profile_inside_hard_guards():
     d = {}
     smooth_profile(d)
     assert c['joint_speed_deg_s'] > d['joint_speed_deg_s'] and c['min_move_s'] < d['min_move_s']
+
+
+def test_velocities_flow_through_waypoints_and_stop_at_the_ends():
+    from ibvs.alignment import smooth_velocities
+    path = np.array([[0.] * 6, [.01] * 6, [.02] * 6, [.03] * 6]); times = np.array([.1, .2, .3, .4])
+    v = smooth_velocities(path, times)
+    assert np.allclose(v[0], 0) and np.allclose(v[-1], 0) and np.allclose(v[1:-1], .1)    # constant speed inside, no stops at knots
+    back = smooth_velocities(np.array([[0.] * 6, [.01] * 6, [0.] * 6]), np.array([.1, .2, .3]))
+    assert np.allclose(back[1], 0)                                                         # reversal: stops at the turning point
+
+
+def test_continuous_timing_is_faster_than_the_stopping_profile():
+    from ibvs.alignment import trajectory_times
+    path = np.array([[0.] * 6, [np.radians(20)] + [0.] * 5, [np.radians(40)] + [0.] * 5])
+    stop = trajectory_times(path, 10., 0., .1)[-1]
+    flow = trajectory_times(path, 10., 0., .1, peak_factor=1.25)[-1]
+    assert flow == pytest.approx(.1 + (stop - .1) * 1.25 / 1.875)
+
+
+def test_speed_scale_multiplies_limits_and_shortens_waits():
+    from alignment_test import scale_speeds
+    c = dict(joint_speed_deg_s=5., linear_speed_m_s=.005, angular_speed_deg_s=2., min_move_s=.6, arrival_settle_s=.5)
+    scale_speeds(c, 2.)
+    assert (c['joint_speed_deg_s'], c['linear_speed_m_s'], c['angular_speed_deg_s']) == (10., .01, 4.)
+    assert c['min_move_s'] == .3 and c['arrival_settle_s'] == .25
+    d = dict(c); scale_speeds(d, 1.); assert d == c                                         # 1.0 changes nothing

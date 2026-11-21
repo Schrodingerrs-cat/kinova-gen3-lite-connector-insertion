@@ -88,6 +88,16 @@ bash Code/IBVS/run_joint2_priority.sh --socket audio --show-image --wait-target-
 
 First hardware run: `Media/IBVS/shape_ibvs_20261121_222939_249959` (CONVERGED, 8 steps, 12.2 s). The home -> post-grasp move through `run_alignment.sh` has not been run with markers yet.
 
+## Sockets and speed
+
+| `--socket` | marker id | goal taught? |
+| --- | --- | --- |
+| `audio` | 11 | yes (2026-11-21) |
+| `usb_a` | 12 | no: `bash Code/IBVS/run_teach_goal.sh --socket usb_a` with the plug aligned at its socket |
+| `ac` | 10 | no: same with `--socket ac` |
+
+`--speed-scale S` (1 to 3, `run_end_to_end.sh` uses 2.0) multiplies the joint, linear, angular and advance speed limits and shortens the minimum move and settle times. Positioning (home, post-grasp) and the forward move now flow through their waypoints (cubic, no stop at every MoveIt waypoint) and are timed with a 1.25 peak factor instead of the 1.875 of a stopping quintic; alignment steps still stop at their end. At 5 deg/s the home-to-post-grasp swing (about 210 deg on joint 5) was timed at about 80 s; at scale 2 the same move is timed at about 26 s (computed from the timing formula, not measured on the arm). Not yet run on the arm.
+
 ## Archive and speed changes (2026-11-20)
 
 - `archive/aruco_state_machine/`: the earlier ArUco design (state machine B0/A1/A2, guards, bounded search, seating check, 22 tests). Not used by the runners here.

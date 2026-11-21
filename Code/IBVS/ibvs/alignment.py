@@ -118,15 +118,15 @@ def fit_camera_tool_mapping(tool_twists, feature_changes, xy, depths):
                       offset_norm_m=float(np.linalg.norm(offset)), probe_count=len(X))
 
 
-def path_times(q_rad, speed_deg_s, min_interval=0.05):
-    """Timing for quintic joint segments with zero velocity/acceleration at knots."""
+def path_times(q_rad, speed_deg_s, min_interval=0.05, peak_factor=1.875):
+    """Segment timing; peak_factor = peak/average speed of the segment profile (1.875 quintic stopping at every knot)."""
     q = np.asarray(q_rad, float)
     if q.ndim != 2 or q.shape[1] != 6 or len(q) < 2 or not np.isfinite(q).all():
         raise ValueError("a finite six-joint path with at least two points is required")
     if not np.isfinite(speed_deg_s) or speed_deg_s <= 0:
         raise ValueError("joint speed must be positive")
     distance = np.degrees(np.abs(np.diff(q, axis=0))).max(axis=1)
-    return np.r_[0.1, 0.1 + np.cumsum(np.maximum(min_interval, 1.875 * distance / speed_deg_s))]
+    return np.r_[0.1, 0.1 + np.cumsum(np.maximum(min_interval, peak_factor * distance / speed_deg_s))]
 
 
 def straight_joint_path(path,tolerance=1e-6):
@@ -150,11 +150,11 @@ def smooth_servo_path(path,max_segment_deg=.25):
     return np.linspace(path[0],path[-1],count)
 
 
-def trajectory_times(path,speed_deg_s,min_duration=0.,start_delay=.1):
+def trajectory_times(path,speed_deg_s,min_duration=0.,start_delay=.1,peak_factor=1.875):
     """Scale movement time independently of the trajectory's initial time offset."""
     if not np.isfinite(min_duration) or min_duration<0 or not np.isfinite(start_delay) or start_delay<=0:
         raise ValueError('invalid trajectory duration or start delay')
-    base=path_times(path,speed_deg_s)
+    base=path_times(path,speed_deg_s,peak_factor=peak_factor)
     elapsed=base-base[0]
     elapsed*=max(1.,min_duration/elapsed[-1])
     return elapsed+start_delay
@@ -172,3 +172,12 @@ def within_limits(T_BE, T_EC, T_tcp, origin_BC, floor_z, max_travel, max_angle):
             raise ValueError("alignment target exceeds the camera travel limit")
         if Rotation.from_matrix(origin_BC[:3, :3].T @ camera[:3, :3]).magnitude() > max_angle:
             raise ValueError("alignment target exceeds the camera rotation limit")
+
+
+def smooth_velocities(path, times):
+    """Joint velocities for a trajectory that flows through its waypoints (zero only at both ends)."""
+    path, times = np.asarray(path, float), np.asarray(times, float)
+    velocities = np.zeros_like(path)
+    if len(path) > 2:
+        velocities[1:-1] = (path[2:] - path[:-2]) / (times[2:] - times[:-2])[:, None]
+    return velocities
