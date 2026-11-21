@@ -1,4 +1,36 @@
 import numpy as np
+import cv2
+
+
+def observed_voxels(depth_m, K, distortion, camera_in_base, lo, hi, voxel=.01, stride=4):
+    """Freeze measured environment surfaces in base coordinates; no extrapolated geometry."""
+    v, u = np.mgrid[0:depth_m.shape[0]:stride, 0:depth_m.shape[1]:stride]
+    z = depth_m[::stride, ::stride]
+    valid = np.isfinite(z) & (z >= lo) & (z <= hi)
+    pixels = np.column_stack([u[valid], v[valid]]).astype(float)
+    if not len(pixels):
+        raise ValueError('no measured environment depth for clearance check')
+    rays = cv2.undistortPoints(pixels.reshape(-1, 1, 2), np.asarray(K), np.asarray(distortion)).reshape(-1, 2)
+    points = np.column_stack([rays, np.ones(len(rays))])*z[valid, None]
+    points = points @ camera_in_base[:3, :3].T + camera_in_base[:3, 3]
+    return (np.unique(np.floor(points/voxel).astype(np.int64), axis=0)+.5)*voxel
+
+
+def validate_frozen_target(snapshot, camera_in_base, pixels, measured_depth, max_pixels=20., max_depth=.02):
+    """Require the current target to agree with the frozen scene before reusing it."""
+    K, D = snapshot['K'], snapshot['distortion']
+    rays = cv2.undistortPoints(snapshot['snapshot_corners_px'].reshape(4, 1, 2).astype(float), K, D).reshape(4, 2)
+    points = np.column_stack([rays, np.ones(4)])*snapshot['snapshot_depths_m'][:, None]
+    relative = np.linalg.inv(camera_in_base) @ snapshot['camera_in_base']
+    points = points @ relative[:3, :3].T + relative[:3, 3]
+    if not np.isfinite(points).all() or np.any(points[:, 2] <= 0):
+        raise RuntimeError('frozen target is not in front of the current camera')
+    predicted, _ = cv2.projectPoints(points, np.zeros(3), np.zeros(3), K, D)
+    error = float(np.linalg.norm(predicted.reshape(4, 2)-pixels, axis=1).max())
+    depth_error = abs(float(points[:, 2].mean())-measured_depth)
+    if not np.isfinite(error+depth_error) or error > max_pixels or depth_error > max_depth:
+        raise RuntimeError('target no longer matches frozen scene: %.1f px / %.1f mm' % (error, depth_error*1000))
+    return dict(max_corner_difference_px=error, mean_depth_difference_m=depth_error)
 
 
 def corner_depths(depth_m, px, lo, hi, patch=2):

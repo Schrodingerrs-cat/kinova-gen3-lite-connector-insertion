@@ -87,6 +87,10 @@ motion:                       # joint moves and straight lines go to the control
   min_move_s: 1.0             # shortest joint move (was 2.0)
   line_speed_mps: 0.05        # descent / lift average speed; arrives at the grasp point at rest (was 0.04)
   min_line_s: 1.5             # shortest straight line (was 2.0)
+post_grasp:
+  # Captured from live Kortex joint feedback on 2026-11-18 08:32:36 UTC.
+  joint_waypoints_deg:        # J1-J6 in degrees; keep the grasp gripper position
+    - [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
 scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)
   table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
   home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here

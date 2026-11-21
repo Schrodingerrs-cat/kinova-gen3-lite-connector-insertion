@@ -63,9 +63,16 @@ class Ibvs:
     def switch(self, on, off):
         if not self.live:
             return True
-        req = SwitchController.Request(start_controllers=[on], stop_controllers=[off], strictness=SwitchController.Request.STRICT)
+        req = SwitchController.Request()
+        req.strictness = SwitchController.Request.STRICT
+        if hasattr(req, "activate_controllers"):
+            req.activate_controllers, req.deactivate_controllers = [on], [off]
+        else:
+            req.start_controllers, req.stop_controllers = [on], [off]
         fut = self.sw.call_async(req)
-        self.r.spin_until(fut.done, 5.0)
+        if not self.r.spin_until(fut.done, 5.0):
+            fut.cancel()
+            return False
         return fut.result() is not None and fut.result().ok
 
     def frame(self):
@@ -106,6 +113,11 @@ class Ibvs:
         conv, prev, t0, tl, missing, why = Convergence(ib["tol_px"], ib["converge_frames"]), np.zeros(3), self.now(), self.now(), 0, None
         try:
             while why is None:
+                why = check_servo(self.now(), self.last_stamp or t0, self.joint_t, self.tool_xyz(), c["guards"],
+                                  c["robot"]["workspace_box_B_m"], t0, ib["timeout_s"], missing,
+                                  c["markers"]["max_missing_frames"])
+                if why:
+                    break
                 f = self.frame()
                 if f is None:
                     self.r.spin_until(lambda: False, 0.005)

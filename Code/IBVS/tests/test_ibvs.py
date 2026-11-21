@@ -199,7 +199,7 @@ def test_machine_search_timeout():
 
 def test_config_refuses_unmeasured_and_uncalibrated(tmp_path):
     cfg = pathlib.Path(__file__).resolve().parents[1] / "config" / "ibvs.yaml"
-    with pytest.raises(ValueError, match="camera.K"):
+    with pytest.raises(ValueError, match="camera.T_EC_xyz_m"):
         load_config(cfg)
     with pytest.raises(ValueError, match="status"):
         load_config(cfg, contact=True)
@@ -224,14 +224,15 @@ def test_logger_columns(tmp_path):
     assert len(open(tmp_path / "l.csv").read().splitlines()) == 2
 
 
-def _canvas(ids, scale=120):
+def _canvas(ids, scale=120, dictionary="DICT_4X4_50", inverted=False):
     img = np.full((480, 640), 255, np.uint8)
-    d = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    d = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, dictionary))
     for k, i in enumerate(ids):
-        m = cv2.aruco.generateImageMarker(d, i, scale)
+        m = (cv2.aruco.generateImageMarker(d, i, scale) if hasattr(cv2.aruco, "generateImageMarker")
+             else cv2.aruco.drawMarker(d, i, scale))
         r, c = 40 + 200 * (k // 2), 60 + 250 * (k % 2)
         img[r:r + scale, c:c + scale] = m
-    return img
+    return 255 - img if inverted else img
 
 
 def test_marker_tracker_corners_validity_and_jump():
@@ -248,3 +249,16 @@ def test_marker_tracker_corners_validity_and_jump():
     assert s.shape == (12, 2) and rms < 2.0
     px2, valid2 = t.detect(np.roll(_canvas([0, 1, 2]), 60, axis=1))   # jump of 60 px > max_jump_px
     assert not valid2.any() or valid2.sum() < 3
+
+
+def test_inverted_reference_marker_requires_inverted_detection():
+    cam = dict(K=[[600, 0, 320], [0, 600, 240], [0, 0, 1]], distortion=[0] * 5)
+    mk = dict(aruco_dict="DICT_6X6_50", ids=[30], target_pixels={30: [[60, 40], [180, 40], [180, 160], [60, 160]]},
+              min_side_px=50, max_jump_px=30)
+    image = _canvas([30], dictionary="DICT_6X6_50", inverted=True)
+    assert not Tracker(cam, mk).detect(image)[1].any()
+    tracker = Tracker(cam, {**mk, "detect_inverted_marker": True})
+    pixels, valid = tracker.detect(image)
+    assert valid.tolist() == [True]
+    _, _, rms = tracker.features(pixels, valid)
+    assert rms < 2.0
