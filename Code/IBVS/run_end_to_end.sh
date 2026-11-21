@@ -6,4 +6,4 @@
 set -e
 cd "$(dirname "$0")"
 source ./ros_env.sh
-exec python3 ros2_iface/alignment_test.py --close-gripper --all-markers --advance-m 0.15 --speed-scale 2.0 "$@"
+exec python3 ros2_iface/alignment_test.py --close-gripper --all-markers --advance-m 0.15 --speed-scale 2.0 --no-checks "$@"

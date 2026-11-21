@@ -107,6 +107,7 @@ class Experiment:
                     self.latest_joints, self.joint_rx = msg, time.monotonic()
 
         self.args, self.c, self.reference, self.grasp, self.output = args, settings, reference, grasp, output
+        self.skip_checks = bool(getattr(args, 'no_checks', False))
         self.rclpy, self.action_type = rclpy, FollowJointTrajectory
         self.children, self.log_files = [], []
         self.goal = self.pending = None
@@ -156,6 +157,8 @@ class Experiment:
     def fresh(self, camera=False):
         if self.r.q is None or not np.isfinite(self.r.q).all():
             raise RuntimeError("no finite arm joint feedback")
+        if self.skip_checks:
+            return
         if time.monotonic() - self.r.joint_rx > self.c["feedback_stale_s"]:
             raise RuntimeError("JOINTS_STALE; restart the arm driver after reconnecting USB")
         now = self.r.get_clock().now().nanoseconds * 1e-9
@@ -378,11 +381,11 @@ class Experiment:
             self.pump()
         self.refresh(camera=True)
         info = self.r._img.get("info")
-        if info is None or [info.width, info.height] != self.reference["image_size_px"]:
+        if info is None or ([info.width, info.height] != self.reference["image_size_px"] and not self.skip_checks):
             raise RuntimeError("camera resolution differs from the reference")
         self.camera = dict(K=np.array(info.k).reshape(3, 3).tolist(), distortion=list(info.d))
         if self.is_marker:
-            if info.header.frame_id != self.reference["camera_frame_id"]:
+            if info.header.frame_id != self.reference["camera_frame_id"] and not self.skip_checks:
                 raise RuntimeError("camera frame differs from the marker configuration")
             self.tracker = AutoMarkerTracker(self.camera, self.reference["feature_tracking"])
         else:
@@ -490,7 +493,7 @@ class Experiment:
             position = float(np.linalg.norm(expected[:3,3]-local[:3,3]))
             angle = float(Rotation.from_matrix(expected[:3,:3].T@local[:3,:3]).magnitude())
             errors.append(dict(position_m=position,rotation_rad=angle))
-            if position > 1e-6 or angle > 1e-6:
+            if (position > 1e-6 or angle > 1e-6) and not self.skip_checks:
                 raise RuntimeError('local URDF forward kinematics does not match MoveIt')
         (self.output/'robot_description.urdf').write_text(description)
         (self.output/'fk_validation.json').write_text(json.dumps(errors,indent=2)+'\n')
@@ -577,7 +580,7 @@ class Experiment:
                 self.pump()
                 self.fresh(camera=True)
         drift = float(np.degrees(np.abs(self.r.q - path[0])).max())
-        if drift > 0.5:
+        if drift > 0.5 and not self.skip_checks:
             raise RuntimeError("arm moved during planning; refusing the stale plan")
         planned_points=len(path)
         precise = self.is_marker and self.phase == "ALIGN"
@@ -633,7 +636,7 @@ class Experiment:
             tolerance = self.c["arrival_tolerance_deg"] if precise else 1.0
             if self.is_marker:
                 self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
-            if self.r.joint_rx <= finished or error.max() > tolerance:
+            if (self.r.joint_rx <= finished or error.max() > tolerance) and not self.skip_checks:
                 raise RuntimeError("fresh joint feedback did not confirm arrival")
         except BaseException:
             self.cancel()
@@ -843,7 +846,7 @@ class Experiment:
                                         advance_m=self.args.advance_m, advance_step_m=self.args.advance_step_m,
                                         advance_speed_mps=self.args.advance_speed_mps, advance_margin_m=self.args.advance_margin_m,
                                         allow_contact=self.args.allow_contact, all_markers=self.args.all_markers,
-                                        marker_order=self.args.marker_order), result)
+                                        marker_order=self.args.marker_order, no_checks=self.skip_checks), result)
             return result
         xy, Z, rms, maximum = self.capture()
         initial = rms
@@ -962,6 +965,7 @@ def add_advance_arguments(parser):
     parser.add_argument("--advance-speed-mps", type=float, default=.01, help="forward speed")
     parser.add_argument("--advance-margin-m", type=float, default=.015, help="stay this far from the wall unless --allow-contact")
     parser.add_argument("--allow-contact", action="store_true", help="do the full forward distance even if the gripper/plug reaches the wall (insertion stroke)")
+    parser.add_argument("--no-checks", action="store_true", help="skip the stale-data, arrival, collision-scene, preflight and wall-clearance checks (the arm's own limits, IK-jump, floor and follow-through guards stay)")
     parser.add_argument("--all-markers", action="store_true", help="visit every marker in view, left to right: align, go forward, back out, next")
     parser.add_argument("--marker-order", choices=("left", "nearest"), default="left", help="which marker comes first in --all-markers mode")
 

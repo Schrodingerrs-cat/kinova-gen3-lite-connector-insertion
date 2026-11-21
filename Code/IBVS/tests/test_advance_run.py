@@ -99,3 +99,19 @@ def test_chunks_flow_through_centimetre_waypoints_and_settle_is_restored(tmp_pat
     assert len(e.moves) == 3 and all(len(p) == 4 for p in e.paths)             # start + 3 waypoints per 3 cm chunk
     assert np.allclose(np.diff(e.paths[0][:, 2]), .01, atol=1e-4)               # one waypoint per centimetre along +z
     assert report['advance']['executed_m'] == pytest.approx(.09, abs=.002) and e.c['arrival_settle_s'] == .5
+
+
+def test_no_checks_does_the_full_stroke_without_collision_checks(tmp_path):
+    e, report, scene = fake(tmp_path, held_depth=.17), {}, Scene()                # only 120 mm to the wall
+    a = args(.15)
+    a.no_checks = True
+    advance(e, scene, a, report, execute=True)
+    assert not report['advance']['trimmed'] and report['advance']['executed_m'] == pytest.approx(.15, abs=.003) and scene.checks == 0
+
+
+def test_no_checks_still_stops_when_the_arm_does_not_follow(tmp_path):
+    e, report = fake(tmp_path, follows=False), {'status': 'CONVERGED'}
+    a = args()
+    a.no_checks = True
+    run_advance(e, Scene(), a, report, execute=True)
+    assert report['status'] == 'ADVANCE_FAILED' and 'NO_PROGRESS' in report['advance']['error']

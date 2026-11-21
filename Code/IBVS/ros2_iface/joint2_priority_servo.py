@@ -234,10 +234,11 @@ def advance(e, scene, args, report, execute):
         raise RuntimeError('wall normal is %.1f deg from the camera axis: not a plausible wall view' % tilt)
     tip = (np.linalg.inv(e.T_EC) @ e.T_tcp[:, 3])[:3]
     free = clearance(np.vstack([backproject(depth, held, K, D), tip]), n, d)
-    planned, trimmed = plan_travel(free, args.advance_m, args.advance_margin_m, args.allow_contact)
+    contact = bool(args.allow_contact or getattr(args, 'no_checks', False))       # --no-checks: the full stroke, no stop short of the wall
+    planned, trimmed = plan_travel(free, args.advance_m, args.advance_margin_m, contact)
     report['advance'] = info = dict(requested_m=args.advance_m, planned_m=planned, clearance_m=free, wall_tilt_deg=tilt,
                                     wall_support_points=support, margin_m=args.advance_margin_m,
-                                    allow_contact=bool(args.allow_contact), trimmed=bool(trimmed), executed_m=0.)
+                                    allow_contact=contact, trimmed=bool(trimmed), executed_m=0.)
     print('ADVANCE: gripper and held object are %.0f mm from the wall (plane %.1f deg off the camera axis). '
           'Requested %.0f mm -> %.0f mm%s' % (free * 1e3, tilt, args.advance_m * 1e3, planned * 1e3,
                                               ' TRIMMED to stay %.0f mm short of the wall; --allow-contact does the full stroke' % (args.advance_margin_m * 1e3) if trimmed else ''), flush=True)
@@ -247,7 +248,7 @@ def advance(e, scene, args, report, execute):
     e.event('ADVANCE_START', **info)
     direction = (e.fk(e.r.q)[:3, :3] @ e.T_EC[:3, :3]) @ -n          # base-frame unit vector, fixed for the whole move
     info['direction_base'] = direction.tolist()
-    move_along(e, None if args.allow_contact else scene, direction, planned, args.advance_speed_mps, args.advance_step_m, info, 'executed_m', 'advance')
+    move_along(e, None if contact else scene, direction, planned, args.advance_speed_mps, args.advance_step_m, info, 'executed_m', 'advance')
     e.event('ADVANCE_DONE', executed_m=info['executed_m'])
 
 
@@ -303,7 +304,7 @@ def servo_one(e, args, report):
     scene = ObservedScene(e)
     try:
         scene.install(float(np.mean(Z)), getattr(args, 'resume_run', None))
-        report['preflight'] = reach_check(e, scene, xy, Z)
+        report['preflight'] = dict(status='SKIPPED') if e.skip_checks else reach_check(e, scene, xy, Z)
         if not args.live:
             report['status'] = 'PREVIEW'
             run_advance(e, scene, args, report, execute=False)
@@ -535,7 +536,8 @@ def main():
                                       calibration_only=False,hand_eye=None,record_sequence=args.record_sequence,
                                       close_gripper=args.close_gripper,advance_m=args.advance_m,advance_step_m=args.advance_step_m,
                                       advance_speed_mps=args.advance_speed_mps,advance_margin_m=args.advance_margin_m,
-                                      allow_contact=args.allow_contact,all_markers=args.all_markers,marker_order=args.marker_order), c, ref, g, out)
+                                      allow_contact=args.allow_contact,all_markers=args.all_markers,marker_order=args.marker_order,
+                                      no_checks=args.no_checks), c, ref, g, out)
         if args.home_first:
             if not args.live:
                 raise RuntimeError('--home-first requires --live; preview checks the current pose without moving')

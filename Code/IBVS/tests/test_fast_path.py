@@ -187,3 +187,27 @@ def test_close_gripper_gives_clear_errors_when_the_controller_never_answers():
         gripper_fixture(answers=(False,)).close_gripper()
     with pytest.raises(RuntimeError, match="action server is not available"):
         gripper_fixture(server=False).close_gripper()
+
+
+def stale_fixture(skip):
+    e = alignment_test.Experiment.__new__(alignment_test.Experiment)
+    e.skip_checks, e.c = skip, dict(feedback_stale_s=.5)
+    e.r = SimpleNamespace(q=np.zeros(6), joint_rx=0., get_clock=lambda: SimpleNamespace(now=lambda: SimpleNamespace(nanoseconds=10 * 10**9)),
+                          latest_joints=None, _img={})
+    return e
+
+
+def test_stale_data_stops_the_run_unless_checks_are_off():
+    with pytest.raises(RuntimeError, match="JOINTS_STALE"):
+        stale_fixture(False).fresh(camera=True)
+    stale_fixture(True).fresh(camera=True)                                    # --no-checks: stale joints and missing images do not stop it
+    e = stale_fixture(True); e.r.q = np.full(6, np.nan)
+    with pytest.raises(RuntimeError, match="no finite arm joint feedback"):   # but unknown joints still do: nothing can be commanded
+        e.fresh()
+
+
+def test_collision_scene_check_is_skipped_with_no_checks():
+    from observed_scene import ObservedScene
+    scene = ObservedScene.__new__(ObservedScene)
+    scene.e = SimpleNamespace(skip_checks=True, state=lambda q: 1 / 0)         # would blow up if it queried MoveIt
+    scene.check(np.zeros(6))

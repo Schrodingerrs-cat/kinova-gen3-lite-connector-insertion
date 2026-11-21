@@ -99,6 +99,8 @@ class ObservedScene:
         self.check(self.e.r.q)
 
     def check(self, q):
+        if self.e.skip_checks:
+            return
         from moveit_msgs.srv import GetStateValidity
         request = GetStateValidity.Request()
         request.robot_state = self.e.state(q)
