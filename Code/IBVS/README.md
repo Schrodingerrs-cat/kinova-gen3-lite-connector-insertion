@@ -23,6 +23,22 @@ The current system tests free-space alignment with the gripper only (no insertio
 
 Home/post-grasp poses and camera-to-tool calibration come from [`../Grasp/config/grasp.yaml`](../Grasp/config/grasp.yaml) (the hand-eye there is the old one: redo it after the camera change). `ros2_iface/ibvs_node.py` and the state-machine modules in `ibvs/` are the older ArUco design; the runners below do not use them.
 
+## Which script to run
+
+Every command from the `insertion_task` folder. The arm driver, MoveIt and the camera (`eih_cam`) must be up first; the quickest way is any run script with `--bringup` (it starts what is missing; start one set only).
+
+| What | Command | Moves the arm? |
+| --- | --- | --- |
+| Whole job: close gripper → home → post-grasp → every marker (servo, 15 cm forward, back out) | `bash Code/IBVS/run_end_to_end.sh --show-image --live --bringup` (drop `--live` for a preview) | yes |
+| Go to the configured post-grasp pose (safest route from wherever the arm is) | `bash Code/IBVS/run_go_to_pose.sh` (`--pose home`, `--dry` plan only) | yes |
+| Photo + depth + joint values (degrees) + visible markers of the current pose | `bash Code/IBVS/run_capture_pose.sh --name my_pose` → `Media/IBVS/poses/` | no |
+| One marker only, from the current pose | `bash Code/IBVS/run_joint2_priority.sh --show-image --live` (`--marker-id N`) | yes |
+| Home → post-grasp → one marker | `bash Code/IBVS/run_alignment.sh --show-image --live --bringup` | yes |
+| Print the markers | `markers/aruco_markers.pdf` (regenerate: `python3 Code/IBVS/markers/make_markers.py`) | no |
+| Offline tests | `python3 -m pytest Code/IBVS/tests -q` | no |
+
+Useful options on the run scripts: `--speed-scale 1..3`, `--advance-m 0.15`, `--no-checks`, `--allow-contact`, `--marker-id N`, `--all-markers`. Gripper by hand: `ros2 action send_goal /gen3_lite_2f_gripper_controller/gripper_cmd control_msgs/action/GripperCommand "{command: {position: 0.81, max_effort: 30.0}}"` (0.0 opens).
+
 ## Marker setup
 
 Print `markers/aruco_markers.pdf` (page 1: ids 10/11/12, 30 mm black square; page 2: hand-eye marker id 0, 100 mm; regenerate with `markers/make_markers.py`; print at 100 %) and stick each marker flat on the wall above its socket. They are DICT_4X4_50 markers. No teaching step: the run picks a visible marker and builds its goal itself. `--marker-id N` or `--socket NAME` (usb_a 12, audio 11, ac 10) only force which marker is chosen. The goal puts the chosen marker at the image centre plus `goal_offset_px` (config, now 5 px down), so the marker must be placed so that centring it lines the plug up with its socket.

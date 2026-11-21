@@ -35,18 +35,20 @@ def main():
     node.create_subscription(CameraInfo, prefix + "/color/camera_info", lambda m: got.__setitem__("info", m), q)
     node.create_subscription(JointState, "/joint_states", lambda m: got.__setitem__("joints", dict(zip(m.name, m.position))), 10)
     t0 = time.time()
-    while len(got) < 4 and time.time() - t0 < 10:
+    while not all(k in got for k in ("color", "depth", "info")) and time.time() - t0 < 10:
         rclpy.spin_once(node, timeout_sec=0.2)
+    for _ in range(10):                                   # joint values only if the arm driver happens to be running
+        rclpy.spin_once(node, timeout_sec=0.1)
     missing = [k for k in ("joints", "color", "depth", "info") if k not in got]
     node.destroy_node()
     rclpy.shutdown()
-    if "joints" in missing:
-        sys.exit("no /joint_states: the arm driver is not running (restart it, e.g. run_end_to_end.sh --bringup, then capture again)")
+    if "color" in missing:
+        sys.exit("no camera image on %s/color/image_raw: is the camera running?" % prefix)
     folder = a.out / ("%s_%s" % (a.name, time.strftime("%Y%m%d_%H%M%S")))
     folder.mkdir(parents=True)
-    joints = [float(np.degrees(got["joints"][j])) for j in JOINTS]
-    info = dict(name=a.name, joints_deg=[round(v, 4) for v in joints], gripper_position=got["joints"].get("right_finger_bottom_joint"),
-                missing=missing)
+    joints = [float(np.degrees(got["joints"][j])) for j in JOINTS] if "joints" in got else None
+    info = dict(name=a.name, joints_deg=None if joints is None else [round(v, 4) for v in joints],
+                gripper_position=got.get("joints", {}).get("right_finger_bottom_joint"), missing=missing)
     if "color" in got:
         m = got["color"]
         img = np.frombuffer(m.data, np.uint8).reshape(m.height, m.step)[:, :m.width * 3].reshape(m.height, m.width, 3)
@@ -67,9 +69,10 @@ def main():
         info["camera_K"] = list(got["info"].k)
     (folder / "pose.json").write_text(json.dumps(info, indent=1) + "\n")
     print("saved", folder)
-    print("joints deg:", [round(v, 2) for v in joints], "| gripper", info["gripper_position"])
+    print("joints deg:", "not available (arm driver not running)" if joints is None else [round(v, 2) for v in joints], "| gripper", info["gripper_position"])
     print("markers visible:", info.get("markers_px", "no color image"))
-    print("as a post_grasp line:  - " + str([round(v, 4) for v in joints]))
+    if joints is not None:
+        print("as a post_grasp line:  - " + str([round(v, 4) for v in joints]))
 
 
 if __name__ == "__main__":
