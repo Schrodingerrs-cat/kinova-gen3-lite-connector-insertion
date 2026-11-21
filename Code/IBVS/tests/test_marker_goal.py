@@ -194,4 +194,26 @@ def test_overlay_takes_the_live_goal_after_the_marker_is_chosen():
     px, valid = tracker.detect(row())
     out = overlay.render(image, K, [0] * 5, stamp=1.0, age_s=0.0, draw_target=True, observation=(px, valid))
     assert overlay.label == "ArUco ID 11" and out.shape == image.shape and overlay.errors.max() > 5
-    assert np.allclose(overlay.target.mean(0), [424, 240])
+    assert np.allclose(overlay.target.mean(0), [424, 245])                     # config goal_offset_px [0, 5]: 5 px below the centre
+
+
+def test_left_order_chooses_the_leftmost_marker_and_remembers_the_sequence_in_view():
+    t = AutoMarkerTracker(CAMERA, {**AUTO, "marker_order": "left"})
+    for _ in range(5):
+        t.detect(row())
+    assert t.locked == 10 and t.sequence == [10, 11, 12]                   # left to right, all visible markers
+    t2 = AutoMarkerTracker(CAMERA, {**AUTO, "marker_order": "left"})
+    for _ in range(5):
+        t2.detect(row(xs=(560, 340, 120)))                                  # ids placed the other way round
+    assert t2.locked == 12 and t2.sequence == [12, 11, 10]
+
+
+def test_goal_offset_moves_the_goal_in_the_image_only():
+    t0, t1 = AutoMarkerTracker(CAMERA, AUTO), AutoMarkerTracker(CAMERA, {**AUTO, "goal_offset_px": [0, 5]})
+    for _ in range(5):
+        t0.detect(row()); t1.detect(row())
+    assert np.allclose(t1.target_px[0] - t0.target_px[0], [0, 5])             # 5 px down, same size and shape
+    t2 = AutoMarkerTracker(CAMERA, {**AUTO, "goal_offset_px": [-3, 0]})
+    for _ in range(5):
+        t2.detect(row())
+    assert np.allclose(t2.target_px[0] - t0.target_px[0], [-3, 0])

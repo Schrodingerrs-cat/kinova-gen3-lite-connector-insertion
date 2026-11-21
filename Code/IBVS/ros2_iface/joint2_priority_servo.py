@@ -168,6 +168,56 @@ def acquire(e, deadline, frames=1):
     raise TrackingLost('marker was not recovered before the stationary hold timeout')
 
 
+def move_along(e, scene, direction, distance, speed, step_m, progress, key, label):
+    """Guarded straight move of the tool along a base-frame unit vector: chunks of step_m, IK waypoints every ~1 cm,
+    one flowing trajectory per chunk, the arm must follow each chunk. scene=None skips the collision check.
+    progress[key] is updated as it goes, so a failure still reports how far it got."""
+    total, ax, settle = 0., dict(max_travel_m=distance + .01, min_progress_frac=.5), e.c['arrival_settle_s']
+    e.c['arrival_settle_s'] = min(settle, .1)                          # the trajectory itself is smooth: no long wait per chunk
+    try:
+        while total < distance - 1e-6:
+            step = min(step_m, distance - total)
+            q = e.r.q.copy()
+            T0 = e.fk(q)
+            count = max(1, int(np.ceil(step / .01 - 1e-9)))
+            waypoints = [q]
+            for k in range(1, count + 1):
+                T = T0.copy()
+                T[:3, 3] += step * k / count * direction
+                q_ik = e.r.ik(T, np.degrees(waypoints[-1]))
+                if q_ik is None:
+                    raise RuntimeError('%s: no IK %.0f mm into the next chunk (after %.0f mm)' % (label, step * k / count * 1e3, total * 1e3))
+                waypoints.append(waypoints[-1] + np.radians((q_ik - np.degrees(waypoints[-1]) + 180) % 360 - 180))
+            path = e.check_joint_path(np.array(waypoints), local=True)
+            if scene is not None:
+                for sample in path:
+                    scene.check(sample)
+            e.move(path, max(e.c['min_move_s'], step / speed))
+            measured = float((e.fk(e.r.q)[:3, 3] - T0[:3, 3]) @ direction)
+            why = check_axial(step, measured, total, ax)
+            total += max(measured, 0.)
+            progress[key] = total
+            with (e.output / (label + '.jsonl')).open('a') as record:
+                record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
+            print('%s %.0f / %.0f mm' % (label.capitalize(), total * 1e3, distance * 1e3), flush=True)
+            if why:
+                raise RuntimeError('%s stopped after %.0f mm: %s (the arm did not follow the command)' % (label, total * 1e3, why))
+    finally:
+        e.c['arrival_settle_s'] = settle
+
+
+def retract(e, args, info):
+    """Back out along the way in: the same guarded move, reversed, without the collision check (it only moves away from where it has been)."""
+    done = info.get('executed_m', 0.)
+    if done < .002:
+        return
+    e.phase, e.visual_stage = 'ADVANCE', 'RETRACT: back to the standoff'
+    e.event('RETRACT_START', distance_m=done)
+    info['retracted_m'] = 0.
+    move_along(e, None, -np.array(info['direction_base']), done, args.advance_speed_mps, args.advance_step_m, info, 'retracted_m', 'retract')
+    e.event('RETRACT_DONE', retracted_m=info['retracted_m'])
+
+
 def advance(e, scene, args, report, execute):
     """After alignment: move straight toward the wall along the measured wall normal in short guarded steps.
     The wall plane and the clearance of everything the gripper holds come from the depth image. No force sensing:
@@ -196,39 +246,36 @@ def advance(e, scene, args, report, execute):
     e.phase, e.visual_stage = 'ADVANCE', 'ADVANCE: forward along the wall normal'
     e.event('ADVANCE_START', **info)
     direction = (e.fk(e.r.q)[:3, :3] @ e.T_EC[:3, :3]) @ -n          # base-frame unit vector, fixed for the whole move
-    total, ax, settle = 0., dict(max_travel_m=planned + .01, min_progress_frac=.5), e.c['arrival_settle_s']
-    e.c['arrival_settle_s'] = min(settle, .1)                          # the trajectory itself is smooth: no long wait per chunk
-    try:
-        while total < planned - 1e-6:
-            step = min(args.advance_step_m, planned - total)
-            q = e.r.q.copy()
-            T0 = e.fk(q)
-            count = max(1, int(np.ceil(step / .01 - 1e-9)))              # IK waypoint every ~1 cm, one flowing trajectory per chunk
-            waypoints = [q]
-            for k in range(1, count + 1):
-                T = T0.copy()
-                T[:3, 3] += step * k / count * direction
-                q_ik = e.r.ik(T, np.degrees(waypoints[-1]))
-                if q_ik is None:
-                    raise RuntimeError('advance: no IK %.0f mm into the next chunk (after %.0f mm)' % (step * k / count * 1e3, total * 1e3))
-                waypoints.append(waypoints[-1] + np.radians((q_ik - np.degrees(waypoints[-1]) + 180) % 360 - 180))
-            path = e.check_joint_path(np.array(waypoints), local=True)
-            if not args.allow_contact:
-                for sample in path:
-                    scene.check(sample)
-            e.move(path, max(e.c['min_move_s'], step / args.advance_speed_mps))
-            measured = float((e.fk(e.r.q)[:3, 3] - T0[:3, 3]) @ direction)
-            why = check_axial(step, measured, total, ax)
-            total += max(measured, 0.)
-            info['executed_m'] = total
-            with (e.output / 'advance.jsonl').open('a') as record:
-                record.write(json.dumps(dict(commanded_m=step, measured_m=measured, total_m=total, joints_deg=np.degrees(e.r.q).tolist(), stop=why)) + '\n')
-            print('Advance %.0f / %.0f mm' % (total * 1e3, planned * 1e3), flush=True)
-            if why:
-                raise RuntimeError('advance stopped after %.0f mm: %s (the arm did not follow the command)' % (total * 1e3, why))
-    finally:
-        e.c['arrival_settle_s'] = settle
-    e.event('ADVANCE_DONE', executed_m=total)
+    info['direction_base'] = direction.tolist()
+    move_along(e, None if args.allow_contact else scene, direction, planned, args.advance_speed_mps, args.advance_step_m, info, 'executed_m', 'advance')
+    e.event('ADVANCE_DONE', executed_m=info['executed_m'])
+
+
+def run_markers(report, next_marker, servo_one, retract):
+    """Every marker in view, left to right, one after another: align, go forward, back out to the standoff.
+    Stops at the first marker that does not converge or whose forward move fails; a preview only looks at the first."""
+    report['markers'] = []
+    sequence, k = None, 0
+    while sequence is None or k < len(sequence):
+        sub = {}
+        report['markers'].append(sub)
+        next_marker(None if sequence is None else sequence[k])
+        servo_one(sub)
+        report['status'] = sub['status']
+        if sequence is None:
+            sequence = report['sequence'] = sub['sequence']
+        if sub['status'] not in ('CONVERGED', 'ALREADY_ALIGNED') or 'error' in sub.get('advance', {}):
+            return
+        retract(sub)
+        k += 1
+    report['status'] = 'CONVERGED'
+
+
+def servo(e, args, report):
+    if not getattr(args, 'all_markers', False):
+        return servo_one(e, args, report)
+    run_markers(report, lambda marker_id: e.new_marker(marker_id, args.marker_order), lambda sub: servo_one(e, args, sub),
+                lambda sub: retract(e, args, sub['advance']) if 'advance' in sub else None)
 
 
 def run_advance(e, scene, args, report, execute):
@@ -242,15 +289,16 @@ def run_advance(e, scene, args, report, execute):
         print('ADVANCE STOPPED:', error, flush=True)
 
 
-def servo(e, args, report):
+def servo_one(e, args, report):
     e.servo_report = report
     report.update(recoveries=0, steps=0, motion_attempts=0)
     xy, Z, rms, maximum = acquire(e, time.monotonic()+getattr(args, 'wait_target_s', 30.))
     report['initial_rms_px'] = rms
     report['marker_id'], report['goal_corners_px'] = int(e.tracker.locked), e.tracker.target_px[0].tolist()
+    report['sequence'] = [int(i) for i in e.tracker.sequence]
     e.event('MARKER_CHOSEN', marker_id=report['marker_id'], candidates=e.tracker.candidates)
-    print('Marker %d chosen live (visible: %s). Goal: centred, upright, %.0f px wide.' % (
-        report['marker_id'], e.tracker.candidates, np.linalg.norm(e.tracker.target_px[0][1] - e.tracker.target_px[0][0])), flush=True)
+    print('Marker %d chosen live (visible, left to right: %s). Goal: centred, upright, %.0f px wide.' % (
+        report['marker_id'], report['sequence'], np.linalg.norm(e.tracker.target_px[0][1] - e.tracker.target_px[0][0])), flush=True)
     report['initial_metrics'] = shape_metrics(e.detection[1][0], e.tracker.target_px[0])
     scene = ObservedScene(e)
     try:
@@ -314,8 +362,8 @@ def servo(e, args, report):
                         initial_tool[:3,:3].T@e.fk(e.r.q)[:3,:3]).magnitude()))
                     e.visual_stage = 'CONVERGED: 5 fresh observations'
                     e.event('CONVERGED', **metrics, fresh_observations=convergence.n)
-                    cv2.imwrite(str(e.output/'converged.png'),e.bgr(e.r._img['color']))
-                    cv2.imwrite(str(e.output/'converged_features.png'),e.latest_annotated)
+                    cv2.imwrite(str(e.output/('converged_marker%d.png' % report['marker_id'])),e.bgr(e.r._img['color']))
+                    cv2.imwrite(str(e.output/('converged_features_marker%d.png' % report['marker_id'])),e.latest_annotated)
                     run_advance(e, scene, args, report, execute=True)
                     return
                 if maximum <= e.c['tolerance_px']:
@@ -442,6 +490,8 @@ def main():
         parser.error('advance: distance 0..0.30 m, step 0..0.05 m, speed 0..0.02 m/s, margin >= 0')
     if not 1. <= args.speed_scale <= 3.:
         parser.error('--speed-scale must be between 1 and 3')
+    if args.all_markers and (args.socket or args.marker_id is not None):
+        parser.error('--all-markers visits every marker: do not force one with --socket/--marker-id')
     if args.fast and (args.smooth or args.control_hz is not None):parser.error('--fast replaces --smooth and --control-hz')
     if args.fast:fast_profile(c)
     elif args.smooth:smooth_profile(c,2. if args.control_hz is None else args.control_hz)
@@ -485,7 +535,7 @@ def main():
                                       calibration_only=False,hand_eye=None,record_sequence=args.record_sequence,
                                       close_gripper=args.close_gripper,advance_m=args.advance_m,advance_step_m=args.advance_step_m,
                                       advance_speed_mps=args.advance_speed_mps,advance_margin_m=args.advance_margin_m,
-                                      allow_contact=args.allow_contact), c, ref, g, out)
+                                      allow_contact=args.allow_contact,all_markers=args.all_markers,marker_order=args.marker_order), c, ref, g, out)
         if args.home_first:
             if not args.live:
                 raise RuntimeError('--home-first requires --live; preview checks the current pose without moving')

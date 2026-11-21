@@ -392,6 +392,14 @@ class Experiment:
         self.prepare_local_fk()
         print("Arm, MoveIt and camera are ready.", flush=True)
 
+    def new_marker(self, marker_id, order):
+        """Point the tracker at the next marker (marker_id None = choose by `order`): fresh live goal and tracking."""
+        self.tracker = AutoMarkerTracker(self.camera, dict(self.reference["feature_tracking"], marker_id=marker_id, marker_order=order))
+        self.display.marker_id = -1
+        self.detection, self.phase = None, "ALIGN"
+        self.tracking_epoch += 1
+        self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
+
     def close_gripper(self):
         gripper = self.grasp["gripper"]
         if not self.args.live:
@@ -803,7 +811,8 @@ class Experiment:
             servo(self, SimpleNamespace(live=self.args.live, steps=int(self.c['max_steps']), wait_target_s=30.,
                                         advance_m=self.args.advance_m, advance_step_m=self.args.advance_step_m,
                                         advance_speed_mps=self.args.advance_speed_mps, advance_margin_m=self.args.advance_margin_m,
-                                        allow_contact=self.args.allow_contact), result)
+                                        allow_contact=self.args.allow_contact, all_markers=self.args.all_markers,
+                                        marker_order=self.args.marker_order), result)
             return result
         xy, Z, rms, maximum = self.capture()
         initial = rms
@@ -902,6 +911,12 @@ def scale_speeds(settings, scale):
         settings[key] *= scale
     for key, floor in (("min_move_s", .2), ("arrival_settle_s", .15)):
         settings[key] = max(floor, settings[key] / scale) if scale > 1 else settings[key]
+    for key in ("max_step_m", "max_step_deg"):          # a lateral move of several cm would otherwise take dozens of 2 mm steps
+        if key in settings:
+            settings[key] *= scale
+    for key, default, cap in (("approach_limits_deg", [1., 5., 1., 1., 1., 1.], [2.5, 5., 2.5, 2.5, 2.5, 2.5]),
+                              ("fine_limits_deg", [.25, 1., .25, .25, .25, .25], [.6, 1.5, .6, .6, .6, .6])):
+        settings[key] = np.minimum(np.array(settings.get(key, default)) * scale, cap).tolist()
 
 
 def add_advance_arguments(parser):
@@ -911,6 +926,8 @@ def add_advance_arguments(parser):
     parser.add_argument("--advance-speed-mps", type=float, default=.01, help="forward speed")
     parser.add_argument("--advance-margin-m", type=float, default=.015, help="stay this far from the wall unless --allow-contact")
     parser.add_argument("--allow-contact", action="store_true", help="do the full forward distance even if the gripper/plug reaches the wall (insertion stroke)")
+    parser.add_argument("--all-markers", action="store_true", help="visit every marker in view, left to right: align, go forward, back out, next")
+    parser.add_argument("--marker-order", choices=("left", "nearest"), default="left", help="which marker comes first in --all-markers mode")
 
 
 def main():
@@ -944,6 +961,8 @@ def main():
     if not 1. <= args.speed_scale <= 3.:
         parser.error("--speed-scale must be between 1 and 3")
     settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket, args.marker_id)
+    if args.all_markers and (args.socket or args.marker_id is not None):
+        parser.error("--all-markers visits every marker: do not force one with --socket/--marker-id")
     scale_speeds(settings, args.speed_scale)
     args.advance_speed_mps = min(.03, args.advance_speed_mps * args.speed_scale)
     marker = reference.get("feature_type") == "marker"

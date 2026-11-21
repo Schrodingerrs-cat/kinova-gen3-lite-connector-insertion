@@ -30,6 +30,7 @@ feature_tracking:
   min_side_px: 20.0
   max_jump_px: 20.0
   camera_stale_s: 0.5
+  goal_offset_px: [0, 5]                  # goal marker position: image centre + this (x right, y down), pixels
   canonical_target_order: [0, 1, 2, 3]   # ArUco corner order is already canonical (marker's own top-left first)
 sockets:                              # marker id per socket, as physically placed (left AC, centre audio, right USB-A seen from the robot)
   usb_a: 12

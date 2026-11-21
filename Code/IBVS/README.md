@@ -25,7 +25,7 @@ Home/post-grasp poses and camera-to-tool calibration come from [`../Grasp/config
 
 ## Marker setup
 
-Print `markers/aruco_markers.pdf` (page 1: ids 10/11/12, 30 mm black square; page 2: hand-eye marker id 0, 100 mm; regenerate with `markers/make_markers.py`; print at 100 %) and stick each marker flat on the wall above its socket. They are DICT_4X4_50 markers. No teaching step: the run picks a visible marker and builds its goal itself. `--marker-id N` or `--socket NAME` (usb_a 12, audio 11, ac 10) only force which marker is chosen. The goal puts the chosen marker at the image centre, so the marker must be placed so that centring it lines the plug up with its socket.
+Print `markers/aruco_markers.pdf` (page 1: ids 10/11/12, 30 mm black square; page 2: hand-eye marker id 0, 100 mm; regenerate with `markers/make_markers.py`; print at 100 %) and stick each marker flat on the wall above its socket. They are DICT_4X4_50 markers. No teaching step: the run picks a visible marker and builds its goal itself. `--marker-id N` or `--socket NAME` (usb_a 12, audio 11, ac 10) only force which marker is chosen. The goal puts the chosen marker at the image centre plus `goal_offset_px` (config, now 5 px down), so the marker must be placed so that centring it lines the plug up with its socket.
 
 ## How to test
 
@@ -68,8 +68,10 @@ Stack up first (arm driver, MoveIt `allow_trajectory_execution:=false`, camera `
 ```bash
 source Code/IBVS/ros_env.sh
 bash Code/IBVS/run_end_to_end.sh --show-image          # preview: nothing moves, prints the predicted wall clearance
-bash Code/IBVS/run_end_to_end.sh --show-image --live   # close gripper -> home -> post-grasp -> choose marker live -> servo -> forward 15 cm
+bash Code/IBVS/run_end_to_end.sh --show-image --live   # close gripper -> home -> post-grasp -> for EVERY marker in view, left to right: servo -> forward 15 cm -> back out
 ```
+
+`run_end_to_end.sh` uses `--all-markers`: it looks at which markers are visible at the post-grasp pose (left to right), then for each one servos to it (goal built live), moves forward, and backs out along the same path to the standoff before the next marker. It stops at the first marker that does not converge or whose forward move fails, and the preview only looks at the first marker. Without `--all-markers` (e.g. `run_alignment.sh`) it does one marker, chosen live (or forced with `--marker-id`/`--socket`). `--speed-scale` also scales the servo step size, so the lateral move between markers is not dozens of 2 mm steps.
 
 Forward move: along the wall normal measured from depth, in 3 cm chunks (IK waypoints every cm, one flowing trajectory per chunk), each chunk must be followed by the arm or the move stops. What the gripper holds is everything nearer than 18 cm to the camera (live), and the move stops 1.5 cm short of the wall unless `--allow-contact` is given (full stroke, for the insertion push). `--advance-m 0` turns it off.
 

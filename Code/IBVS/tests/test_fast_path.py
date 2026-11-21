@@ -88,8 +88,22 @@ def test_continuous_timing_is_faster_than_the_stopping_profile():
 
 def test_speed_scale_multiplies_limits_and_shortens_waits():
     from alignment_test import scale_speeds
-    c = dict(joint_speed_deg_s=5., linear_speed_m_s=.005, angular_speed_deg_s=2., min_move_s=.6, arrival_settle_s=.5)
+    c = dict(joint_speed_deg_s=5., linear_speed_m_s=.005, angular_speed_deg_s=2., min_move_s=.6, arrival_settle_s=.5,
+             max_step_m=.002, max_step_deg=.4)
     scale_speeds(c, 2.)
     assert (c['joint_speed_deg_s'], c['linear_speed_m_s'], c['angular_speed_deg_s']) == (10., .01, 4.)
     assert c['min_move_s'] == .3 and c['arrival_settle_s'] == .25
-    d = dict(c); scale_speeds(d, 1.); assert d == c                                         # 1.0 changes nothing
+    assert c['max_step_m'] == .004 and c['max_step_deg'] == .8                              # bigger steps: lateral moves of cm are not 2 mm at a time
+    assert c['approach_limits_deg'] == [2., 5., 2., 2., 2., 2.] and c['fine_limits_deg'] == [.5, 1.5, .5, .5, .5, .5]
+    d = dict(joint_speed_deg_s=5., linear_speed_m_s=.005, angular_speed_deg_s=2., min_move_s=.6, arrival_settle_s=.5, max_step_m=.002, max_step_deg=.4)
+    scale_speeds(d, 1.)
+    assert d['joint_speed_deg_s'] == 5. and d['max_step_m'] == .002 and d['min_move_s'] == .6    # 1.0 changes no speed or step
+
+
+def test_scaled_step_limits_stay_under_the_hard_guards():
+    from alignment_test import scale_speeds
+    for scale in (1., 2., 3.):
+        c = dict(joint_speed_deg_s=5., linear_speed_m_s=.005, angular_speed_deg_s=2., min_move_s=.6, arrival_settle_s=.5)
+        scale_speeds(c, scale)
+        assert max(c['approach_limits_deg']) <= 5. and max(c['approach_limits_deg'][i] for i in (0, 2, 3, 4, 5)) <= 2.5   # 3 deg guard on joints 1,3-6
+        assert max(c['fine_limits_deg']) <= 1.5

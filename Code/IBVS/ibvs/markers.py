@@ -102,7 +102,8 @@ class AutoMarkerTracker:
     def __init__(self, cfg_cam, cfg):
         self.K = np.array(cfg_cam["K"], float).reshape(3, 3)
         self.dist = np.array(cfg_cam["distortion"], float)
-        self.m, self.forced = cfg, cfg.get("marker_id")
+        self.m, self.forced, self.order = cfg, cfg.get("marker_id"), cfg.get("marker_order", "nearest")
+        self.visible, self.sequence = {}, []
         dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg["aruco_dict"]))
         params = cv2.aruco.DetectorParameters()
         params.detectInvertedMarker = bool(cfg.get("detect_inverted_marker", False))
@@ -124,6 +125,8 @@ class AutoMarkerTracker:
         usable = {i: c for i, c in seen.items() if self.sides(c).min() >= self.m["min_side_px"]}
         if self.forced is not None:
             return self.forced if self.forced in usable else None
+        if self.order == "left":
+            return min(usable, key=lambda i: usable[i][:, 0].mean()) if usable else None
         centre = np.array([self.K[0, 2], self.K[1, 2]])
         return min(usable, key=lambda i: np.linalg.norm(usable[i].mean(0) - centre)) if usable else None
 
@@ -133,10 +136,12 @@ class AutoMarkerTracker:
             self.status = "marker %d is rotated %.0f deg in the image: the camera is not facing the wall upright" % (marker_id, tilt)
             return
         h = self.sides(corners).mean() / 2
-        cx, cy = self.K[0, 2], self.K[1, 2]
+        dx, dy = self.m.get("goal_offset_px", [0, 0])                 # image x right, y DOWN
+        cx, cy = self.K[0, 2] + dx, self.K[1, 2] + dy
         goal = np.array([[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]])
         self.target_px, self.star = goal.reshape(1, 4, 2), self.normalize(goal).reshape(1, 4, 2)
         self.ids, self.locked, self.prev = [marker_id], marker_id, {marker_id: corners}
+        self.sequence = sorted(self.visible, key=self.visible.get)               # every usable marker in view, left to right
         self.status = "tracking marker %d" % marker_id
 
     def detect(self, gray):
@@ -144,6 +149,7 @@ class AutoMarkerTracker:
         corners, ids, _ = self.det.detectMarkers(gray)
         seen = {} if ids is None else {int(i): c.reshape(4, 2) for i, c in zip(ids.ravel(), corners)}
         self.candidates = sorted(seen)
+        self.visible = {i: float(c[:, 0].mean()) for i, c in seen.items() if self.sides(c).min() >= self.m["min_side_px"]}
         px, valid = np.full((1, 4, 2), np.nan), np.array([False])
         if self.locked is None:
             pick = self.choose(seen)
