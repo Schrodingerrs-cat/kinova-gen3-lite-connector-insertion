@@ -26,7 +26,7 @@ ROOT, PROJECT = HERE.parent, HERE.parents[2]
 GRASP = HERE.parents[1] / "Grasp"
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(GRASP / "ros2_iface"))
-from ibvs.alignment import camera_step, fit_camera_tool_mapping, marker_plane_depths, path_times, within_limits  # noqa: E402
+from ibvs.alignment import camera_step, fit_camera_tool_mapping, marker_plane_depths, path_times, sequenced_joint_path, within_limits  # noqa: E402
 from ibvs.control import Convergence  # noqa: E402
 from ibvs.depth import corner_depths, drop_near_field, observed_voxels, scene_near_depth  # noqa: E402
 from ibvs.frames import matrix  # noqa: E402
@@ -399,6 +399,25 @@ class Experiment:
         self.detection, self.phase = None, "ALIGN"
         self.tracking_epoch += 1
         self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
+
+    def positioning_path(self, target_deg, scene):
+        """Joint path for a positioning move: joint groups one after another, then a straight joint move, every sample
+        checked against the floor and the collision scene; MoveIt's planner only if none of them is clear."""
+        target, q0, why = np.radians(target_deg), self.r.q.copy(), []
+        n = max(2, int(np.ceil(np.degrees(np.abs(target - q0).max()))) + 1)
+        for path in [sequenced_joint_path(q0, target, groups) for groups in POSITIONING_ORDERS] + [np.linspace(q0, target, n)]:
+            try:
+                self.check_joint_path(path)
+                for q in path if scene is not None else ():
+                    scene.check(q)
+                return path
+            except (RuntimeError, ValueError) as error:
+                why.append(str(error)[:150])
+        print("No clear joint-group or straight path (%s); asking MoveIt." % "; ".join(why), flush=True)
+        try:
+            return self.joint_plan(target_deg)
+        except RuntimeError as error:
+            raise RuntimeError("no path to the target pose: %s | MoveIt: %s" % ("; ".join(why), error)) from error
 
     def close_gripper(self):
         gripper = self.grasp["gripper"]
@@ -791,7 +810,7 @@ class Experiment:
                     self.visual_stage = self.phase
                     self.event(self.phase+'_START')
                     print("Moving to %s: %s" % (self.phase, np.round(q, 4)), flush=True)
-                    self.move(self.joint_plan(q))
+                    self.move(self.positioning_path(q, scene))
                     self.poses_completed.append(self.phase)
                     self.event(self.phase+'_REACHED',joints_deg=np.degrees(self.r.q).tolist())
                     print("Reached " + self.phase, flush=True)
@@ -903,6 +922,11 @@ class Experiment:
                         process.terminate()
         for log in self.log_files:
             log.close()
+
+
+# Joint groups for positioning moves (0-based): wrist roll with the base first, then the wrist pitch, then elbow/forearm, then the shoulder.
+# From home to the wall this keeps every link at least 9 cm above the table; the straight joint move dipped to the table.
+POSITIONING_ORDERS = ([(0, 5), (4,), (2, 3), (1,)], [(2, 3), (4,), (0, 5), (1,)])
 
 
 def scale_speeds(settings, scale):

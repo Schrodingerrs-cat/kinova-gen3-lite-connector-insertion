@@ -107,3 +107,53 @@ def test_scaled_step_limits_stay_under_the_hard_guards():
         scale_speeds(c, scale)
         assert max(c['approach_limits_deg']) <= 5. and max(c['approach_limits_deg'][i] for i in (0, 2, 3, 4, 5)) <= 2.5   # 3 deg guard on joints 1,3-6
         assert max(c['fine_limits_deg']) <= 1.5
+
+
+def test_sequenced_path_moves_one_group_at_a_time_in_small_steps():
+    from ibvs.alignment import sequenced_joint_path
+    q0 = np.radians([0, 0, 0, 0, 0, 0.]); q1 = np.radians([30, -80, 40, -20, 200, -15.])
+    path = sequenced_joint_path(q0, q1, [(0, 5), (4,), (2, 3), (1,)], step_deg=1.)
+    assert np.allclose(path[0], q0) and np.allclose(path[-1], q1)
+    assert np.degrees(np.abs(np.diff(path, axis=0))).max() <= 1.0 + 1e-9                  # sampled every degree
+    first = path[:np.argmax(np.degrees(np.abs(path[:, 0] - q1[0])) < 1e-6) + 1]           # while joints 1 and 6 move, the others are still
+    assert np.allclose(first[:, [1, 2, 3, 4]], 0)
+    mid = path[(np.abs(path[:, 4] - q0[4]) > 1e-9) & (np.abs(path[:, 4] - q1[4]) > 1e-9)]   # while joint 5 moves, joints 1,6 are done, 2,3,4 not started
+    assert np.allclose(mid[:, [0, 5]], q1[[0, 5]]) and np.allclose(mid[:, [1, 2, 3]], 0)
+    assert len(np.unique(np.round(path, 9), axis=0)) == len(path)                         # no repeated points
+
+
+def positioning_fixture(tmp_path, reject):
+    e = alignment_test.Experiment.__new__(alignment_test.Experiment)
+    e.r = SimpleNamespace(q=np.zeros(6)); e.checked, e.planned = [], []
+    e.check_joint_path = lambda path, local=False: e.checked.append(len(path))
+    e.joint_plan = lambda target_deg: (e.planned.append(1), np.array([e.r.q, np.radians(target_deg)]))[1]
+
+    class Scene:
+        def check(self, q):
+            if reject(q):
+                raise RuntimeError("observed-scene collision")
+    return e, Scene()
+
+
+def test_positioning_takes_the_first_clear_candidate(tmp_path):
+    e, scene = positioning_fixture(tmp_path, lambda q: False)
+    path = e.positioning_path([30, -80, 40, -20, 200, -15], scene)
+    assert not e.planned and np.allclose(path[-1], np.radians([30, -80, 40, -20, 200, -15]))
+    assert np.allclose(path[1:30, 4], 0)                                                    # first candidate: joint 5 waits for joints 1 and 6 (30 samples)
+
+
+def test_positioning_falls_back_to_the_next_candidate_then_straight_then_moveit(tmp_path):
+    # reject any sample where joint 5 has moved but joints 1 and 6 have not: kills the second candidate only
+    e, scene = positioning_fixture(tmp_path, lambda q: abs(q[4]) > .05 and abs(q[0]) < 1e-9)
+    e.positioning_path([30, -80, 40, -20, 200, -15], scene)
+    assert not e.planned
+    e, scene = positioning_fixture(tmp_path, lambda q: True)                                 # everything collides
+    path = e.positioning_path([30, -80, 40, -20, 200, -15], scene)
+    assert e.planned == [1] and len(path) == 2
+
+
+def test_positioning_error_lists_why_every_path_failed(tmp_path):
+    e, scene = positioning_fixture(tmp_path, lambda q: True)
+    e.joint_plan = lambda target_deg: (_ for _ in ()).throw(RuntimeError("MoveIt joint plan failed: 99999"))
+    with pytest.raises(RuntimeError, match="no path to the target pose.*observed-scene collision.*MoveIt joint plan failed: 99999"):
+        e.positioning_path([30, -80, 40, -20, 200, -15], scene)

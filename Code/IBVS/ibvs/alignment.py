@@ -181,3 +181,21 @@ def smooth_velocities(path, times):
     if len(path) > 2:
         velocities[1:-1] = (path[2:] - path[:-2]) / (times[2:] - times[:-2])[:, None]
     return velocities
+
+
+def sequenced_joint_path(q0, q1, groups, step_deg=1.):
+    """Joint groups move one after another, each in a straight line, sampled every step_deg.
+    Keeps the arm high while the wrist swings; every sample can then be collision checked."""
+    q = np.asarray(q0, float).copy()
+    q1 = np.asarray(q1, float)
+    path = [q.copy()]
+    for group in groups:
+        target = q.copy()
+        target[list(group)] = q1[list(group)]
+        delta = np.degrees(np.abs(target - q).max())
+        if delta < 1e-9:
+            continue
+        count = max(1, int(np.ceil(delta / step_deg)))
+        path += [q + (target - q) * s for s in np.linspace(0, 1, count + 1)[1:]]
+        q = target
+    return np.array(path)
