@@ -58,3 +58,12 @@ def scene_near_depth(settings, T_EC, T_tcp):
     """Nearest range (m) from the camera that is treated as scene: closer returns are the gripper and what it holds."""
     tcp_in_camera = np.linalg.inv(T_EC) @ T_tcp
     return settings.get('scene_min_depth_m', max(.18, float(tcp_in_camera[2, 3]) + .04))
+
+
+def drop_near_field(depth_m, near_m, grow_px=12):
+    """Depth with the gripper and whatever it holds removed: everything nearer than near_m plus a halo of grow_px pixels,
+    so silhouette-edge returns with wrong (far) depth do not become obstacles either."""
+    import cv2
+    near = (np.isfinite(depth_m) & (depth_m > 0) & (depth_m < near_m)).astype(np.uint8)
+    halo = cv2.dilate(near, np.ones((2 * grow_px + 1, 2 * grow_px + 1), np.uint8)).astype(bool)
+    return np.where(halo, np.nan, depth_m)

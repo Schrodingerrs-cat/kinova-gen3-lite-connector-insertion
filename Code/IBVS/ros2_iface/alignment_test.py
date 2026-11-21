@@ -28,29 +28,14 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(GRASP / "ros2_iface"))
 from ibvs.alignment import camera_step, fit_camera_tool_mapping, marker_plane_depths, path_times, within_limits  # noqa: E402
 from ibvs.control import Convergence  # noqa: E402
-from ibvs.depth import corner_depths, observed_voxels, scene_near_depth  # noqa: E402
+from ibvs.depth import corner_depths, drop_near_field, observed_voxels, scene_near_depth  # noqa: E402
 from ibvs.frames import matrix  # noqa: E402
-from ibvs.markers import Tracker, TrackingLost, mean_marker_depth  # noqa: E402
+from ibvs.markers import AutoMarkerTracker, Tracker, TrackingLost, mean_marker_depth  # noqa: E402
 from ibvs.overlay import FeatureOverlay  # noqa: E402
 from ibvs.recording import TimedVideo  # noqa: E402
 
 
-def marker_goal(reference, socket, goals_path):
-    """Marker id and taught goal corners of one socket; refuses a socket whose goal was never taught."""
-    sockets = reference["sockets"]
-    if socket not in sockets:
-        raise ValueError("--socket must be one of: " + ", ".join(sockets))
-    goals = yaml.safe_load(Path(goals_path).read_text()) or {}
-    taught = goals.get(socket)
-    if not taught:
-        raise ValueError("no taught goal for socket %s: jog the plug to the aligned pre-insertion pose and run ros2_iface/teach_goal.py --socket %s" % (socket, socket))
-    if taught["marker_id"] != sockets[socket]:
-        raise ValueError("taught goal was made for marker %s, config says %s" % (taught["marker_id"], sockets[socket]))
-    tracking = dict(reference["feature_tracking"], ids=[sockets[socket]])
-    return dict(feature_tracking=tracking, corners_image_px=taught["corners_image_px"], camera_K=taught["camera_K"], socket=socket)
-
-
-def load_inputs(settings_path, reference_path, socket=None, goals_path=None):
+def load_inputs(settings_path, reference_path, socket=None, marker_id=None):
     settings = yaml.safe_load(settings_path.read_text())
     for key, value in settings.items():
         if not isinstance(value, (int, float)) or not np.isfinite(value) or value <= 0:
@@ -64,7 +49,13 @@ def load_inputs(settings_path, reference_path, socket=None, goals_path=None):
         reference = yaml.safe_load(reference_path.read_text())
         if reference.get("feature_type") != "marker":
             raise ValueError("the YAML target must describe an ArUco marker")
-        reference.update(marker_goal(reference, socket, goals_path or ROOT / "config" / "taught_goals.yaml"))
+        if socket is not None and socket not in reference["sockets"]:
+            raise ValueError("--socket must be one of: " + ", ".join(reference["sockets"]))
+        forced = marker_id if marker_id is not None else (reference["sockets"][socket] if socket is not None else None)
+        w, h = reference["image_size_px"]
+        # Nothing is taught: marker and goal are chosen from the live view (AutoMarkerTracker); this square is only a placeholder.
+        reference["feature_tracking"] = dict(reference["feature_tracking"], ids=[forced if forced is not None else 0], marker_id=forced)
+        reference["corners_image_px"] = [[w/2-30, h/2-30], [w/2+30, h/2-30], [w/2+30, h/2+30], [w/2-30, h/2+30]]
         settings["damping"] = 0.0
         settings["max_servo_joint_step_deg"] = 5.5
         FeatureOverlay(reference)
@@ -87,8 +78,8 @@ def load_inputs(settings_path, reference_path, socket=None, goals_path=None):
                 raise ValueError("six positive joint gains are required")
             settings["joint_gains"] = gains.tolist()
     else:
-        if socket is not None:
-            raise ValueError('--socket requires the marker YAML reference')
+        if socket is not None or marker_id is not None:
+            raise ValueError('--socket/--marker-id need the marker YAML reference')
         reference = json.loads(reference_path.read_text())
         image = reference_path.parent / reference["image_file"]
         if hashlib.sha256(image.read_bytes()).hexdigest() != reference["image_sha256"]:
@@ -132,12 +123,6 @@ class Experiment:
         self.record_correction = False
         self.record_sequence = getattr(args,'record_sequence',False)
         self.tracking_epoch = 0
-        from ibvs.self_depth import SelfDepthBank
-        self_depth_paths=sorted((ROOT/'config').glob('gripper_depth*.npz'))
-        self.self_depth_template = SelfDepthBank(self_depth_paths) if self_depth_paths else None
-        if self.self_depth_template is not None:
-            (output/'source/config').mkdir(parents=True,exist_ok=True)
-            for path in self_depth_paths:shutil.copyfile(path,output/'source/config'/path.name)
         self.servo_steps = 0
         self.record_start_stamp = None
         self.poses_completed = []
@@ -204,18 +189,8 @@ class Experiment:
             self.fresh(camera=True)
 
     def scene_depth(self, depth, color=None):
-        """Exclude only sensor returns matching explicitly calibrated gripper surfaces."""
-        if self.self_depth_template is None:
-            return depth
-        try:
-            if color is None:color=self.bgr(self.r._img['color'])
-            mask,details=self.self_depth_template.exclude(depth,np.asarray(self.camera['K']),
-                np.asarray(self.camera['distortion']),self.reference['camera_frame_id'],self.r.grip_pos_msr,color=color)
-        except ValueError as error:
-            raise TrackingLost(str(error)) from error
-        with (self.output/'self_depth_filter.jsonl').open('a') as record:
-            record.write(json.dumps(dict(phase=self.phase,**details))+'\n')
-        return np.where(mask,np.nan,depth)
+        """The gripper and whatever it holds are everything nearer than the scene range (plus a halo): not scene."""
+        return drop_near_field(depth, scene_near_depth(self.c, self.T_EC, self.T_tcp))
 
     def positioning_scene(self):
         from observed_scene import ObservedScene
@@ -301,6 +276,8 @@ class Experiment:
             pixels, valid = np.full((1,4,2), np.nan), np.array([False])
             if self.phase in ("ALIGN", "ADVANCE"):
                 pixels, valid = self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+                if self.tracker.locked is not None and self.display.marker_id != self.tracker.locked:
+                    self.display.set_goal(self.tracker.locked, self.tracker.target_px[0])
                 if valid[0]:
                     self.last_marker_seen = time.monotonic()
                 else:
@@ -407,9 +384,7 @@ class Experiment:
         if self.is_marker:
             if info.header.frame_id != self.reference["camera_frame_id"]:
                 raise RuntimeError("camera frame differs from the marker configuration")
-            if np.abs(np.array(self.camera["K"]) - np.array(self.reference["camera_K"])).max() > 1.0:
-                raise RuntimeError("camera intrinsics differ from the taught goal; teach the goal again")
-            self.tracker = Tracker(self.camera, {**self.reference["feature_tracking"], "target_pixels": {self.reference["feature_tracking"]["ids"][0]: self.reference["corners_image_px"]}})
+            self.tracker = AutoMarkerTracker(self.camera, self.reference["feature_tracking"])
         else:
             self.tracker = Tracker(self.camera, {**self.reference, "min_side_px": self.c["min_marker_side_px"],
                                                  "max_jump_px": self.c["max_corner_jump_px"]})
@@ -710,7 +685,7 @@ class Experiment:
             self.csv_file.flush()
             return xy, Z, rms, maximum
         if self.is_marker:
-            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs')
+            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs: %s' % getattr(self.tracker, 'status', ''))
         raise RuntimeError('no stable reference marker in fresh synchronized camera/depth pairs')
 
     def average_observation(self):
@@ -941,7 +916,7 @@ def add_advance_arguments(parser):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true", help="execute joint positioning and image-based alignment")
-    parser.add_argument("--close-gripper", action="store_true", help="close the gripper before moving (needs a self-depth reference for that state)")
+    parser.add_argument("--close-gripper", action="store_true", help="close the gripper before moving")
     add_advance_arguments(parser)
     parser.add_argument("--bringup", action="store_true", help="start missing driver, MoveIt and camera processes")
     parser.add_argument("--shutdown", action="store_true", help="stop ROS processes started by this run when it finishes")
@@ -952,7 +927,8 @@ def main():
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
     parser.add_argument("--settings", type=Path, default=ROOT / "config" / "alignment.yaml")
     parser.add_argument("--reference", type=Path, default=ROOT / "config" / "marker_goal.yaml")
-    parser.add_argument('--socket', help='socket whose marker and taught goal to use (usb_a, audio, ac)')
+    parser.add_argument('--socket', help='optional: force the marker of this socket (usb_a, audio, ac) instead of choosing live')
+    parser.add_argument('--marker-id', type=int, help='optional: force this ArUco id instead of choosing live')
     parser.add_argument("--hand-eye", type=Path, help="reuse a local_hand_eye.json from this unchanged camera mount; default: measure local mapping")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -967,7 +943,7 @@ def main():
         parser.error("advance: distance 0..0.30 m, step 0..0.05 m, speed 0..0.02 m/s, margin >= 0")
     if not 1. <= args.speed_scale <= 3.:
         parser.error("--speed-scale must be between 1 and 3")
-    settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket)
+    settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket, args.marker_id)
     scale_speeds(settings, args.speed_scale)
     args.advance_speed_mps = min(.03, args.advance_speed_mps * args.speed_scale)
     marker = reference.get("feature_type") == "marker"
@@ -989,7 +965,7 @@ def main():
                      "ibvs/depth.py", "ibvs/frames.py", "ibvs/overlay.py", "ibvs/shape_control.py",
                      "ros2_iface/joint2_priority_servo.py", "ros2_iface/observed_scene.py",
                      "ibvs/recording.py", "ibvs/kinematics.py",
-                     "ibvs/self_depth.py", "config/alignment.yaml", "config/marker_goal.yaml", "config/taught_goals.yaml"]:
+                     "config/alignment.yaml", "config/marker_goal.yaml"]:
         snapshot = output / "source" / relative
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, snapshot)

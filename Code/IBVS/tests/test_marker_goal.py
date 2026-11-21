@@ -76,33 +76,10 @@ def test_median_goal_needs_still_marker():
         median_corners(frames[:5])
 
 
-def reference_files(tmp_path, audio=True, marker_id=11):
-    goals = tmp_path / "goals.yaml"
-    if audio:
-        save_goal(goals, "audio", marker_id, GOAL, K, .1)
-    return ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", goals
 
 
-def test_load_inputs_selects_socket_marker_and_taught_trapezoid(tmp_path):
-    settings, reference, goals = reference_files(tmp_path)
-    c, ref, _ = load_inputs(settings, reference, "audio", goals)
-    assert ref["feature_tracking"]["ids"] == [11] and ref["corners_image_px"] == [list(map(float, p)) for p in GOAL]
-    assert ref["socket"] == "audio" and c["tolerance_px"] == 5.0
 
 
-def test_load_inputs_refuses_missing_goal_unknown_socket_and_wrong_marker(tmp_path):
-    settings, reference, goals = reference_files(tmp_path)
-    with pytest.raises(ValueError, match="teach_goal.py --socket usb_a"):
-        load_inputs(settings, reference, "usb_a", goals)
-    with pytest.raises(ValueError, match="must be one of"):
-        load_inputs(settings, reference, "hdmi", goals)
-    with pytest.raises(ValueError, match="must be one of"):
-        load_inputs(settings, reference, None, goals)
-    other = tmp_path / "wrong"
-    other.mkdir()
-    settings, reference, goals = reference_files(other, marker_id=99)
-    with pytest.raises(ValueError, match="marker 99"):
-        load_inputs(settings, reference, "audio", goals)
 
 
 def test_save_goal_keeps_other_sockets_and_header(tmp_path):
@@ -115,11 +92,106 @@ def test_save_goal_keeps_other_sockets_and_header(tmp_path):
     assert data["usb_a"]["marker_id"] == 10 and data["audio"]["camera_K"] == [list(map(float, r)) for r in K]
 
 
-def test_overlay_tracks_the_selected_marker(tmp_path):
-    settings, reference, goals = reference_files(tmp_path)
-    _, ref, _ = load_inputs(settings, reference, "audio", goals)
-    overlay = FeatureOverlay(ref)
-    image = cv2.cvtColor(canvas(11), cv2.COLOR_GRAY2BGR)
-    out = overlay.render(image, K, [0] * 5, stamp=1.0, age_s=0.0, draw_target=True)
-    assert out.shape == image.shape and overlay.corners is not None and overlay.errors.max() > 5
-    assert "usb" not in overlay.label.lower() and overlay.label == "ArUco ID 11"
+
+
+# ---- live marker choice: nothing taught ----
+from ibvs.markers import AutoMarkerTracker  # noqa: E402
+from ibvs.depth import drop_near_field  # noqa: E402
+
+AUTO = dict(aruco_dict="DICT_4X4_50", min_side_px=20, max_jump_px=30, lock_frames=5)
+
+
+def row(ids=(10, 11, 12), xs=(120, 340, 560), size=100, rotate=None):
+    img = np.full((480, 848), 255, np.uint8)
+    for i, x in zip(ids, xs):
+        m = cv2.aruco.generateImageMarker(DICT, i, size)
+        img[190:190 + size, x:x + size] = np.rot90(m, (rotate or {}).get(i, 0))
+    return img
+
+
+def test_picks_marker_nearest_the_image_centre_after_consecutive_frames():
+    t = AutoMarkerTracker(CAMERA, AUTO)
+    for _ in range(4):
+        px, valid = t.detect(row())
+        assert not valid.any() and t.locked is None                       # still choosing
+    assert t.detect(row())[1].tolist() == [False] and t.locked == 11      # locked on the 5th frame, centre marker
+    px, valid = t.detect(row())
+    assert valid.tolist() == [True] and np.abs(px[0, 0] - [340, 190]).max() < 2
+    assert t.candidates == [10, 11, 12]
+
+
+def test_goal_is_centred_upright_and_keeps_the_size_at_choice():
+    t = AutoMarkerTracker(CAMERA, AUTO)
+    for _ in range(5):
+        t.detect(row(size=100))
+    goal = t.target_px[0]
+    assert np.allclose(goal.mean(0), [424, 240], atol=1e-6)               # principal point
+    assert np.allclose(np.linalg.norm(goal[1] - goal[0]), 100, atol=2) and abs(goal[1, 1] - goal[0, 1]) < 1e-9
+    assert np.allclose(t.star[0], t.normalize(goal), atol=1e-9)
+
+
+def test_forced_marker_is_chosen_even_when_not_nearest():
+    t = AutoMarkerTracker(CAMERA, {**AUTO, "marker_id": 12})
+    for _ in range(5):
+        t.detect(row())
+    assert t.locked == 12
+
+
+def test_nothing_locks_on_tiny_or_rotated_markers_and_says_why():
+    t = AutoMarkerTracker(CAMERA, {**AUTO, "min_side_px": 150})
+    for _ in range(6):
+        t.detect(row())
+    assert t.locked is None and "too small" in t.status
+    t = AutoMarkerTracker(CAMERA, AUTO)
+    for _ in range(6):
+        t.detect(row(rotate={11: 1, 10: 1, 12: 1}))
+    assert t.locked is None and "rotated" in t.status
+
+
+def test_locked_tracker_follows_its_marker_and_rejects_jumps():
+    t = AutoMarkerTracker(CAMERA, AUTO)
+    for _ in range(5):
+        t.detect(row())
+    assert t.detect(row())[1][0]
+    assert not t.detect(row(xs=(120, 380, 560)))[1][0]                    # chosen marker jumped 40 px > 30
+    assert not t.detect(row(ids=(10, 12, 13)))[1][0]                       # chosen marker missing
+
+
+def test_near_field_is_removed_with_a_halo_and_far_depth_is_kept():
+    depth = np.full((100, 100), .30)
+    depth[80:, 40:60] = .10                                                # fingers
+    out = drop_near_field(depth, .18, grow_px=5)
+    assert np.isnan(out[85, 50]) and np.isnan(out[76, 50]) and not np.isnan(out[60, 50]) and out[10, 10] == .30
+
+
+
+# ---- config loading and overlay: marker and goal come from the live view ----
+def auto_inputs(socket=None, marker_id=None):
+    return load_inputs(ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", socket, marker_id)
+
+
+def test_nothing_taught_is_needed_to_load_and_the_goal_is_only_a_placeholder():
+    _, ref, _ = auto_inputs()
+    assert ref["feature_tracking"]["marker_id"] is None and "camera_K" not in ref
+    assert np.allclose(np.mean(ref["corners_image_px"], axis=0), [424, 240])
+
+
+def test_socket_or_marker_id_only_force_which_marker_is_chosen():
+    assert auto_inputs("audio")[1]["feature_tracking"]["marker_id"] == 11
+    assert auto_inputs("usb_a")[1]["feature_tracking"]["marker_id"] == 12
+    assert auto_inputs(None, 10)[1]["feature_tracking"]["marker_id"] == 10
+    with pytest.raises(ValueError, match="must be one of"):
+        auto_inputs("hdmi")
+
+
+def test_overlay_takes_the_live_goal_after_the_marker_is_chosen():
+    _, ref, _ = auto_inputs()
+    overlay, tracker = FeatureOverlay(ref), AutoMarkerTracker(CAMERA, ref["feature_tracking"])
+    for _ in range(5):
+        tracker.detect(row())
+    overlay.set_goal(tracker.locked, tracker.target_px[0])
+    image = cv2.cvtColor(row(), cv2.COLOR_GRAY2BGR)
+    px, valid = tracker.detect(row())
+    out = overlay.render(image, K, [0] * 5, stamp=1.0, age_s=0.0, draw_target=True, observation=(px, valid))
+    assert overlay.label == "ArUco ID 11" and out.shape == image.shape and overlay.errors.max() > 5
+    assert np.allclose(overlay.target.mean(0), [424, 240])

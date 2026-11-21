@@ -12,15 +12,13 @@ from joint2_priority_servo import advance, run_advance  # noqa: E402
 K = np.array([[435., 0, 426.5], [0, 434.4, 238.2], [0, 0, 1]])
 
 
-def fake(tmp_path, wall=.29, held_depth=.10, follows=True):
+def fake(tmp_path, wall=.29, held_depth=.10, follows=True):   # fingers closer than 0.18 m are the held object (live rule)
     """Camera looks straight at a wall `wall` m away; fingers (held_depth) sit at the bottom. Base frame = camera frame, fk(q) = translation q[:3] m."""
     depth = np.full((480, 848), wall)
     depth[400:470, 400:500] = held_depth
-    held = np.zeros(depth.shape, bool); held[400:470, 400:500] = True
     e = SimpleNamespace()
     e.last_observation = dict(depth_m=depth, K=K, distortion=np.zeros(5), color=np.zeros((480, 848, 3), np.uint8),
                               corners_px=np.array([[404, 183], [450, 183], [450, 229], [404, 229]], float))
-    e.self_depth_template = SimpleNamespace(exclude=lambda *a, **k: (held, {}))
     e.reference, e.c = dict(camera_frame_id='f'), dict(depth_min_m=.07, depth_max_m=1., min_move_s=.1, arrival_settle_s=.5)
     e.T_EC, e.T_tcp = np.eye(4), np.eye(4)
     e.T_tcp[2, 3] = .035
@@ -67,10 +65,10 @@ def test_full_stroke_is_taken_in_guarded_steps_along_the_wall_normal(tmp_path):
 
 
 def test_travel_stops_short_of_the_wall_unless_contact_is_allowed(tmp_path):
-    e, report = fake(tmp_path, held_depth=.20), {}                       # held object 90 mm from the wall
+    e, report = fake(tmp_path, held_depth=.17), {}                       # held object 120 mm from the wall
     advance(e, Scene(), args(.15, margin=.015), report, execute=True)
-    assert report['advance']['trimmed'] and report['advance']['executed_m'] == pytest.approx(.075, abs=.003)
-    e2, report2, scene2 = fake(tmp_path, held_depth=.20), {}, Scene()
+    assert report['advance']['trimmed'] and report['advance']['executed_m'] == pytest.approx(.105, abs=.003)
+    e2, report2, scene2 = fake(tmp_path, held_depth=.17), {}, Scene()
     advance(e2, scene2, args(.15, contact=True), report2, execute=True)
     assert not report2['advance']['trimmed'] and report2['advance']['executed_m'] == pytest.approx(.15, abs=.003) and scene2.checks == 0
 
@@ -81,15 +79,11 @@ def test_stalled_arm_stops_the_advance_and_marks_the_run_failed(tmp_path):
     assert report['status'] == 'ADVANCE_FAILED' and 'NO_PROGRESS' in report['advance']['error'] and len(e.moves) == 1
 
 
-def test_missing_reference_or_wall_refuses_before_moving(tmp_path):
+def test_missing_wall_refuses_before_moving(tmp_path):
     e, report = fake(tmp_path), {'status': 'CONVERGED'}
-    e.self_depth_template = None
+    e.last_observation['depth_m'][:] = 0
     run_advance(e, Scene(), args(), report, execute=True)
-    assert report['status'] == 'ADVANCE_FAILED' and 'self-depth reference' in report['advance']['error'] and not e.moves
-    e2, report2 = fake(tmp_path), {'status': 'CONVERGED'}
-    e2.last_observation['depth_m'][:] = 0
-    run_advance(e2, Scene(), args(), report2, execute=True)
-    assert 'wall not measured' in report2['advance']['error'] and not e2.moves
+    assert report['status'] == 'ADVANCE_FAILED' and 'wall not measured' in report['advance']['error'] and not e.moves
 
 
 def test_advance_off_by_default(tmp_path):

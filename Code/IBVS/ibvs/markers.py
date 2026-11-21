@@ -91,3 +91,73 @@ def save_goal(path, socket, marker_id, corners, K, std_px):
                          taught_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     header = "".join(line for line in open(path) if line.startswith("#")) if path.exists() else ""
     path.write_text(header + yaml.safe_dump(goals, sort_keys=True))
+
+
+class AutoMarkerTracker:
+    """Picks a visible marker at run time and builds its goal from the live view. Nothing is taught or remembered.
+
+    Goal = the chosen marker centred on the optical axis, upright, at the size it has when chosen. The marker closest to the
+    image centre is chosen (or `marker_id` if given), once it is seen `lock_frames` times in a row. Same interface as Tracker."""
+
+    def __init__(self, cfg_cam, cfg):
+        self.K = np.array(cfg_cam["K"], float).reshape(3, 3)
+        self.dist = np.array(cfg_cam["distortion"], float)
+        self.m, self.forced = cfg, cfg.get("marker_id")
+        dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg["aruco_dict"]))
+        params = cv2.aruco.DetectorParameters()
+        params.detectInvertedMarker = bool(cfg.get("detect_inverted_marker", False))
+        params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.det = cv2.aruco.ArucoDetector(dictionary, params)
+        self.ids, self.prev, self.candidates, self.status = [], {}, [], "looking for a marker"
+        self.locked, self._seen, self._count = None, None, 0
+        self.target_px = np.zeros((1, 4, 2))
+        self.star = np.zeros((1, 4, 2))
+
+    def normalize(self, pixels):
+        return cv2.undistortPoints(np.asarray(pixels, np.float64).reshape(-1, 1, 2), self.K, self.dist).reshape(-1, 2)
+
+    @staticmethod
+    def sides(c):
+        return np.linalg.norm(c - np.roll(c, 1, axis=0), axis=1)
+
+    def choose(self, seen):
+        usable = {i: c for i, c in seen.items() if self.sides(c).min() >= self.m["min_side_px"]}
+        if self.forced is not None:
+            return self.forced if self.forced in usable else None
+        centre = np.array([self.K[0, 2], self.K[1, 2]])
+        return min(usable, key=lambda i: np.linalg.norm(usable[i].mean(0) - centre)) if usable else None
+
+    def lock(self, marker_id, corners):
+        tilt = float(np.degrees(np.arctan2(*(corners[1] - corners[0])[::-1])))
+        if abs(tilt) > 20.:
+            self.status = "marker %d is rotated %.0f deg in the image: the camera is not facing the wall upright" % (marker_id, tilt)
+            return
+        h = self.sides(corners).mean() / 2
+        cx, cy = self.K[0, 2], self.K[1, 2]
+        goal = np.array([[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]])
+        self.target_px, self.star = goal.reshape(1, 4, 2), self.normalize(goal).reshape(1, 4, 2)
+        self.ids, self.locked, self.prev = [marker_id], marker_id, {marker_id: corners}
+        self.status = "tracking marker %d" % marker_id
+
+    def detect(self, gray):
+        """(px (1,4,2) NaN when invalid, valid (1,)). Unlocked: choose; locked: track the chosen id."""
+        corners, ids, _ = self.det.detectMarkers(gray)
+        seen = {} if ids is None else {int(i): c.reshape(4, 2) for i, c in zip(ids.ravel(), corners)}
+        self.candidates = sorted(seen)
+        px, valid = np.full((1, 4, 2), np.nan), np.array([False])
+        if self.locked is None:
+            pick = self.choose(seen)
+            self._count = self._count + 1 if pick is not None and pick == self._seen else (1 if pick is not None else 0)
+            self._seen = pick
+            if pick is None:
+                self.status = "no usable marker in view" if not seen else "markers %s seen but too small" % sorted(seen)
+            elif self._count >= self.m.get("lock_frames", 5):
+                self.lock(pick, seen[pick])
+            return px, valid
+        c = seen.get(self.locked)
+        if c is not None:
+            jump = np.linalg.norm(c - self.prev[self.locked], axis=1).max()
+            if self.sides(c).min() >= self.m["min_side_px"] and jump <= self.m["max_jump_px"]:
+                px[0], valid[0] = c, True
+            self.prev[self.locked] = c
+        return px, valid

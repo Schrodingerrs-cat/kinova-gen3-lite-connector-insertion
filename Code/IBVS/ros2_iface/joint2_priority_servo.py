@@ -15,6 +15,7 @@ from scipy.spatial.transform import Rotation
 
 from alignment_test import Experiment, ROOT, PROJECT, load_inputs, add_advance_arguments, scale_speeds
 from ibvs.advance import backproject, clearance, fit_wall, plan_travel
+from ibvs.depth import scene_near_depth
 from ibvs.alignment import camera_joint_jacobian, within_limits, smooth_servo_path
 from ibvs.control import Convergence
 from ibvs.guards import check_axial
@@ -173,9 +174,7 @@ def advance(e, scene, args, report, execute):
     each step must be followed by the arm (progress check), and without --allow-contact the travel stops short of the wall."""
     obs = e.last_observation
     depth, K, D = obs['depth_m'], obs['K'], obs['distortion']
-    if e.self_depth_template is None:
-        raise RuntimeError('advance needs a gripper self-depth reference (what the gripper holds must be known)')
-    held, _ = e.self_depth_template.exclude(depth, K, D, e.reference['camera_frame_id'], e.r.grip_pos_msr, color=obs['color'])
+    held = np.isfinite(depth) & (depth > 0) & (depth < scene_near_depth(e.c, e.T_EC, e.T_tcp))   # gripper and held plug, live
     corners = obs['corners_px']
     x0, y0 = int(corners[:, 0].mean()), int(corners[:, 1].max()) + 20
     n, d, support = fit_wall(depth, (x0 - 160, y0, x0 + 160, min(depth.shape[0], y0 + 240)), held, K, D,
@@ -248,6 +247,10 @@ def servo(e, args, report):
     report.update(recoveries=0, steps=0, motion_attempts=0)
     xy, Z, rms, maximum = acquire(e, time.monotonic()+getattr(args, 'wait_target_s', 30.))
     report['initial_rms_px'] = rms
+    report['marker_id'], report['goal_corners_px'] = int(e.tracker.locked), e.tracker.target_px[0].tolist()
+    e.event('MARKER_CHOSEN', marker_id=report['marker_id'], candidates=e.tracker.candidates)
+    print('Marker %d chosen live (visible: %s). Goal: centred, upright, %.0f px wide.' % (
+        report['marker_id'], e.tracker.candidates, np.linalg.norm(e.tracker.target_px[0][1] - e.tracker.target_px[0][0])), flush=True)
     report['initial_metrics'] = shape_metrics(e.detection[1][0], e.tracker.target_px[0])
     scene = ObservedScene(e)
     try:
@@ -417,9 +420,10 @@ def main():
     parser.add_argument('--near-scene', action='store_true', help='fresh scene from 11 cm for this verified D405/gripper setup')
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
     parser.add_argument('--reference', type=Path, default=ROOT/'config/marker_goal.yaml')
-    parser.add_argument('--socket', required=True, help='socket whose marker and taught goal to use (usb_a, audio, ac)')
+    parser.add_argument('--socket', help='optional: force the marker of this socket (usb_a, audio, ac) instead of choosing live')
+    parser.add_argument('--marker-id', type=int, help='optional: force this ArUco id instead of choosing live')
     add_advance_arguments(parser)
-    parser.add_argument('--close-gripper',action='store_true',help='close the gripper before the servo (needs a self-depth reference for that state)')
+    parser.add_argument('--close-gripper',action='store_true',help='close the gripper before the servo')
     parser.add_argument('--fast',action='store_true',help='UNVALIDATED faster profile: bigger steps, short settling, coarser collision sampling')
     parser.add_argument('--smooth',action='store_true',help='orientation-aware approach, continuous straight servo segments and shorter settling')
     parser.add_argument('--control-hz',type=float,help='maximum step-loop frequency; actual rate is limited by planning, motion and fresh feedback')
@@ -431,7 +435,7 @@ def main():
         parser.error('--resume-run continues the current pose and cannot be combined with --home-first')
     if args.resume_run and args.near_scene:
         parser.error('choose either a fresh near scene or a saved scene')
-    c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket)
+    c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket, args.marker_id)
     if args.control_hz is not None and (not np.isfinite(args.control_hz) or not .2<=args.control_hz<=3.):
         parser.error('control-hz must be between 0.2 and 3')
     if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .05 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
@@ -464,7 +468,7 @@ def main():
     for source in (__file__, ROOT/'ibvs/shape_control.py', ROOT/'ros2_iface/observed_scene.py'):
         shutil.copyfile(source, out/os.path.basename(source))
     for relative in ('ros2_iface/alignment_test.py', 'ibvs/alignment.py', 'ibvs/control.py', 'ibvs/depth.py',
-                     'ibvs/frames.py', 'ibvs/markers.py', 'ibvs/self_depth.py', 'ibvs/overlay.py', 'ibvs/recording.py', 'ibvs/kinematics.py', 'config/marker_goal.yaml', 'config/taught_goals.yaml'):
+                     'ibvs/frames.py', 'ibvs/markers.py', 'ibvs/overlay.py', 'ibvs/recording.py', 'ibvs/kinematics.py', 'config/marker_goal.yaml'):
         snapshot = out/'source'/relative
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT/relative, snapshot)

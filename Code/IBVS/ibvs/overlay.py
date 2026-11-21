@@ -36,6 +36,13 @@ class FeatureOverlay:
         self.corners = self.errors = None
         self.matched_frames = 0
 
+    def set_goal(self, marker_id, corners):
+        """Goal chosen at run time (after the overlay was built with a placeholder)."""
+        self.marker_id, self.label = int(marker_id), "ArUco ID %d" % int(marker_id)
+        self.target = np.asarray(corners, float)[self.order]
+        self.marker["ids"], self.marker["target_pixels"] = [self.marker_id], {self.marker_id: self.target.tolist()}
+        self.clear()
+
     def clear(self):
         self.corners = self.errors = None
         self.matched_frames = 0
