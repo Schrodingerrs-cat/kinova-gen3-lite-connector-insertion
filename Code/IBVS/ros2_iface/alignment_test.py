@@ -424,7 +424,19 @@ class Experiment:
         if not self.args.live:
             print("PREVIEW: the gripper would be closed (command %.2f)." % gripper["close_cmd"], flush=True)
             return
-        self.r.gripper(gripper["close_cmd"], gripper["close_effort"])
+        from control_msgs.action import GripperCommand
+        goal = GripperCommand.Goal()
+        goal.command.position, goal.command.max_effort = float(gripper["close_cmd"]), float(gripper["close_effort"])
+        if not self.r.grip.wait_for_server(timeout_sec=20):      # just after a driver start the gripper controller can still be spawning
+            raise RuntimeError("gripper action server is not available (is the arm driver fully up?)")
+        for _ in range(3):
+            handle = self.wait(self.r.grip.send_goal_async(goal), timeout=5)
+            if handle is not None and handle.accepted:
+                break
+            self.r.spin_until(lambda: False, 1.0)
+        else:
+            raise RuntimeError("the gripper controller did not accept the close command")
+        self.wait(handle.get_result_async(), timeout=15)
         self.r.spin_until(lambda: False, 1.0)
         position = float(self.r.grip_pos_msr)
         self.event("GRIPPER_CLOSED", position=position, empty_closes_to=gripper["close_cmd"])

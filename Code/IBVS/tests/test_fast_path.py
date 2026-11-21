@@ -157,3 +157,33 @@ def test_positioning_error_lists_why_every_path_failed(tmp_path):
     e.joint_plan = lambda target_deg: (_ for _ in ()).throw(RuntimeError("MoveIt joint plan failed: 99999"))
     with pytest.raises(RuntimeError, match="no path to the target pose.*observed-scene collision.*MoveIt joint plan failed: 99999"):
         e.positioning_path([30, -80, 40, -20, 200, -15], scene)
+
+
+def gripper_fixture(server=True, answers=(True,)):
+    """Fake gripper action client: answers[i] False = no handle yet (controller still spawning)."""
+    e = alignment_test.Experiment.__new__(alignment_test.Experiment)
+    e.args, e.events, e.sent = SimpleNamespace(live=True), [], []
+    e.grasp = dict(gripper=dict(close_cmd=.81, close_effort=30.))
+    handle = SimpleNamespace(accepted=True, get_result_async=lambda: SimpleNamespace(result=lambda: "done"))
+
+    def send(goal):
+        i = len(e.sent); e.sent.append((goal.command.position, goal.command.max_effort))
+        return SimpleNamespace(result=lambda: handle if answers[min(i, len(answers) - 1)] else None)
+    e.r = SimpleNamespace(grip=SimpleNamespace(wait_for_server=lambda timeout_sec: server, send_goal_async=send),
+                          spin_until=lambda *a: None, grip_pos_msr=.835)
+    e.wait = lambda future, timeout=10.0, monitor=False: future.result()
+    e.event = lambda name, **kw: e.events.append(name)
+    return e
+
+
+def test_close_gripper_retries_until_the_controller_answers():
+    e = gripper_fixture(answers=(False, False, True))
+    e.close_gripper()
+    assert e.sent == [(.81, 30.)] * 3 and e.events == ["GRIPPER_CLOSED"]
+
+
+def test_close_gripper_gives_clear_errors_when_the_controller_never_answers():
+    with pytest.raises(RuntimeError, match="did not accept"):
+        gripper_fixture(answers=(False,)).close_gripper()
+    with pytest.raises(RuntimeError, match="action server is not available"):
+        gripper_fixture(server=False).close_gripper()
