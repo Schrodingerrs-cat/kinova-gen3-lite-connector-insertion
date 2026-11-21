@@ -1,0 +1,18 @@
+# wires run in this order. name = connector in Grasp/config/{strip,connectors}.yaml, socket = IBVS marker socket
+wires:
+  - {name: usb_a, socket: usb_a, hint: ""}      # hint "x,y" (m, base frame) of the sticker, optional
+pick:
+  modes: [strip, cad]       # attempt 1 uses strip, attempt 2 cad, attempt 3 strip ...
+  max_attempts: 3
+align:
+  max_attempts: 3
+  timeout_s: 900
+  extra_args: []            # e.g. [--smooth]; IBVS refuses a held wire today, see README
+insert:
+  max_attempts: 2
+  axis_tool: null           # TBD: insertion axis in tool frame, e.g. [0, 0, 1]. null blocks live runs
+  depth_m: null             # TBD: measured insertion depth. null blocks live runs
+  speed_mps: 0.01
+  retreat_m: 0.05
+retry: {delay_s: 2, backoff: 2, max_delay_s: 30}
+max_consecutive_wire_failures: 2
