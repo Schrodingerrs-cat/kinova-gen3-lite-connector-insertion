@@ -3,25 +3,16 @@ import cv2
 import numpy as np
 
 from .markers import Tracker
-from .rectangles import make_rectangle_tracker
 from .shape_control import shape_metrics
 
 
 class FeatureOverlay:
     def __init__(self, config):
         self.marker = dict(config["feature_tracking"])
-        self.feature_type = self.marker.get('type', 'aruco')
-        self.holes = self.feature_type == 'hole_rectangles'
-        self.rectangle = self.feature_type in ('rectangle', 'hole_rectangles')
-        if self.holes:
-            from .hole_rectangles import validate_hole_settings
-            validate_hole_settings(self.marker)
-        if not self.rectangle and len(self.marker["ids"]) != 1:
-            raise ValueError("the center rectangle expects one marker")
-        self.marker_id = 0 if self.rectangle else int(self.marker["ids"][0])
-        self.label = "RECTANGLE / SQUARE" if self.rectangle else f"ArUco ID {self.marker_id}"
-        if self.holes:
-            self.label = f"HOLE RECTANGLE {self.marker.get('selected_rectangle', 1)} / 3"
+        if len(self.marker["ids"]) != 1:
+            raise ValueError("the servo expects exactly one marker")
+        self.marker_id = int(self.marker["ids"][0])
+        self.label = f"ArUco ID {self.marker_id}"
         self.order = np.asarray(self.marker.pop("canonical_target_order"), dtype=int)
         if self.order.shape != (4,) or sorted(self.order.tolist()) != list(range(4)):
             raise ValueError("canonical_target_order must be a permutation of 0..3")
@@ -45,16 +36,6 @@ class FeatureOverlay:
         self.corners = self.errors = None
         self.matched_frames = 0
 
-    def select_rectangle(self, number):
-        from .hole_rectangles import rectangle_number
-        if not self.holes:
-            raise ValueError('rectangle selection requires hole_rectangles tracking')
-        number = rectangle_number(number)
-        self.marker['selected_rectangle'] = number
-        self.label = f'HOLE RECTANGLE {number} / 3'
-        self.tracker = self.camera_key = None
-        self.clear()
-
     def clear(self):
         self.corners = self.errors = None
         self.matched_frames = 0
@@ -63,7 +44,7 @@ class FeatureOverlay:
             self.tracker.prev.clear()
 
     def render(self, image, K, distortion, stamp, age_s=0.0, frame_valid=True,
-               observation=None, draw_target=False, phase="", feature_tracker=None):
+               observation=None, draw_target=False, phase=""):
         """Detect on raw pixels; count each fresh camera timestamp only once."""
         result = image.copy()
         color = (80, 90, 255)
@@ -82,15 +63,14 @@ class FeatureOverlay:
             camera_key = (tuple(K.ravel()), tuple(distortion.ravel()))
             if self.camera_key != camera_key:
                 camera = dict(K=K.tolist(), distortion=distortion.tolist())
-                self.tracker = (make_rectangle_tracker(camera, self.marker, self.target) if self.rectangle
-                                else Tracker(camera, self.marker))
+                self.tracker = Tracker(camera, self.marker)
                 self.camera_key = camera_key
                 self.clear()
             if self.last_stamp is not None and stamp < self.last_stamp:
                 self.clear()
             if stamp != self.last_stamp:
                 self.last_stamp = stamp
-                pixels, valid = (self.tracker.detect(image if self.holes else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+                pixels, valid = (self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
                                  if observation is None else observation)
                 self.corners = pixels[0] if valid[0] else None
                 if self.corners is None:
@@ -107,11 +87,6 @@ class FeatureOverlay:
                     state = f"IN TOLERANCE {self.matched_frames}/{self.required_frames}"
                     color = (80, 235, 80)
 
-        context = feature_tracker if feature_tracker is not None else self.tracker
-        if self.holes and context is not None and K is not None and frame_valid and np.isfinite(age_s) and age_s <= self.stale_s:
-            context.draw_context(result)
-            if self.corners is None:
-                state = context.status
         if self.corners is not None:
             pixels = np.rint(self.corners).astype(np.int32)
             center = pixels.mean(axis=0)
@@ -119,8 +94,7 @@ class FeatureOverlay:
             for index, (actual, target) in enumerate(zip(pixels, self.target)):
                 actual = tuple(int(v) for v in actual)
                 cv2.circle(result, actual, 4, (255, 230, 0), -1, cv2.LINE_AA)
-                feature = f'H{index+1}' if self.holes else f'C{index}'
-                label = f"{feature} -> P{self.order[index]+1}"
+                label = f"C{index} -> P{self.order[index]+1}"
                 width = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, .45, 1)[0][0]
                 x = actual[0] - width - 7 if actual[0] < center[0] else actual[0] + 7
                 y = actual[1] - 8 if actual[1] < center[1] else actual[1] + 18
@@ -141,7 +115,7 @@ class FeatureOverlay:
             rms = float(np.sqrt(np.mean(self.errors**2)))
             detail = f"Corner error: RMS {rms:.1f} px | max {self.errors.max():.1f} px | tolerance {self.tolerance:g} px"
         cv2.putText(result, detail, (12, 80), cv2.FONT_HERSHEY_SIMPLEX, .5, (235, 235, 235), 1, cv2.LINE_AA)
-        if self.rectangle and self.corners is not None:
+        if self.corners is not None:
             metrics = shape_metrics(self.corners, self.target)
             cv2.putText(result, f"Center {metrics['center_error_px']:.1f} px | size {100*metrics['size_ratio']:.1f}% | angle {metrics['orientation_error_deg']:+.1f} deg",
                         (12, 106), cv2.FONT_HERSHEY_SIMPLEX, .5, (255, 230, 0), 1, cv2.LINE_AA)

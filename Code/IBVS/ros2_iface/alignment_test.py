@@ -30,13 +30,27 @@ from ibvs.alignment import camera_step, fit_camera_tool_mapping, marker_plane_de
 from ibvs.control import Convergence  # noqa: E402
 from ibvs.depth import corner_depths  # noqa: E402
 from ibvs.frames import matrix  # noqa: E402
-from ibvs.markers import Tracker  # noqa: E402
-from ibvs.rectangles import make_rectangle_tracker, TrackingLost, mean_rectangle_depths  # noqa: E402
+from ibvs.markers import Tracker, TrackingLost, mean_marker_depth  # noqa: E402
 from ibvs.overlay import FeatureOverlay  # noqa: E402
 from ibvs.recording import TimedVideo  # noqa: E402
 
 
-def load_inputs(settings_path, reference_path, rectangle_id=None):
+def marker_goal(reference, socket, goals_path):
+    """Marker id and taught goal corners of one socket; refuses a socket whose goal was never taught."""
+    sockets = reference["sockets"]
+    if socket not in sockets:
+        raise ValueError("--socket must be one of: " + ", ".join(sockets))
+    goals = yaml.safe_load(Path(goals_path).read_text()) or {}
+    taught = goals.get(socket)
+    if not taught:
+        raise ValueError("no taught goal for socket %s: jog the plug to the aligned pre-insertion pose and run ros2_iface/teach_goal.py --socket %s" % (socket, socket))
+    if taught["marker_id"] != sockets[socket]:
+        raise ValueError("taught goal was made for marker %s, config says %s" % (taught["marker_id"], sockets[socket]))
+    tracking = dict(reference["feature_tracking"], ids=[sockets[socket]])
+    return dict(feature_tracking=tracking, corners_image_px=taught["corners_image_px"], camera_K=taught["camera_K"], socket=socket)
+
+
+def load_inputs(settings_path, reference_path, socket=None, goals_path=None):
     settings = yaml.safe_load(settings_path.read_text())
     for key, value in settings.items():
         if not isinstance(value, (int, float)) or not np.isfinite(value) or value <= 0:
@@ -48,12 +62,9 @@ def load_inputs(settings_path, reference_path, rectangle_id=None):
             raise ValueError(key + " must be an integer")
     if reference_path.suffix in (".yaml", ".yml"):
         reference = yaml.safe_load(reference_path.read_text())
-        if reference.get("feature_type") != "rectangle":
-            raise ValueError("the YAML target must describe a rectangle")
-        if rectangle_id is not None:
-            if reference.get('feature_tracking', {}).get('type') != 'hole_rectangles':
-                raise ValueError('--rectangle requires the hole_rectangles reference')
-            reference['feature_tracking']['selected_rectangle'] = rectangle_id
+        if reference.get("feature_type") != "marker":
+            raise ValueError("the YAML target must describe an ArUco marker")
+        reference.update(marker_goal(reference, socket, goals_path or ROOT / "config" / "taught_goals.yaml"))
         settings["damping"] = 0.0
         settings["max_servo_joint_step_deg"] = 5.5
         FeatureOverlay(reference)
@@ -66,7 +77,7 @@ def load_inputs(settings_path, reference_path, rectangle_id=None):
             if key in reference:
                 value = reference[key]
                 if not isinstance(value, (float,int)) or not np.isfinite(value) or value <= 0:
-                    raise ValueError("invalid rectangle setting: " + key)
+                    raise ValueError("invalid marker setting: " + key)
                 if key in ("max_steps", "error_growth_frames", "tracking_recovery_frames", "max_tracking_recoveries") and int(value) != value:
                     raise ValueError(key + " must be an integer")
                 settings[key] = value
@@ -76,8 +87,8 @@ def load_inputs(settings_path, reference_path, rectangle_id=None):
                 raise ValueError("six positive joint gains are required")
             settings["joint_gains"] = gains.tolist()
     else:
-        if rectangle_id is not None:
-            raise ValueError('--rectangle requires the hole_rectangles reference')
+        if socket is not None:
+            raise ValueError('--socket requires the marker YAML reference')
         reference = json.loads(reference_path.read_text())
         image = reference_path.parent / reference["image_file"]
         if hashlib.sha256(image.read_bytes()).hexdigest() != reference["image_sha256"]:
@@ -111,11 +122,11 @@ class Experiment:
         self.video, self.frames = None, 0
         self.phase, self.last_image_stamp = "STARTUP", None
         self.after_motion_stamp = 0.0
-        self.is_rectangle = reference.get("feature_type") == "rectangle"
-        self.display = FeatureOverlay(reference) if self.is_rectangle else None
+        self.is_marker = reference.get("feature_type") == "marker"
+        self.display = FeatureOverlay(reference) if self.is_marker else None
         self.detection = None
         self.last_observation = self.initial_observation = None
-        self.last_rectangle_seen = 0.0
+        self.last_marker_seen = 0.0
         self.overlay_video = None
         self.correction_video = None
         self.record_correction = False
@@ -141,7 +152,7 @@ class Experiment:
         qos = QoSProfile(depth=2, reliability=ReliabilityPolicy.RELIABLE)
         self.camera_prefix = reference.get("camera_topic_prefix", "/camera/camera").rstrip("/")
         self.image_type = Image
-        self.overlay_pub = self.r.create_publisher(Image, "/ibvs/feature_image", 1) if self.is_rectangle else None
+        self.overlay_pub = self.r.create_publisher(Image, "/ibvs/feature_image", 1) if self.is_marker else None
         self.r.create_subscription(Image, self.camera_prefix + "/color/image_raw", self.on_color, qos)
         for name, topic, typ in [("depth", self.camera_prefix + "/aligned_depth_to_color/image_raw", Image),
                                   ("info", self.camera_prefix + "/color/camera_info", CameraInfo)]:
@@ -245,9 +256,9 @@ class Experiment:
             self.pump()
             if monitor:
                 self.fresh(camera=self.phase in ("ALIGN", "CALIBRATE"))
-                if (self.is_rectangle and self.phase == "ALIGN" and self.detection is not None and not self.detection[2][0]
-                        and time.monotonic()-self.last_rectangle_seen > self.c["tracking_loss_tolerance_s"]):
-                    raise TrackingLost("selected rectangle was lost during the step")
+                if (self.is_marker and self.phase == "ALIGN" and self.detection is not None and not self.detection[2][0]
+                        and time.monotonic()-self.last_marker_seen > self.c["tracking_loss_tolerance_s"]):
+                    raise TrackingLost("the marker was lost during the step")
             if time.monotonic() > deadline:
                 if future is not self.pending:
                     future.cancel()
@@ -286,25 +297,24 @@ class Experiment:
         self.r._img["color"] = msg
         image = self.bgr(msg)
         annotated = None
-        if self.is_rectangle and self.tracker is not None:
+        if self.is_marker and self.tracker is not None:
             pixels, valid = np.full((1,4,2), np.nan), np.array([False])
             if self.phase == "ALIGN":
-                pixels, valid = self.tracker.detect(image if self.reference['feature_tracking']['type']=='hole_rectangles'
-                                                     else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
+                pixels, valid = self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
                 if valid[0]:
-                    self.last_rectangle_seen = time.monotonic()
+                    self.last_marker_seen = time.monotonic()
                 else:
                     if self.detection is None or self.detection[2][0]:
                         self.tracking_epoch += 1
-                        cv2.imwrite(str(self.output / "lost_rectangle.png"), image)
+                        cv2.imwrite(str(self.output / "lost_marker.png"), image)
                     with (self.output / "tracking_loss.jsonl").open("a") as record:
-                        record.write(json.dumps(dict(image_stamp=self.stamp(msg), candidates=len(self.tracker.candidates),
-                                                     seconds_since_seen=time.monotonic()-self.last_rectangle_seen)) + "\n")
+                        record.write(json.dumps(dict(image_stamp=self.stamp(msg), ids_seen=self.tracker.candidates,
+                                                     seconds_since_seen=time.monotonic()-self.last_marker_seen)) + "\n")
             self.detection = (self.stamp(msg), pixels, valid)
             age = max(0., self.r.get_clock().now().nanoseconds*1e-9-self.stamp(msg))
             annotated = self.display.render(image, self.camera["K"], self.camera["distortion"],
                                              self.stamp(msg), age_s=age, observation=(pixels,valid), draw_target=True,
-                                             phase=getattr(self, 'visual_stage', self.phase), feature_tracker=self.tracker)
+                                             phase=getattr(self, 'visual_stage', self.phase))
             stamp = self.stamp(msg)
             if self.record_start_stamp is None:
                 self.record_start_stamp = stamp
@@ -382,7 +392,7 @@ class Experiment:
             if not self.args.bringup:
                 raise RuntimeError("camera is unavailable; run with --bringup")
             command = ["ros2", "launch", "realsense2_camera", "rs_launch.py", "align_depth.enable:=true"]
-            if self.is_rectangle:
+            if self.is_marker:
                 command += ["camera_name:=eih_cam", "camera_namespace:=/", "tf_prefix:=eih_cam",
                             "depth_module.color_profile:=848x480x30", "depth_module.depth_profile:=848x480x30"]
             self.start("camera", command)
@@ -394,10 +404,12 @@ class Experiment:
         if info is None or [info.width, info.height] != self.reference["image_size_px"]:
             raise RuntimeError("camera resolution differs from the reference")
         self.camera = dict(K=np.array(info.k).reshape(3, 3).tolist(), distortion=list(info.d))
-        if self.is_rectangle:
+        if self.is_marker:
             if info.header.frame_id != self.reference["camera_frame_id"]:
-                raise RuntimeError("camera frame differs from the rectangle configuration")
-            self.tracker = make_rectangle_tracker(self.camera, self.reference["feature_tracking"], self.reference["corners_image_px"])
+                raise RuntimeError("camera frame differs from the marker configuration")
+            if np.abs(np.array(self.camera["K"]) - np.array(self.reference["camera_K"])).max() > 1.0:
+                raise RuntimeError("camera intrinsics differ from the taught goal; teach the goal again")
+            self.tracker = Tracker(self.camera, {**self.reference["feature_tracking"], "target_pixels": {self.reference["feature_tracking"]["ids"][0]: self.reference["corners_image_px"]}})
         else:
             self.tracker = Tracker(self.camera, {**self.reference, "min_side_px": self.c["min_marker_side_px"],
                                                  "max_jump_px": self.c["max_corner_jump_px"]})
@@ -532,18 +544,18 @@ class Experiment:
         if not self.args.live:
             raise RuntimeError("preview mode cannot send a joint trajectory")
         self.fresh(camera=self.phase in ("ALIGN", "CALIBRATE"))
-        if self.is_rectangle and self.phase == "ALIGN":
+        if self.is_marker and self.phase == "ALIGN":
             deadline = time.monotonic()+self.c["tracking_loss_tolerance_s"]
             while self.detection is None or not self.detection[2][0]:
                 if time.monotonic() > deadline:
-                    raise TrackingLost("no current rectangle; refusing to send an alignment step")
+                    raise TrackingLost("no current marker; refusing to send an alignment step")
                 self.pump()
                 self.fresh(camera=True)
         drift = float(np.degrees(np.abs(self.r.q - path[0])).max())
         if drift > 0.5:
             raise RuntimeError("arm moved during planning; refusing the stale plan")
         planned_points=len(path)
-        precise = self.is_rectangle and self.phase == "ALIGN"
+        precise = self.is_marker and self.phase == "ALIGN"
         profile='segmented_quintic'
         if precise and self.c.get('smooth_joint_segments',False):
             from ibvs.alignment import straight_joint_path
@@ -577,7 +589,7 @@ class Experiment:
             if result.result.error_code != 0:
                 raise RuntimeError("joint trajectory failed: " + result.result.error_string)
             finished = time.monotonic()
-            if self.is_rectangle:
+            if self.is_marker:
                 settle_s=self.c["arrival_settle_s"] if precise else self.c.get('position_settle_s',self.c['arrival_settle_s'])
                 settle_until = finished + settle_s
                 while time.monotonic() < settle_until:
@@ -590,7 +602,7 @@ class Experiment:
             self.fresh(camera=self.phase in ("ALIGN", "CALIBRATE"))
             error = np.degrees(np.abs(self.r.q - path[-1]))
             tolerance = self.c["arrival_tolerance_deg"] if precise else 1.0
-            if self.is_rectangle:
+            if self.is_marker:
                 self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
             if self.r.joint_rx <= finished or error.max() > tolerance:
                 raise RuntimeError("fresh joint feedback did not confirm arrival")
@@ -646,7 +658,7 @@ class Experiment:
             image = self.bgr(color)
             if self.initial_observation is None:
                 cv2.imwrite(str(self.output / "start_alignment.png"), image)
-            if self.is_rectangle:
+            if self.is_marker:
                 if self.detection is None or self.detection[0] != stamp:
                     continue
                 pixels, valid = self.detection[1:]
@@ -663,18 +675,10 @@ class Experiment:
             if self.initial_observation is None:
                 self.initial_observation = observation
                 np.savez_compressed(self.output / "initial_observation.npz", **observation)
-            if self.is_rectangle:
+            if self.is_marker:
                 raw = corner_depths(metres, pixels[0], self.c["depth_min_m"], self.c["depth_max_m"])
                 try:
-                    if self.reference['feature_tracking']['type'] == 'hole_rectangles':
-                        from ibvs.hole_rectangles import hole_rim_depths
-                        Z, support = hole_rim_depths(metres, pixels[0],
-                            self.tracker.hole_radii[self.tracker.selected_rectangle-1],
-                            self.camera['K'], self.camera['distortion'],
-                            self.c['depth_min_m'], self.c['depth_max_m'], self.c['depth_plane_inlier_m'],
-                            self.c['min_depth_points'], self.c['min_depth_inlier_fraction'])
-                    else:
-                        Z, support = mean_rectangle_depths(metres,pixels[0],self.c["depth_min_m"],self.c["depth_max_m"])
+                    Z, support = mean_marker_depth(metres,pixels[0],self.c["depth_min_m"],self.c["depth_max_m"])
                 except ValueError as error:
                     raise TrackingLost(str(error)) from error
             else:
@@ -690,8 +694,8 @@ class Experiment:
                                json.dumps([None if not np.isfinite(z) else float(z) for z in raw]), json.dumps(support)])
             self.csv_file.flush()
             return xy, Z, rms, maximum
-        if self.is_rectangle:
-            raise TrackingLost('no selected rectangle in fresh synchronized camera/depth pairs')
+        if self.is_marker:
+            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs')
         raise RuntimeError('no stable reference marker in fresh synchronized camera/depth pairs')
 
     def average_observation(self):
@@ -780,7 +784,7 @@ class Experiment:
             print("Home plan checked: %d joint points. No motion sent." % len(path), flush=True)
             return dict(status="PREVIEW", note="Post-grasp and servo plans require actual feedback after reaching their starting pose")
         if not self.args.from_post_grasp:
-            scene = self.positioning_scene() if getattr(self,'is_rectangle',False) else None
+            scene = self.positioning_scene() if getattr(self,'is_marker',False) else None
             try:
                 for index, q in enumerate(waypoints):
                     self.phase = "HOME" if index == 0 else "POST_GRASP"
@@ -798,8 +802,8 @@ class Experiment:
             raise RuntimeError("--from-post-grasp requires the recorded post-grasp pose")
         self.origin = self.fk(self.r.q) @ self.T_EC
         self.phase = "ALIGN"
-        self.visual_stage = 'ACQUIRE SQUARE'
-        if getattr(self, 'is_rectangle', False) and not self.args.position_only:
+        self.visual_stage = 'ACQUIRE MARKER'
+        if getattr(self, 'is_marker', False) and not self.args.position_only:
             from types import SimpleNamespace
             from joint2_priority_servo import servo
             self.visual_stage = 'STATIONARY reach/clearance check'
@@ -905,11 +909,11 @@ def main():
     parser.add_argument("--position-only", action="store_true", help="stop after positioning and checking marker/depth")
     parser.add_argument("--calibration-only", action="store_true", help="stop after measuring and checking the local camera/tool mapping")
     parser.add_argument("--from-post-grasp", action="store_true", help="start alignment at the already reached post-grasp pose")
-    parser.add_argument("--show-image", action="store_true", help="open the camera pane with the exact rectangle used by IBVS; Q stops")
+    parser.add_argument("--show-image", action="store_true", help="open the camera pane with the marker corners used by IBVS; Q stops")
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
     parser.add_argument("--settings", type=Path, default=ROOT / "config" / "alignment.yaml")
-    parser.add_argument("--reference", type=Path, default=ROOT / "config" / "center_rectangle.yaml")
-    parser.add_argument('--rectangle', type=int, choices=(1, 2, 3), help='hole rectangle to track, numbered left to right at acquisition')
+    parser.add_argument("--reference", type=Path, default=ROOT / "config" / "marker_goal.yaml")
+    parser.add_argument('--socket', help='socket whose marker and taught goal to use (usb_a, audio, ac)')
     parser.add_argument("--hand-eye", type=Path, help="reuse a local_hand_eye.json from this unchanged camera mount; default: measure local mapping")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -920,10 +924,10 @@ def main():
         os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
     if args.position_only and args.calibration_only:
         parser.error("choose either --position-only or --calibration-only")
-    settings, reference, grasp = load_inputs(args.settings, args.reference, args.rectangle)
-    rectangle = reference.get("feature_type") == "rectangle"
-    if rectangle and (args.calibration_only or args.hand_eye):
-        parser.error("rectangle mode uses standard IBVS and the existing transform; calibration probes/fitted mappings are disabled")
+    settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket)
+    marker = reference.get("feature_type") == "marker"
+    if marker and (args.calibration_only or args.hand_eye):
+        parser.error("marker mode uses standard IBVS and the existing transform; calibration probes/fitted mappings are disabled")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     output = args.out or PROJECT / "Media" / "IBVS" / ("run_" + stamp + "_free_space")
     output.mkdir(parents=True, exist_ok=False)
@@ -934,14 +938,13 @@ def main():
                   home_deg=grasp["scan"]["home_joints_deg"], post_grasp=grasp["post_grasp"],
                   hand_eye=grasp["camera"], hand_eye_status="existing estimate; bounded free-space test only",
                   method=("Undamped center/size IBVS then four-corner IBVS; weighted joint mobility; measured mean depth"
-                          if rectangle else "6-DoF image-error control with measured depth and collision-checked position steps"))
+                          if marker else "6-DoF image-error control with measured depth and collision-checked position steps"))
     (output / "config.json").write_text(json.dumps(report, indent=2) + "\n")
     for relative in ["ros2_iface/alignment_test.py", "ibvs/alignment.py", "ibvs/markers.py", "ibvs/control.py",
-                     "ibvs/depth.py", "ibvs/frames.py", "ibvs/rectangles.py", "ibvs/overlay.py", "ibvs/shape_control.py",
+                     "ibvs/depth.py", "ibvs/frames.py", "ibvs/overlay.py", "ibvs/shape_control.py",
                      "ros2_iface/joint2_priority_servo.py", "ros2_iface/observed_scene.py",
                      "ibvs/recording.py", "ibvs/kinematics.py",
-                     "ibvs/hole_rectangles.py", "ibvs/hole_templates.py", "ibvs/self_depth.py",
-                     "config/alignment.yaml", "config/center_rectangle.yaml"]:
+                     "ibvs/self_depth.py", "config/alignment.yaml", "config/marker_goal.yaml", "config/taught_goals.yaml"]:
         snapshot = output / "source" / relative
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, snapshot)

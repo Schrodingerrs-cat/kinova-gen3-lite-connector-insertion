@@ -16,7 +16,7 @@ from scipy.spatial.transform import Rotation
 from alignment_test import Experiment, ROOT, PROJECT, load_inputs
 from ibvs.alignment import camera_joint_jacobian, within_limits, smooth_servo_path
 from ibvs.control import Convergence
-from ibvs.rectangles import TrackingLost
+from ibvs.markers import TrackingLost
 from ibvs.shape_control import shape_ibvs_step, shape_metrics, task_cost, project_motion, STEP_SCALES
 from observed_scene import ObservedScene
 
@@ -162,7 +162,7 @@ def acquire(e, deadline, frames=1):
         count += 1
         if count >= frames:
             return observation
-    raise TrackingLost('selected rectangle was not recovered before the stationary hold timeout')
+    raise TrackingLost('marker was not recovered before the stationary hold timeout')
 
 
 def servo(e, args, report):
@@ -301,9 +301,9 @@ def servo(e, args, report):
                 report['recoveries'] += 1
                 if report['recoveries'] > e.c.get('max_tracking_recoveries',10):
                     raise TrackingLost('tracking recovery limit reached') from error
-                e.visual_stage = 'HOLD: reacquire the same rectangle'
+                e.visual_stage = 'HOLD: reacquire the marker'
                 e.event('TRACKING_HOLD', recovery=report['recoveries'], reason=str(error))
-                print('Holding for selected rectangle reacquisition in the same run.',flush=True)
+                print('Holding for marker reacquisition in the same run.',flush=True)
                 e.hold(e.c['arrival_settle_s'])
                 deadline = min(started+e.c['timeout_s'],time.monotonic()+e.c.get('tracking_recovery_timeout_s',12.))
                 xy,Z,rms,maximum = acquire(e,deadline,int(e.c.get('tracking_recovery_frames',3)))
@@ -316,7 +316,7 @@ def servo(e, args, report):
                 final_hold_done=False
                 scene.check(e.r.q)
                 e.event('TRACKING_RESUMED', recovery=report['recoveries'])
-                print('Rectangle recovered; continuing the same IBVS run.',flush=True)
+                print('Marker recovered; continuing the same IBVS run.',flush=True)
     finally:
         scene.close()
 
@@ -332,12 +332,12 @@ def main():
     parser.add_argument('--bringup', action='store_true')
     parser.add_argument('--home-first', action='store_true', help='home then recorded post-grasp before IBVS')
     parser.add_argument('--steps', type=int, default=800)
-    parser.add_argument('--wait-target-s', type=float, default=3., help='stationary wait for a visible rectangle')
+    parser.add_argument('--wait-target-s', type=float, default=3., help='stationary wait for the visible marker')
     parser.add_argument('--resume-run', type=Path, help='reuse a verified earlier fixed-scene snapshot after visual validation')
     parser.add_argument('--near-scene', action='store_true', help='fresh scene from 11 cm for this verified D405/gripper setup')
     parser.add_argument('--record-sequence',action='store_true',help='also record positioning; default records only IBVS')
-    parser.add_argument('--reference', type=Path, default=ROOT/'config/center_rectangle.yaml')
-    parser.add_argument('--rectangle', type=int, choices=(1, 2, 3), help='hole rectangle to track, numbered left to right at acquisition')
+    parser.add_argument('--reference', type=Path, default=ROOT/'config/marker_goal.yaml')
+    parser.add_argument('--socket', required=True, help='socket whose marker and taught goal to use (usb_a, audio, ac)')
     parser.add_argument('--fast',action='store_true',help='UNVALIDATED faster profile: bigger steps, short settling, coarser collision sampling')
     parser.add_argument('--smooth',action='store_true',help='orientation-aware approach, continuous straight servo segments and shorter settling')
     parser.add_argument('--control-hz',type=float,help='maximum step-loop frequency; actual rate is limited by planning, motion and fresh feedback')
@@ -349,7 +349,7 @@ def main():
         parser.error('--resume-run continues the current pose and cannot be combined with --home-first')
     if args.resume_run and args.near_scene:
         parser.error('choose either a fresh near scene or a saved scene')
-    c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.rectangle)
+    c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket)
     if args.control_hz is not None and (not np.isfinite(args.control_hz) or not .2<=args.control_hz<=3.):
         parser.error('control-hz must be between 0.2 and 3')
     if args.fast and (args.smooth or args.control_hz is not None):parser.error('--fast replaces --smooth and --control-hz')
@@ -376,7 +376,7 @@ def main():
     for source in (__file__, ROOT/'ibvs/shape_control.py', ROOT/'ros2_iface/observed_scene.py'):
         shutil.copyfile(source, out/os.path.basename(source))
     for relative in ('ros2_iface/alignment_test.py', 'ibvs/alignment.py', 'ibvs/control.py', 'ibvs/depth.py',
-                     'ibvs/frames.py', 'ibvs/rectangles.py', 'ibvs/hole_rectangles.py', 'ibvs/hole_templates.py', 'ibvs/self_depth.py', 'ibvs/overlay.py', 'ibvs/recording.py', 'ibvs/kinematics.py', 'config/center_rectangle.yaml'):
+                     'ibvs/frames.py', 'ibvs/markers.py', 'ibvs/self_depth.py', 'ibvs/overlay.py', 'ibvs/recording.py', 'ibvs/kinematics.py', 'config/marker_goal.yaml', 'config/taught_goals.yaml'):
         snapshot = out/'source'/relative
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT/relative, snapshot)
