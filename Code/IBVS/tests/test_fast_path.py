@@ -125,7 +125,8 @@ def test_sequenced_path_moves_one_group_at_a_time_in_small_steps():
 def positioning_fixture(tmp_path, reject):
     e = alignment_test.Experiment.__new__(alignment_test.Experiment)
     e.r = SimpleNamespace(q=np.zeros(6)); e.checked, e.planned = [], []
-    e.check_joint_path = lambda path, local=False: e.checked.append(len(path))
+    e.check_joint_path = lambda path, local=False, limits=True: e.checked.append(len(path))
+    e.skip_checks, e.fk, e.T_tcp, e.T_EC, e.wrist_fk = False, lambda q: np.eye(4), np.eye(4), np.eye(4), None
     e.joint_plan = lambda target_deg: (e.planned.append(1), np.array([e.r.q, np.radians(target_deg)]))[1]
 
     class Scene:
@@ -211,3 +212,29 @@ def test_collision_scene_check_is_skipped_with_no_checks():
     scene = ObservedScene.__new__(ObservedScene)
     scene.e = SimpleNamespace(skip_checks=True, state=lambda q: 1 / 0)         # would blow up if it queried MoveIt
     scene.check(np.zeros(6))
+
+
+def test_positioning_takes_the_route_whose_lowest_point_is_highest(tmp_path):
+    e, scene = positioning_fixture(tmp_path, lambda q: False)
+    # a low spot where joint 2 is near -0.5 while joint 5 has already moved: routes that move joint 5 before joint 2 pass through it
+    def fk(q):
+        T = np.eye(4)
+        T[2, 3] = 1.0 - .9 * np.exp(-50 * (q[1] + .5) ** 2) * (q[4] > .5)
+        return T
+    e.fk = fk
+    target = np.degrees([0, -1., 0, 0, 1., 0])
+    path = e.positioning_path(target, scene)
+    assert e.lowest_height(path) > .99                                                       # avoided the low spot
+    assert np.allclose(path[path[:, 1] > -.99][:, 4], 0, atol=1e-9) or e.lowest_height(path) > .99
+    first_j5_move = np.argmax(np.abs(path[:, 4]) > 1e-9)
+    assert np.isclose(path[first_j5_move, 1], -1.)                                           # joint 2 finished before joint 5 started
+
+
+def test_no_checks_skips_the_floor_limit_for_positioning_only(tmp_path):
+    seen = []
+    e, scene = positioning_fixture(tmp_path, lambda q: False)
+    e.check_joint_path = lambda path, local=False, limits=True: seen.append(limits)
+    e.positioning_path([30, -80, 40, -20, 200, -15], scene)
+    e.skip_checks = True
+    e.positioning_path([30, -80, 40, -20, 200, -15], scene)
+    assert seen == [True, False]

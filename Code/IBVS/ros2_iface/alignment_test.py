@@ -403,16 +403,30 @@ class Experiment:
         self.tracking_epoch += 1
         self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
 
+    def lowest_height(self, path):
+        """Lowest point (m, base frame) of tool, fingertips, camera and wrist along a joint path."""
+        lowest = np.inf
+        for q in path:
+            T = self.fk(q)
+            heights = [T[2, 3], (T @ self.T_tcp)[2, 3], (T @ self.T_EC)[2, 3]]
+            if getattr(self, "wrist_fk", None) is not None:
+                heights.append(self.wrist_fk(q)[2, 3])
+            lowest = min(lowest, *heights)
+        return lowest
+
     def positioning_path(self, target_deg, scene):
-        """Joint path for a positioning move: joint groups one after another, then a straight joint move, every sample
-        checked against the floor and the collision scene; MoveIt's planner only if none of them is clear."""
+        """Joint path for a positioning move: joint groups one after another (several orders) or a straight joint move; the one whose
+        lowest point is highest goes first, and is checked against the floor and the collision scene unless --no-checks.
+        MoveIt's planner only if none is clear."""
         target, q0, why = np.radians(target_deg), self.r.q.copy(), []
         n = max(2, int(np.ceil(np.degrees(np.abs(target - q0).max()))) + 1)
-        for path in [sequenced_joint_path(q0, target, groups) for groups in POSITIONING_ORDERS] + [np.linspace(q0, target, n)]:
+        candidates = [sequenced_joint_path(q0, target, groups) for groups in POSITIONING_ORDERS] + [np.linspace(q0, target, n)]
+        for path in sorted(candidates, key=self.lowest_height, reverse=True):
             try:
-                self.check_joint_path(path)
+                self.check_joint_path(path, limits=not self.skip_checks)
                 for q in path if scene is not None else ():
                     scene.check(q)
+                print("Positioning path: lowest point %.0f mm above the base plane." % (self.lowest_height(path) * 1e3), flush=True)
                 return path
             except (RuntimeError, ValueError) as error:
                 why.append(str(error)[:150])
@@ -498,6 +512,7 @@ class Experiment:
         (self.output/'robot_description.urdf').write_text(description)
         (self.output/'fk_validation.json').write_text(json.dumps(errors,indent=2)+'\n')
         self.local_fk = model
+        self.wrist_fk = UrdfChain(description, BASE, 'upper_wrist_link', JOINTS)
         print('Local URDF FK verified against MoveIt; collision services remain active.',flush=True)
 
     def check_path(self, trajectory, local=False):
@@ -513,7 +528,7 @@ class Experiment:
         """Straight joint-space move from the current joints; same limits as a planned path, no MoveIt planning call."""
         return self.check_joint_path(np.vstack([self.r.q.copy(), target_rad]), local)
 
-    def check_joint_path(self, path, local=False):
+    def check_joint_path(self, path, local=False, limits=True):
         if not np.isfinite(path).all():
             raise RuntimeError("non-finite planned joints")
         changes = np.degrees(np.abs(path - path[0])).max(axis=0)
@@ -524,7 +539,7 @@ class Experiment:
                 record.write(json.dumps(rejected) + "\n")
             raise RuntimeError("IK requires %.2f deg on joint %d (step limit %.2f deg)" %
                                (changes.max(), int(changes.argmax())+1, self.c["max_servo_joint_step_deg"]))
-        for q in path:
+        for q in path if limits else ():
             within_limits(self.fk(q), self.T_EC, self.T_tcp, self.origin, self.floor,
                           self.c["max_camera_travel_m"], np.radians(self.c["max_camera_rotation_deg"]))
         return path
@@ -939,9 +954,9 @@ class Experiment:
             log.close()
 
 
-# Joint groups for positioning moves (0-based): wrist roll with the base first, then the wrist pitch, then elbow/forearm, then the shoulder.
-# From home to the wall this keeps every link at least 9 cm above the table; the straight joint move dipped to the table.
-POSITIONING_ORDERS = ([(0, 5), (4,), (2, 3), (1,)], [(2, 3), (4,), (0, 5), (1,)])
+# Joint groups for positioning moves (0-based). Which order keeps the arm high depends on the direction: home -> wall wants the base and
+# wrist roll first, wall -> home wants the shoulder first. The route with the highest lowest point is taken (see positioning_path).
+POSITIONING_ORDERS = ([(0, 5), (4,), (2, 3), (1,)], [(1,), (2, 3), (4,), (0, 5)], [(1,), (4,), (2, 3), (0, 5)], [(2, 3), (4,), (0, 5), (1,)])
 
 
 def scale_speeds(settings, scale):
