@@ -49,14 +49,17 @@ def main():
     if not all(j in state for j in JOINTS):
         sys.exit("no /joint_states within 10 s: the arm driver is not running (start it, e.g. run_end_to_end.sh --bringup)")
     q0 = np.array([state[j] for j in JOINTS])
-    client = node.create_client(GetParameters, "/move_group/get_parameters")
-    if not client.wait_for_service(timeout_sec=5):
-        sys.exit("MoveIt is not running: it provides the robot model (start it, e.g. run_end_to_end.sh --bringup)")
-    future = client.call_async(GetParameters.Request(names=["robot_description"]))
-    rclpy.spin_until_future_complete(node, future, timeout_sec=10)
-    if future.result() is None:
-        sys.exit("MoveIt did not answer for the robot model")
-    urdf = future.result().values[0].string_value
+    urdf = ""
+    for service in ("/robot_state_publisher/get_parameters", "/move_group/get_parameters"):     # the arm driver publishes the robot model
+        client = node.create_client(GetParameters, service)
+        if client.wait_for_service(timeout_sec=5):
+            future = client.call_async(GetParameters.Request(names=["robot_description"]))
+            rclpy.spin_until_future_complete(node, future, timeout_sec=10)
+            if future.result() is not None and future.result().values[0].string_value:
+                urdf = future.result().values[0].string_value
+                break
+    if not urdf:
+        sys.exit("could not read the robot model (no robot_state_publisher or MoveIt): is the arm driver up?")
     fk, wrist = UrdfChain(urdf, "base_link", "tool_frame", JOINTS), UrdfChain(urdf, "base_link", "upper_wrist_link", JOINTS)
     T_EC = matrix(grasp["camera"]["hand_eye_xyz_m"], grasp["camera"]["hand_eye_quat_xyzw"])
     T_tcp = matrix(grasp["gripper"]["tcp_in_tool_xyz_m"], grasp["gripper"]["tcp_in_tool_quat_xyzw"])
