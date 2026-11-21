@@ -53,11 +53,12 @@ def project(p):
     return int(round(K[0, 0] * c[0] / c[2] + K[0, 2])), int(round(K[1, 1] * c[1] / c[2] + K[1, 2]))
 
 
-CAD = plan.get("method") == "cad_fit"
-if CAD:   # CAD mode: no 7-pose scan; the fit overlays are already in plots/. Write the observed and fitted-model clouds.
+CAD = plan.get("method") in ("cad_fit", "strip_fit")
+if CAD:   # cad / strip mode: no 7-pose scan; the fit overlays are already in plots/. Write the observed points (and the fitted model for cad).
     P = np.load(plan_dir / "cad_points.npz")
     ply(RUN / "point_clouds" / "1_cad_observed_points.ply", P["observed_mm"] / 1000, np.tile(np.array([0, 255, 0], np.uint8), (len(P["observed_mm"]), 1)))
-    ply(RUN / "point_clouds" / "2_cad_model_fitted.ply", P["model_posed_mm"] / 1000, np.tile(np.array([255, 0, 255], np.uint8), (len(P["model_posed_mm"]), 1)))
+    if "model_posed_mm" in P:
+        ply(RUN / "point_clouds" / "2_cad_model_fitted.ply", P["model_posed_mm"] / 1000, np.tile(np.array([255, 0, 255], np.uint8), (len(P["model_posed_mm"]), 1)))
     tcp, fused, marker, gc = None, np.zeros((0, 3)), np.zeros((0, 3)), np.zeros((0, 3))
 else:
     if (RUN / "scan_used.txt").exists():  # run reused a scan: copy it in so the package is self-contained

@@ -6,6 +6,16 @@ A teal-marker sticker on the TOP face of the connector head marks the grasp. No 
 measured from the colour image around the sticker. The earlier depth-based housing planner and optimizer are archived in
 [`archive/old_depth_pipeline_20261107/`](archive/old_depth_pipeline_20261107/README.md).
 
+## Which mode? (`run_pipeline.py --mode ...`)
+| mode | scan | how the grasp is found | needs | status |
+|---|---|---|---|---|
+| `head` (default) | 7-pose scan, then 1 close view | sticker + head pixels -> grid search of pad positions on the head cloud | green sticker on the head | ran on the arm, n = 1 per run (4 runs) |
+| `cloud` | 7-pose scan, then 1 close view | marker region only, candidate search | green sticker | ran on the arm, n = 1 |
+| `model` | 7-pose scan, then 1 close view | ArUco tag on the panel -> plug pose from a stored offset (STEP candidates) | ArUco tag, `config/panel_map.yaml` | offline only |
+| `cad` | find sticker, 3 close tilted views | STEP model fitted to the points (panel plane + leave-one-view-out gate), free placement | `config/connectors.yaml`, good hand-eye calibration | offline only; real jack scans were just under the gate |
+| `strip` | find strip + stickers, 3 close views across it | white strip gives the plug yaw, rectangle on the plug top, depth measured, hover refit | cables on the white strip, `config/strip.yaml` (usb_a, aux; power pending) | offline (synthetic) only |
+`sticker` mode is archived (`archive/sticker_mode_20261110/`). `cad` and `strip` take `--connector NAME [NAME ...]` (several cables in turn) and `--hint X,Y`. Pick `strip` when the cables lie on the strip with known orientation, `cad` when a plug can sit anywhere, `head` when you only have the sticker. Details of each: PIPELINE.md section 5.
+
 ## Layout
 ```
 housing_grasp/        pure NumPy/SciPy library, no ROS
@@ -15,6 +25,9 @@ housing_grasp/        pure NumPy/SciPy library, no ROS
   cad_fit.py          cad mode: connector points, panel plane, STEP model fit with leave-one-view-out gate, close-view poses
   cad_place.py        cad mode: candidates placed with the fitted pose, panel clearance + finger-box checks
   cad_report.py       cad mode: overlay / side-view / held-out figures
+  strip_fit.py        strip mode: strip pose, cable choice, rectangle at the strip's yaw, gates, hover refit
+  strip_config.py     config/strip.yaml loading + validation
+  strip_report.py     strip mode figures
   model_grasp.py      grasp candidate search on a model cloud (also used by tools/make_candidates.py)
   motion_profile.py   quintic joint / path profiles (smooth, zero velocity and acceleration at the ends)
   color_marker.py            marker mask, marker point cloud, table RANSAC, DBSCAN, marker clusters, housing footprint from the colour image
@@ -25,6 +38,7 @@ ros2_iface/           grasp_node.py (services), arm.py (motion), robot_ros.py (H
                       run_pipeline.py (thin runner wiring ROS into it + data collection),
                       export_evidence.py, record.py, smoke_test.py, go_home.py, open_gripper.py, launch/, grasp.rviz, grasp_clouds.rviz
 config/grasp.yaml     all parameters; sources of measured values are commented
+config/strip.yaml     strip mode: strip, views, gates and one entry per connector (usb_a, aux, power pending)
 config/connectors.yaml  cad mode: views, fit gate, panel, placement and one entry per connector (STEP file, model frame, seat, sticker colour)
 tools/                make_candidates.py (offline grasp candidates per connector), scan_observability.py (how well do the views pin the pose down), check_scan_poses.py
 tests/                pytest, synthetic data (geometry only, not hardware evidence)
@@ -64,6 +78,7 @@ python3 ros2_iface/run_pipeline.py $PWD/../../Media/Grasp/run_$(date +%Y%m%d_%H%
 python3 ros2_iface/run_pipeline.py RUN_DIR --mode head|cloud|model|cad       # grasp mode (default: head)
 python3 ros2_iface/run_pipeline.py RUN_DIR                         # no --grasp: perception only, computes the grasp, never moves to it
 python3 ros2_iface/run_pipeline.py RUN_DIR --grasp --skip-scan     # reuse the last scan (saves ~2.5 min)
+python3 ros2_iface/run_pipeline.py RUN_DIR --mode strip --connector usb_a [--hint X,Y] --grasp   # strip mode (white strip gives the plug yaw), connectors of config/strip.yaml: usb_a, aux (power pending)
 python3 ros2_iface/run_pipeline.py RUN_DIR --mode cad --connector micro_jack            # cad mode, one named connector of config/connectors.yaml
 python3 ros2_iface/run_pipeline.py RUN_DIR --mode cad --connector usb_a micro_jack --hint 0.26,-0.02 --grasp --between pause   # several cables in turn
 python3 ros2_iface/export_evidence.py RUN_DIR                            # afterwards: point clouds (PLY), perception overlays, annotated video
@@ -75,9 +90,10 @@ Without the runner, the same steps are services: `ros2 service call /grasp/<name
 `execute` only checks the motion until `/grasp/allow_grasp` has been called AND the node runs with `dry_run:=false`. Finger-collision and optimizer limits are OFF in `config/grasp.yaml` by user decision (2026-11-07): nothing stops a grasp next to an obstacle.
 Other tools: keyboard jog of the arm `Code/Teleop/run.sh` (do not run it while the pipeline moves the arm); calibration scans / hand-eye / intrinsics `Code/Calibration/`; `python3 ros2_iface/go_home.py` joint move to home; `python3 ros2_iface/open_gripper.py`.
 
-## Four grasp modes (same scan, same coarse target, same execute; choose with `run_pipeline.py --mode ...` or `grasp_mode:=...` for `/grasp/pick`; default head). The sticker mode is archived in `archive/sticker_mode_20261110/`.
+## Mode details (same scan, same coarse target, same execute; choose with `run_pipeline.py --mode ...` or `grasp_mode:=...` for `/grasp/pick`; default head). The sticker mode is archived in `archive/sticker_mode_20261110/`.
 - **head** (DEFAULT) = the IMAGE method (`--mode head`, `/grasp/head_grasp`): the same segmentation, but ONLY the head pixels are lifted to a head cloud with their OWN depth, then a GRID SEARCH (no on/off switch) generates thousands of candidates from that cloud: jaw centres every 1 mm x yaw every 5 deg, pad window and gap from the cloud, finger-collision test against the non-head scene points, cost from outline normals, width evenness, centring, contact and gap width. Details: `PIPELINE.md` section 5.2.
 - **model** (`--mode model`, `/grasp/model_grasp`): separate from the other two. STEP model of the plug + an ArUco tag on the panel: tag pose -> plug pose (stored offset, `config/panel_map.yaml`) -> candidates of the offline model search placed in the base frame. Offline-tested only; needs the printed tag (`tags/`), its measured size and the plug offset (`tools/calibrate_panel_map.py`). Details: `PIPELINE.md` 5.4.
+- **strip** (`--mode strip`, `/grasp/strip_scan` + `strip_grasp` + `strip_refine`): cables on a white strip, plug yaw = strip yaw + a fixed offset per connector. Picks one cable (hint or most free space), 3 close views across the strip, rectangle of that yaw on the plug top, gates (footprint, leave-one-view-out, finger clearance, jaw band), hover refit at the pre-grasp, straight-down grasp. Less calibration-sensitive than cad. Settings: `config/strip.yaml`. Offline-tested on synthetic scenes only. See PIPELINE.md 5.6.
 - **cad** (`--mode cad`, `/grasp/cad_scan` + `/grasp/cad_grasp`): no 7-pose scan. Finds the sticker, 3 close tilted views (fast joint moves), fits the connector's STEP model (panel plane + leave-one-view-out gate), places the model's grasp candidates. Any connector with a STEP file: `config/connectors.yaml` + `tools/make_candidates.py`; several cables in one run with `--connector usb_a micro_jack`. Offline-tested only. Details: `PIPELINE.md` 5.5.
 - **cloud** (`--mode cloud`, `/grasp/cloud_grasp`; candidate search on/off with `color_marker.candidate_search` or `-p candidate_search:=on|off`; faces with `color_marker.contact_faces`, sizes from `color_marker.extent_source`): COLOUR MARKER REGION ONLY, the black body is not used. Position and height = median of the marker 3D points (stray specks removed); sticker axes and size = min-area rectangle of the marker blob IN THE IMAGE (the 3D sticker points are distorted on the glossy head: plane tilted 73 deg although the sticker faces up). Candidate SEARCH: jaw along the sticker's long or short edge x yaw offsets (-10/0/+10 deg) x 5 pad positions x 2 flips, opening = sticker extent along the jaw + 2 x 12 mm, TCP 8 mm below the sticker; cost = edge prior + centring + yaw; ranked, `/grasp/execute` takes the first with a feasible IK chain.
   Limit: marker data alone cannot say which sticker edge the jaws should close along. `color_marker.jaw_edge: long` is a CONVENTION (the sticker's long edge lies across the head, true on the current head); the black footprint is what measures it in the other modes. If a head is stickered the other way round, set `jaw_edge: short` (the other edge is also in the candidate list, ranked lower).

@@ -52,7 +52,7 @@ def make(tmp_path, mode="cad", connectors=(), hints=(), grasp=False, between="pa
     work, code = tmp_path / "work", tmp_path / "code"
     for d in (work, code / "config", code / "logs"):
         d.mkdir(parents=True)
-    for f in ("config/grasp.yaml", "config/connectors.yaml", "logs/grasp_node.log"):
+    for f in ("config/grasp.yaml", "config/connectors.yaml", "config/strip.yaml", "logs/grasp_node.log"):
         (code / f).write_text("x")
     old = work / "runs" / "20200101_000000"
     (old / "plots").mkdir(parents=True)
@@ -85,7 +85,7 @@ def test_arguments_are_validated():
 def test_single_cable_perception_only_runs_the_stages_in_order_and_collects_only_new_files(tmp_path):
     pipe, io = make(tmp_path, connectors=("micro_jack",), hints=("0.26,-0.02",))
     (res,) = pipe.run()
-    assert io.log == ["open_gripper", "cad_scan", "cad_grasp"] and io.params == [dict(cad_connector="micro_jack", cad_hint="0.26,-0.02")]
+    assert io.log == ["open_gripper", "cad_scan", "cad_grasp"] and io.params == [dict(connector="micro_jack", hint="0.26,-0.02")]
     assert res.outcome.startswith("PERCEPTION_ONLY") and not res.picked and not res.stop
     run = tmp_path / "run"
     assert (run / "metrics.json").exists() and (run / "config_connectors.yaml").exists() and (run / "grasp_node.log").exists()
@@ -110,7 +110,7 @@ def test_two_cables_with_a_pause_between_them(tmp_path):
     assert [r.name for r in res] == ["usb_a", "micro_jack"] and all(r.picked for r in res)
     assert io.log == ["open_gripper", "cad_scan", "cad_grasp", "allow_grasp", "execute", "open_gripper", "open_gripper", "cad_scan", "cad_grasp", "allow_grasp", "execute"]
     assert len(io.prompts) == 1 and "usb_a" in io.prompts[0] and "micro_jack" in io.prompts[0]
-    assert io.params == [dict(cad_connector="usb_a", cad_hint="0.26,-0.02"), dict(cad_connector="micro_jack", cad_hint="")]
+    assert io.params == [dict(connector="usb_a", hint="0.26,-0.02"), dict(connector="micro_jack", hint="")]
     run = tmp_path / "run"
     assert (run / "01_usb_a" / "metrics.json").exists() and (run / "02_micro_jack" / "metrics.json").exists()
     summary = json.loads((run / "summary.json").read_text())
@@ -152,3 +152,26 @@ def test_an_exception_in_a_stage_is_recorded_and_the_recorder_is_stopped(tmp_pat
     (res,) = pipe.run()
     assert res.outcome == "ERROR: RuntimeError: cad_scan failed" and res.stop and io.recorders[0].stopped
     assert json.loads((tmp_path / "run" / "metrics.json").read_text())["stages"]["cad_scan"]["ok"] is False
+
+
+def test_strip_mode_runs_find_fit_hover_then_grasp_and_collects_its_views(tmp_path):
+    pipe, io = make(tmp_path, mode="strip", connectors=("usb_a",), hints=("0.28,0.0",), grasp=True,
+                    side_effects={"strip_scan": lambda i: (lambda d: (d.mkdir(parents=True, exist_ok=True), (d / "target.json").write_text("{}")))(i.work / "strip" / "20261120_000000"),
+                                  "strip_grasp": lambda i: (lambda d: (d.mkdir(parents=True, exist_ok=True), (d / "plan.json").write_text("{}")))(i.work / "runs" / "20261120_000001")})
+    (res,) = pipe.run()
+    assert io.log == ["open_gripper", "strip_scan", "strip_grasp", "strip_refine", "allow_grasp", "execute"] and res.picked
+    assert io.params == [dict(connector="usb_a", hint="0.28,0.0")]
+    run = tmp_path / "run"
+    assert (run / "strip_views" / "20261120_000000" / "target.json").exists() and (run / "config_strip.yaml").exists() and not (run / "config_connectors.yaml").exists()
+
+
+def test_a_refused_hover_refit_means_no_grasp(tmp_path):
+    pipe, io = make(tmp_path, mode="strip", connectors=("usb_a",), grasp=True, results={"strip_refine": [False]})
+    (res,) = pipe.run()
+    assert "execute" not in io.log and res.outcome.startswith("ERROR: RuntimeError: hover refit refused") and res.stop
+
+
+def test_connector_needs_cad_or_strip_mode():
+    with pytest.raises(SystemExit):
+        pl.parse_args(["r", "--mode", "head", "--connector", "usb_a"])
+    assert pl.parse_args(["r", "--mode", "strip", "--connector", "usb_a", "aux"]).connectors == ("usb_a", "aux")

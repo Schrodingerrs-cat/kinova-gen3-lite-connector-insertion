@@ -18,7 +18,7 @@ _spec.loader.exec_module(gn)
 
 def node(**kw):
     n = types.SimpleNamespace(last=None, home_T=np.eye(4), cad_dir=None, cfg={"grasp": {"standoff_m": 0.06, "lift_m": 0.08}}, ran=None)
-    n.get_parameter = lambda name: types.SimpleNamespace(value={"max_plan_age_s": 60.0, "max_candidates": 4, "cad_connector": "micro_jack"}[name])
+    n.get_parameter = lambda name: types.SimpleNamespace(value={"max_plan_age_s": 60.0, "max_candidates": 4, "connector": "micro_jack"}[name])
     n._run = lambda grasps: setattr(n, "ran", len(grasps)) or "ran"
     for k, v in kw.items():
         setattr(n, k, v)
@@ -69,3 +69,19 @@ def test_cad_grasp_refuses_views_of_another_connector_and_clears_the_old_plan(tm
 def test_cad_grasp_needs_the_home_pose_of_this_node_session():
     with pytest.raises(RuntimeError, match="run /grasp/cad_scan first"):
         gn.GraspNode.cad_grasp(node(home_T=None))
+
+
+def test_strip_grasp_refuses_views_of_another_connector_and_clears_the_old_plan(tmp_path):
+    (tmp_path / "target.json").write_text(json.dumps(dict(connector="aux", sticker_mm=[280, 0, 27], stickers_mm=[[280, 0, 27]])))
+    n = node(last="OLD PLAN", strip_dir=tmp_path)
+    n.get_parameter = lambda name: types.SimpleNamespace(value={"connector": "usb_a", "hint": ""}[name])
+    with pytest.raises(RuntimeError, match="views are of 'aux' but the connector is 'usb_a'"):
+        gn.GraspNode.strip_grasp(n)
+    assert n.last is None
+
+
+def test_strip_refine_needs_a_strip_plan():
+    n = node(last=dict(ok=True, grasps=[], stamp=0))
+    n.get_parameter = lambda name: types.SimpleNamespace(value={"connector": "usb_a", "hint": ""}[name])
+    with pytest.raises(RuntimeError, match="strip_grasp first"):
+        gn.GraspNode.strip_refine(n)

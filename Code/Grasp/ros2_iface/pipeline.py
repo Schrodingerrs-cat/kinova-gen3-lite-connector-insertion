@@ -15,9 +15,10 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-MODES = ("head", "cloud", "model", "cad")
+MODES = ("head", "cloud", "model", "cad", "strip")
 BETWEEN = ("pause", "release", "stop")
 MODE_SERVICE = dict(head="head_grasp", cloud="cloud_grasp", model="model_grasp")
+TWO_STAGE = dict(cad=("cad_scan", "cad_grasp"), strip=("strip_scan", "strip_grasp"))   # modes without the 7-pose scan: find + close views, then fit + plan
 HOME_TOL_START_DEG, HOME_TOL_DONE_DEG = 1.0, 2.0
 
 
@@ -37,7 +38,7 @@ class Io:
     def call(self, service, timeout):           # -> (ok, message); raises on timeout / missing service
         raise NotImplementedError
 
-    def set_node_params(self, **values):        # strings only (cad_connector, cad_hint)
+    def set_node_params(self, **values):        # strings only (connector, hint)
         raise NotImplementedError
 
     def joints_deg(self):
@@ -58,13 +59,13 @@ def parse_args(argv=None):
     ap.add_argument("run_dir", type=pathlib.Path)
     ap.add_argument("--grasp", action="store_true", help="execute the grasp (default: perception and planning only)")
     ap.add_argument("--skip-scan", action="store_true", help="reuse the last 7-pose scan (head, cloud, model modes)")
-    ap.add_argument("--mode", choices=MODES, default="head", help="head (default), cloud, model, cad (STEP model fitted to 3 close views)")
-    ap.add_argument("--connector", nargs="+", metavar="NAME", help="cad mode: connector(s) of config/connectors.yaml to pick, in this order")
-    ap.add_argument("--hint", nargs="+", metavar="X,Y", help="cad mode: approximate base-frame x,y (m) of each connector's sticker, same order as --connector")
+    ap.add_argument("--mode", choices=MODES, default="head", help="head (default), cloud, model, cad (STEP model fitted to 3 close views), strip (rectangle on the plug, orientation from the white strip)")
+    ap.add_argument("--connector", nargs="+", metavar="NAME", help="cad / strip mode: connector(s) of config/connectors.yaml / config/strip.yaml to pick, in this order")
+    ap.add_argument("--hint", nargs="+", metavar="X,Y", help="cad / strip mode: approximate base-frame x,y (m) of each connector's sticker, same order as --connector")
     ap.add_argument("--between", choices=BETWEEN, default="pause", help="several cables: after one was picked up, ask the operator (pause), open the gripper at once (release) or stop")
     a = ap.parse_args(argv)
-    if a.connector and a.mode != "cad":
-        ap.error("--connector needs --mode cad")
+    if a.connector and a.mode not in TWO_STAGE:
+        ap.error("--connector needs --mode cad or strip")
     if a.hint and not a.connector:
         ap.error("--hint needs --connector")
     if a.connector and len(set(a.connector)) != len(a.connector):
@@ -81,7 +82,7 @@ def parse_args(argv=None):
     return Options(a.run_dir, a.grasp, a.skip_scan, a.mode, tuple(a.connector or ()), tuple(hints), a.between)
 
 
-PATTERNS = ("runs/2*/plan.json", "scans/*/marker_cloud.npy", "cad/2*/target.json")
+PATTERNS = ("runs/2*/plan.json", "scans/*/marker_cloud.npy", "cad/2*/target.json", "strip/2*/target.json")
 
 
 def snapshot(work):
@@ -98,15 +99,15 @@ def newest(work, pattern, known=frozenset()):
 def collect(run_dir, work, code_root, opts, known):
     """Copy this run's scan / cad views / plan / plots / config / node log into the run folder. Files that existed before the run are never collected."""
     plan = newest(work, "runs/2*/plan.json", known)
-    scan = None if opts.mode == "cad" else newest(work, "scans/*/marker_cloud.npy", known)
-    views = newest(work, "cad/2*/target.json", known) if opts.mode == "cad" else None
+    scan = None if opts.mode in TWO_STAGE else newest(work, "scans/*/marker_cloud.npy", known)
+    views = newest(work, opts.mode + "/2*/target.json", known) if opts.mode in TWO_STAGE else None
     if views is not None:
-        shutil.copytree(views.parent, run_dir / "cad_views" / views.parent.name, dirs_exist_ok=True)
+        shutil.copytree(views.parent, run_dir / (opts.mode + "_views") / views.parent.name, dirs_exist_ok=True)
     if scan is not None:
         shutil.copytree(scan.parent, run_dir / "scan" / scan.parent.name, dirs_exist_ok=True)
         for p in (scan.parent / "plots").glob("*.png"):
             shutil.copy(p, run_dir / "plots" / ("scan_" + p.name))
-    elif opts.skip_scan and opts.mode != "cad":
+    elif opts.skip_scan and opts.mode not in TWO_STAGE:
         last = newest(work, "scans/*/marker_cloud.npy")
         if last is not None:
             (run_dir / "scan_used.txt").write_text(str(last.parent) + "\n")
@@ -114,9 +115,10 @@ def collect(run_dir, work, code_root, opts, known):
         shutil.copytree(plan.parent, run_dir / "plan" / plan.parent.name, dirs_exist_ok=True)
         for p in (plan.parent / "plots").glob("*.png"):
             shutil.copy(p, run_dir / "plots" / ("plan_" + p.name))
-    for src, dst in ((code_root / "config" / "grasp.yaml", "config_grasp.yaml"), (code_root / "config" / "connectors.yaml", "config_connectors.yaml"), (code_root / "logs" / "grasp_node.log", "grasp_node.log")):
-        if src.exists() and (dst != "config_connectors.yaml" or opts.mode == "cad"):
-            shutil.copy(src, run_dir / dst)
+    mode_cfg = [code_root / "config" / ("strip.yaml" if opts.mode == "strip" else "connectors.yaml")] if opts.mode in TWO_STAGE else []
+    for src in [code_root / "config" / "grasp.yaml", *mode_cfg, code_root / "logs" / "grasp_node.log"]:
+        if src.exists():
+            shutil.copy(src, run_dir / ("config_" + src.name if src.suffix == ".yaml" else src.name))
 
 
 @dataclass
@@ -166,11 +168,12 @@ class Pipeline:
             raise RuntimeError("could not open the gripper")
 
     def _perceive(self, call, snap):
-        if self.opts.mode == "cad":
-            if not call("cad_scan", 300):
-                raise RuntimeError("cad_scan failed")
+        if self.opts.mode in TWO_STAGE:
+            scan, fit = TWO_STAGE[self.opts.mode]
+            if not call(scan, 300):
+                raise RuntimeError(scan + " failed")
             snap("03_close_view")
-            return call("cad_grasp", 300)
+            return call(fit, 300)
         if not self.opts.skip_scan and not call("scan", 1500):
             raise RuntimeError("scan failed")
         if not call("color_target", 300):
@@ -192,16 +195,18 @@ class Pipeline:
         recorder = self.io.start_recorder(run_dir)
         try:
             snap("00_start")
-            if self.opts.mode == "cad":
-                self.io.set_node_params(cad_connector=name or "", cad_hint=hint or "")
+            if self.opts.mode in TWO_STAGE:
+                self.io.set_node_params(connector=name or "", hint=hint or "")
             self._preflight(call)
             planned = self._perceive(call, snap)
             snap("04_after_grasp_plan")
             if not planned:
-                metrics["outcome"] = "STOPPED_BEFORE_GRASP: " + metrics["stages"]["cad_grasp" if self.opts.mode == "cad" else MODE_SERVICE[self.opts.mode]]["message"]
+                metrics["outcome"] = "STOPPED_BEFORE_GRASP: " + metrics["stages"][TWO_STAGE[self.opts.mode][1] if self.opts.mode in TWO_STAGE else MODE_SERVICE[self.opts.mode]]["message"]
             elif not self.opts.grasp:
                 metrics["outcome"] = "PERCEPTION_ONLY: grasp computed, not requested"
             else:
+                if self.opts.mode == "strip" and not call("strip_refine", 300):
+                    raise RuntimeError("hover refit refused: no grasp")
                 call("allow_grasp", 20)
                 ok = call("execute", 600)
                 snap("05_after_grasp")

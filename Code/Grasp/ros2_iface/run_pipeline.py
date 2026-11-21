@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Grasp pipeline end to end for one or several cables, with data collection into a Media/Grasp run folder. Needs the stack and the grasp node running.
 
-python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud|model|cad]
+python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud|model|cad|strip]
                                    [--connector NAME [NAME ...]] [--hint X,Y [X,Y ...]] [--between pause|release|stop]
 
 head / cloud / model: home -> 7-pose scan -> colour target -> close view -> grasp plan -> [--grasp] execute.
 cad: home -> find the sticker -> 3 close views -> fit the connector's STEP model -> grasp plan -> [--grasp] execute.
-Every run starts with the arm at home and the gripper open. --connector (cad mode) picks the named connectors of config/connectors.yaml one after the
+strip: home -> white strip + stickers -> pick one cable -> 3 close views across the strip -> rectangle at the strip's yaw -> plan -> [--grasp] hover refit, execute.
+Every run starts with the arm at home and the gripper open. --connector (cad / strip mode) picks the named connectors of config/connectors.yaml / config/strip.yaml one after the
 other, each in its own sub-folder of RUN_DIR; see ros2_iface/pipeline.py for what happens between two cables. Exit status 0 = every cable planned / picked.
 """
 import os
@@ -30,7 +31,7 @@ WORK = ROOT.parents[1] / "Media" / "Grasp" / "work"  # where the node writes its
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT))
 import pipeline  # noqa: E402
-from housing_grasp import connectors  # noqa: E402
+from housing_grasp import connectors, strip_config  # noqa: E402
 from robot_ros import Robot  # noqa: E402
 
 OK_OUTCOMES = ("GRASP_REPORTED_HELD", "PERCEPTION_ONLY")
@@ -94,7 +95,7 @@ def main():
     opts = pipeline.parse_args()
     for name in opts.connectors or ():
         try:
-            connectors.load(name)           # validates config/connectors.yaml and the name before anything moves
+            (strip_config if opts.mode == "strip" else connectors).load(name)   # validates the config and the name before anything moves
         except (KeyError, ValueError) as e:
             sys.exit("connectors: %s" % (e.args[0] if e.args else e))
     home = (np.array(yaml.safe_load(open(ROOT / "config" / "grasp.yaml"))["scan"]["home_joints_deg"]) + 180) % 360 - 180

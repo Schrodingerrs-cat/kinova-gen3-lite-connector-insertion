@@ -1,6 +1,6 @@
 # CAD mode (--mode cad): one entry per connector. Add a connector = add its STEP file + an entry here + python3 tools/make_candidates.py NAME.
 # Model frame (mm): u axis = plug axis, pointing AWAY from the panel (up when the plug stands in its socket); u = seat_u_mm is where the panel surface cuts the plug.
-active: usb_a                   # default connector (run_pipeline.py --connector NAME [NAME ...] and the node param cad_connector override it)
+active: usb_a                   # default connector (run_pipeline.py --connector NAME [NAME ...] and the node param connector override it)
 #
 # Optional per connector: marker: {h: [lo, hi], s_min: .., v_min: ..}   its own sticker colour (OpenCV hue 0-179; lo > hi wraps, e.g. red [170, 10]);
 # without it the color_marker colour of grasp.yaml is used. Different colours per cable let one panel hold several cables without a --hint.
