@@ -47,7 +47,8 @@ def main():
     while not all(j in state for j in JOINTS) and time.time() < deadline:
         rclpy.spin_once(node, timeout_sec=0.2)
     if not all(j in state for j in JOINTS):
-        sys.exit("no /joint_states within 10 s: the arm driver is not running (start it, e.g. run_end_to_end.sh --bringup)")
+        print("no /joint_states within 10 s: the arm driver is not running or has lost the arm", flush=True)
+        sys.exit(3)                                         # the wrapper script restarts the driver on this code
     q0 = np.array([state[j] for j in JOINTS])
     urdf = ""
     for service in ("/robot_state_publisher/get_parameters", "/move_group/get_parameters"):     # the arm driver publishes the robot model
