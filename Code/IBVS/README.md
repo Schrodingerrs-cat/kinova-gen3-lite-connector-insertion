@@ -40,6 +40,27 @@ Every command from the `insertion_task` folder. The arm driver, MoveIt and the c
 
 Useful options on the run scripts: `--speed-scale 1..3`, `--advance-m 0.08`, `--no-checks`, `--allow-contact`, `--marker-id N`, `--all-markers`. Gripper by hand: `ros2 action send_goal /gen3_lite_2f_gripper_controller/gripper_cmd control_msgs/action/GripperCommand "{command: {position: 0.81, max_effort: 30.0}}"` (0.0 opens).
 
+## Insertion servo (new pipeline, live marker, per wire)
+
+Separate from the taught-goal AUX run below. After the grasp, from the post-grasp pose, it servos the wire's marker to the pre-insertion image, stops 1 s, then servos to the insertion image (plug at the socket entrance). The robot only translates (orientation held), no camera tilting. Marker per wire: aux = 11, usb = 12, power = 10. Reference pixels per wire: `config/insertion_refs.yaml` (`nudge_px: [x, y]` shifts the insertion target in the image to fine-tune).
+
+Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS/ros_env.sh`, one arm driver only):
+
+1. Terminal 1, the arm and MoveIt (the grasp stack's bringup, the same one the grasp pipeline uses; wait until the controllers are up).
+2. Terminal 2, the camera as the grasp stack starts it (`/camera/camera/...` with aligned depth; this script reads these topics).
+3. Terminal 3, put the arm at the post-grasp pose: `bash Code/IBVS/go_post_grasp.sh` (the grasp pipeline does this itself after a real grasp).
+4. Terminal 3, run the servo:
+
+| Mode | Command |
+| --- | --- |
+| Stop-and-observe (default): quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`) |
+| Continuous: re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux --continuous` |
+| Slower / faster (m/s, default 0.05) | `--speed 0.03` |
+| Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
+| Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
+
+If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (continuous: after 6 frames in a row). Do not edit files while it runs. Start with the default mode, then `--continuous`.
+
 ## Marker setup
 
 Print `markers/aruco_markers.pdf` (page 1: ids 10/11/12, 30 mm black square; page 2: hand-eye marker id 0, 100 mm; regenerate with `markers/make_markers.py`; print at 100 %) and stick each marker flat on the wall above its socket. They are DICT_4X4_50 markers. No teaching step: the run picks a visible marker and builds its goal itself. `--marker-id N` or `--socket NAME` (usb_a 12, audio 11, ac 10) only force which marker is chosen. The goal puts the chosen marker at the image centre plus `goal_offset_px` (config, now 5 px down), so the marker must be placed so that centring it lines the plug up with its socket.
