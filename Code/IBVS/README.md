@@ -29,16 +29,16 @@ Every command from the `insertion_task` folder. The arm driver, MoveIt and the c
 
 | What | Command | Moves the arm? |
 | --- | --- | --- |
-| Whole job: close gripper → home → post-grasp → every marker (servo, 15 cm forward, back out) | `bash Code/IBVS/run_end_to_end.sh --show-image --live --bringup` (drop `--live` for a preview) | yes |
+| Whole job: close gripper → home → post-grasp → every marker (servo, 10 cm forward, back out) | `bash Code/IBVS/run_end_to_end.sh --show-image --live --bringup` (drop `--live` for a preview) | yes |
 | Go to the configured post-grasp pose (safest route from wherever the arm is) | `bash Code/IBVS/run_go_to_pose.sh` (`--pose home`, `--dry` plan only) | yes |
 | Photo + depth + joint values (degrees) + visible markers of the current pose | `bash Code/IBVS/run_capture_pose.sh --name my_pose` → `Media/IBVS/poses/` | no |
-| AUX (audio) socket with the goal taught for it: close gripper → home → post-grasp → marker 11 → forward 15 cm → second target `audio_insertion` (centre marker 11 as in the insertion-pose photo; `--then-goal NAME` for another saved goal) | `bash Code/IBVS/run_aux.sh --show-image --live --bringup` (preview without `--live`) | yes |
+| AUX (audio) socket with the goal taught for it: close gripper → home → post-grasp → marker 11 → forward 10 cm → second target `audio_insertion` (centre marker 11 as in the insertion-pose photo; `--then-goal NAME` for another saved goal) | `bash Code/IBVS/run_aux.sh --show-image --live --bringup` (preview without `--live`) | yes |
 | One marker only, from the current pose | `bash Code/IBVS/run_joint2_priority.sh --show-image --live` (`--marker-id N`) | yes |
 | Home → post-grasp → one marker | `bash Code/IBVS/run_alignment.sh --show-image --live --bringup` | yes |
 | Print the markers | `markers/aruco_markers.pdf` (regenerate: `python3 Code/IBVS/markers/make_markers.py`) | no |
 | Offline tests | `python3 -m pytest Code/IBVS/tests -q` | no |
 
-Useful options on the run scripts: `--speed-scale 1..3`, `--advance-m 0.15`, `--no-checks`, `--allow-contact`, `--marker-id N`, `--all-markers`. Gripper by hand: `ros2 action send_goal /gen3_lite_2f_gripper_controller/gripper_cmd control_msgs/action/GripperCommand "{command: {position: 0.81, max_effort: 30.0}}"` (0.0 opens).
+Useful options on the run scripts: `--speed-scale 1..3`, `--advance-m 0.10`, `--no-checks`, `--allow-contact`, `--marker-id N`, `--all-markers`. Gripper by hand: `ros2 action send_goal /gen3_lite_2f_gripper_controller/gripper_cmd control_msgs/action/GripperCommand "{command: {position: 0.81, max_effort: 30.0}}"` (0.0 opens).
 
 ## Marker setup
 
@@ -85,7 +85,7 @@ Stack up first (arm driver, MoveIt `allow_trajectory_execution:=false`, camera `
 ```bash
 source Code/IBVS/ros_env.sh
 bash Code/IBVS/run_end_to_end.sh --show-image          # preview: nothing moves, prints the predicted wall clearance
-bash Code/IBVS/run_end_to_end.sh --show-image --live   # close gripper -> home -> post-grasp -> for EVERY marker in view, left to right: servo -> forward 15 cm -> back out
+bash Code/IBVS/run_end_to_end.sh --show-image --live   # close gripper -> home -> post-grasp -> for EVERY marker in view, left to right: servo -> forward 10 cm -> back out
 ```
 
 `run_end_to_end.sh` uses `--all-markers`: it looks at which markers are visible at the post-grasp pose (left to right), then for each one servos to it (goal built live), moves forward, and backs out along the same path to the standoff before the next marker. It stops at the first marker that does not converge or whose forward move fails, and the preview only looks at the first marker. Without `--all-markers` (e.g. `run_alignment.sh`) it does one marker, chosen live (or forced with `--marker-id`/`--socket`). `--speed-scale` also scales the servo step size, so the lateral move between markers is not dozens of 2 mm steps.
