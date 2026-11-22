@@ -1,0 +1,8 @@
+# Per-wire marker references read off Media/IBVS/poses/ (848x480 camera pixels; centre x, y and side length of the marker).
+# pre = marker as seen at the pre-insertion pose, insert = marker as seen with the plug at the socket entrance.
+# nudge_px moves the insertion target in the image (x right, y down) to fine-tune where the gripper ends up; marker_side_m is the printed size.
+marker_side_m: 0.030
+wires:
+  aux:   {marker_id: 11, pre: {c: [395, 203], side: 42}, insert: {c: [457, 252], side: 103}, nudge_px: [0, 0]}
+  usb:   {marker_id: 12, pre: {c: [384, 207], side: 43}, insert: {c: [471, 280], side: 100}, nudge_px: [0, 0]}
+  power: {marker_id: 10, pre: {c: [409, 225], side: 38}, insert: {c: [470, 253], side: 102}, nudge_px: [0, 0]}
