@@ -123,7 +123,7 @@ class Experiment:
         self.goal = self.pending = None
         self.video, self.frames = None, 0
         self.phase, self.last_image_stamp = "STARTUP", None
-        self.after_motion_stamp = 0.0
+        self.after_motion_mono, self.color_arrival = 0.0, 0.0       # monotonic times on this machine: independent of the camera's clock
         self.is_marker = reference.get("feature_type") == "marker"
         self.display = FeatureOverlay(reference) if self.is_marker else None
         self.detection = None
@@ -163,6 +163,8 @@ class Experiment:
 
     def pump(self, seconds=0.05):
         self.r._ex.spin_once(timeout_sec=seconds)
+        for _ in range(9):                               # one callback per spin_once: drain the queue so busy topics cannot starve the camera
+            self.r._ex.spin_once(timeout_sec=0)
 
     def fresh(self, camera=False):
         if self.r.q is None or not np.isfinite(self.r.q).all():
@@ -282,6 +284,17 @@ class Experiment:
         self.frames += 1
 
     def on_color(self, msg):
+        self.frames_processed = getattr(self, "frames_processed", 0) + 1
+        try:
+            self.handle_color(msg)
+        except Exception as error:                       # keep the run alive and say why frames are rejected (see capture)
+            if getattr(self, "callback_error", None) is None:
+                import traceback
+                self.callback_error = "%s: %s (%s)" % (type(error).__name__, error, traceback.format_exc().strip().splitlines()[-3].strip())
+                print("IMAGE HANDLER ERROR:", self.callback_error, flush=True)
+
+    def handle_color(self, msg):
+        self.color_arrival = time.monotonic()
         self.r._img["color"] = msg
         image = self.bgr(msg)
         annotated = None
@@ -413,7 +426,7 @@ class Experiment:
         self.display.marker_id = -1
         self.detection, self.phase = None, "ALIGN"
         self.tracking_epoch += 1
-        self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
+        self.after_motion_mono = time.monotonic()
 
     def lowest_height(self, path):
         """Lowest point (m, base frame) of tool, fingertips, camera and wrist along a joint path."""
@@ -662,7 +675,7 @@ class Experiment:
             error = np.degrees(np.abs(self.r.q - path[-1]))
             tolerance = self.c["arrival_tolerance_deg"] if precise else 1.0
             if self.is_marker:
-                self.after_motion_stamp = self.r.get_clock().now().nanoseconds * 1e-9
+                self.after_motion_mono = time.monotonic()
             if (self.r.joint_rx <= finished or error.max() > tolerance) and not self.skip_checks:
                 raise RuntimeError("fresh joint feedback did not confirm arrival")
         except BaseException:
@@ -705,13 +718,24 @@ class Experiment:
 
     def capture(self):
         deadline = time.monotonic() + 3
+        why = self.rejected = getattr(self, "rejected", {})
+        reject = lambda key: why.__setitem__(key, why.get(key, 0) + 1)
         while time.monotonic() < deadline:
             self.pump()
             self.fresh(camera=True)
-            color, depth = self.r._img["color"], self.r._img["depth"]
+            color, depth = self.r._img.get("color"), self.r._img.get("depth")
+            if color is None or depth is None:
+                reject("no image yet")
+                continue
             stamp = self.stamp(color)
-            if (stamp == self.last_image_stamp or stamp <= self.after_motion_stamp
-                    or abs(stamp - self.stamp(depth)) > self.c["camera_sync_s"]):
+            if stamp == self.last_image_stamp:
+                reject("same frame")
+                continue
+            if self.color_arrival <= self.after_motion_mono + .1:         # must arrive after the move and its settling (camera clock not used)
+                reject("frame arrived before the end of the last move")
+                continue
+            if abs(stamp - self.stamp(depth)) > self.c["camera_sync_s"]:
+                reject("color and depth stamps differ by more than %.0f ms" % (1e3 * self.c["camera_sync_s"]))
                 continue
             self.last_image_stamp = stamp
             image = self.bgr(color)
@@ -719,11 +743,13 @@ class Experiment:
                 cv2.imwrite(str(self.output / "start_alignment.png"), image)
             if self.is_marker:
                 if self.detection is None or self.detection[0] != stamp:
+                    reject("detection not computed for this frame (phase %s)" % self.phase)
                     continue
                 pixels, valid = self.detection[1:]
             else:
                 pixels, valid = self.tracker.detect(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
             if not valid.all():
+                reject("marker not valid")
                 continue
             if depth.encoding != "16UC1" or (depth.width, depth.height) != (color.width, color.height):
                 raise RuntimeError("expected aligned 16UC1 depth at color resolution")
@@ -754,7 +780,8 @@ class Experiment:
             self.csv_file.flush()
             return xy, Z, rms, maximum
         if self.is_marker:
-            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs: %s' % getattr(self.tracker, 'status', ''))
+            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs | tracker: %s | frames handled: %s | rejected: %s | image handler error: %s'
+                               % (getattr(self.tracker, 'status', ''), getattr(self, 'frames_processed', 0), why, getattr(self, 'callback_error', None)))
         raise RuntimeError('no stable reference marker in fresh synchronized camera/depth pairs')
 
     def average_observation(self):

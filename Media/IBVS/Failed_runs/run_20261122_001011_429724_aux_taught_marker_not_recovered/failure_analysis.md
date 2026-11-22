@@ -1,0 +1,6 @@
+# Failure analysis (cause NOT confirmed)
+- `start_alignment.png`: the view at the post-grasp pose is ideal, all three markers visible, marker 11 clear at 45 px.
+- `trial.csv` header only, no `initial_observation.npz`, no `lost_marker.png`, no `tracking_loss.jsonl`, no `latest_features.png`: capture() never completed a frame and the detection branch never logged a lost marker.
+- Offline, on this exact image and this run's exact config, the tracker locks marker 11 after 5 frames and tracks it (valid from frame 6); the full capture path (image handler, tracker, overlay, capture) with a fake ROS layer succeeds after 6 frames and produces all those files.
+- So the tracker, the taught-goal loading and the overlay are not the cause. The one check that depends on the camera's clock domain was `frame stamp <= ROS time at the end of the last move`; if the camera headers are not in ROS time every frame is rejected silently. Not verified on the arm.
+- Changes made after this run: that check now uses arrival time on this machine (no camera clock); capture() counts why it rejects frames; an error inside the image handler is recorded and printed; the final error text carries tracker status, frames handled, rejection counts and handler error; each wait cycle drains several queued callbacks. If it fails again the error line says which of these it is.

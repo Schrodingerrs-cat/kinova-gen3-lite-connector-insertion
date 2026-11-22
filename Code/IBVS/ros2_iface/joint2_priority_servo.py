@@ -151,12 +151,12 @@ def reach_check(e, scene, xy, Z):
 
 
 def acquire(e, deadline, frames=1):
-    count, epoch = 0, getattr(e, 'tracking_epoch', 0)
+    count, epoch, last = 0, getattr(e, 'tracking_epoch', 0), 'no capture attempt finished'
     while time.monotonic() < deadline:
         try:
             observation = e.capture()
-        except TrackingLost:
-            count = 0
+        except TrackingLost as error:
+            count, last = 0, str(error)
             continue
         current_epoch = getattr(e, 'tracking_epoch', 0)
         if current_epoch != epoch:
@@ -165,7 +165,7 @@ def acquire(e, deadline, frames=1):
         count += 1
         if count >= frames:
             return observation
-    raise TrackingLost('marker was not recovered before the stationary hold timeout')
+    raise TrackingLost('marker was not recovered before the stationary hold timeout | %s' % last)
 
 
 def move_along(e, scene, direction, distance, speed, step_m, progress, key, label):
