@@ -13,7 +13,7 @@ from test_capture_path import experiment  # noqa: E402
 
 
 def run(monkeypatch, first_status='CONVERGED', advance=None, then_goal='audio_insertion'):
-    calls, e = [], SimpleNamespace(new_marker=lambda *a: calls.append(('new_marker', a)))
+    calls, e = [], SimpleNamespace(new_marker=lambda *a: calls.append(('new_marker', a)), reference=dict(then_goal_offset_px=[0, 5]))
 
     def servo_one(_e, args, report):
         calls.append(('servo_one', args.advance_m))
@@ -32,7 +32,8 @@ def test_second_stage_follows_a_good_first_stage_with_the_saved_goal_and_no_more
     calls, report = run(monkeypatch)
     assert [c[0] for c in calls] == ['servo_one', 'new_marker', 'servo_one'] and calls[2][1] == 0.        # second stage: advance 0
     marker_id, order, goal = calls[1][1]
-    assert marker_id == 11 and order == 'nearest' and np.allclose(goal, at.taught_goal('audio_insertion')['corners_image_px'])
+    assert marker_id == 11 and order == 'nearest'
+    assert np.allclose(np.array(goal) - np.array(at.taught_goal('audio_insertion')['corners_image_px']), [0, 5])      # 5 px down from the saved goal
     assert 'then' in report and report['status'] == 'CONVERGED'
 
 
@@ -63,3 +64,8 @@ def test_new_marker_points_the_tracker_at_the_goal_and_the_display_is_reset(tmp_
 def test_no_scene_stand_in_does_nothing():
     scene = j2.NoScene()
     assert scene.install(1., None) is None and scene.check(np.zeros(6)) is None and scene.close() is None
+
+
+def test_the_last_target_offset_is_configured_in_the_repo():
+    import yaml
+    assert yaml.safe_load((ROOT / 'config' / 'marker_goal.yaml').read_text())['then_goal_offset_px'] == [0, 5]

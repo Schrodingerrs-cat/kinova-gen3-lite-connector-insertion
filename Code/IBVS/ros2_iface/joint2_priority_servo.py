@@ -279,7 +279,8 @@ def second_stage(e, args, report):
     goal = taught_goal(args.then_goal)
     print('Second target %s: marker %d, goal %.0f px wide.' % (args.then_goal, goal['marker_id'],
           np.linalg.norm(np.array(goal['corners_image_px'][1]) - np.array(goal['corners_image_px'][0]))), flush=True)
-    e.new_marker(goal['marker_id'], 'nearest', goal['corners_image_px'])
+    corners = (np.array(goal['corners_image_px']) + np.array(e.reference.get('then_goal_offset_px', [0, 0]), float)).tolist()   # saved photo goal + configured shift
+    e.new_marker(goal['marker_id'], 'nearest', corners)
     report['then'] = sub = {}
     stage = SimpleNamespace(**{**vars(args), 'advance_m': 0.})
     servo_one(e, stage, sub)
