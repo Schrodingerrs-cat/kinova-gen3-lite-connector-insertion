@@ -35,6 +35,14 @@ from ibvs.overlay import FeatureOverlay  # noqa: E402
 from ibvs.recording import TimedVideo  # noqa: E402
 
 
+def taught_goal(name, goals_path=None):
+    """Marker id and goal corners saved under `name` in taught_goals.yaml (teach_goal.py, or a photo of the target pose)."""
+    entry = (yaml.safe_load(Path(goals_path or ROOT / "config" / "taught_goals.yaml").read_text()) or {}).get(name)
+    if not entry:
+        raise ValueError("no taught goal named %s in taught_goals.yaml" % name)
+    return entry
+
+
 def load_inputs(settings_path, reference_path, socket=None, marker_id=None, taught=False, goals_path=None):
     settings = yaml.safe_load(settings_path.read_text())
     for key, value in settings.items():
@@ -59,9 +67,10 @@ def load_inputs(settings_path, reference_path, socket=None, marker_id=None, taug
         if taught:                                                       # use the goal taught for this socket (teach_goal.py) instead of the live one
             if socket is None:
                 raise ValueError("--taught needs --socket")
-            entry = (yaml.safe_load(Path(goals_path or ROOT / "config" / "taught_goals.yaml").read_text()) or {}).get(socket)
-            if not entry:
-                raise ValueError("no taught goal for socket %s: run ros2_iface/teach_goal.py --socket %s" % (socket, socket))
+            try:
+                entry = taught_goal(socket, goals_path)
+            except ValueError:
+                raise ValueError("no taught goal for socket %s: run ros2_iface/teach_goal.py --socket %s" % (socket, socket)) from None
             if entry["marker_id"] != reference["sockets"][socket]:
                 raise ValueError("the goal for %s was taught on marker %s, config says %s" % (socket, entry["marker_id"], reference["sockets"][socket]))
             reference["feature_tracking"].update(taught_goal_px=entry["corners_image_px"], marker_id=entry["marker_id"])
@@ -145,14 +154,16 @@ class Experiment:
         self.plan_cli = self.r.create_client(GetMotionPlan, "/plan_kinematic_path")
         self.fk_cli = self.r.create_client(GetPositionFK, "/compute_fk")
         qos = QoSProfile(depth=2, reliability=ReliabilityPolicy.RELIABLE)
-        self.camera_prefix = reference.get("camera_topic_prefix", "/camera/camera").rstrip("/")
+        self.camera_prefixes = camera_prefixes(reference)
+        self.camera_prefix = self.camera_prefixes[0]
         self.image_type = Image
         self.overlay_pub = self.r.create_publisher(Image, "/ibvs/feature_image", 1) if self.is_marker else None
-        self.r.create_subscription(Image, self.camera_prefix + "/color/image_raw", self.on_color, qos)
-        for name, topic, typ in [("depth", self.camera_prefix + "/aligned_depth_to_color/image_raw", Image),
-                                  ("info", self.camera_prefix + "/color/camera_info", CameraInfo)]:
-            self.r.create_subscription(typ, topic, lambda msg, key=name: self.r._img.__setitem__(key, msg), qos)
-        self.r.create_subscription(Image, self.camera_prefix + "/depth/image_rect_raw", lambda msg: None, qos)
+        for prefix in self.camera_prefixes:                  # the same camera runs under one naming or the other: listen to both
+            self.r.create_subscription(Image, prefix + "/color/image_raw", self.on_color, qos)
+            for name, topic, typ in [("depth", prefix + "/aligned_depth_to_color/image_raw", Image),
+                                      ("info", prefix + "/color/camera_info", CameraInfo)]:
+                self.r.create_subscription(typ, topic, lambda msg, key=name: self.r._img.__setitem__(key, msg), qos)
+            self.r.create_subscription(Image, prefix + "/depth/image_rect_raw", lambda msg: None, qos)
         self.T_EC = matrix(grasp["camera"]["hand_eye_xyz_m"], grasp["camera"]["hand_eye_quat_xyzw"])
         self.T_tcp = matrix(grasp["gripper"]["tcp_in_tool_xyz_m"], grasp["gripper"]["tcp_in_tool_quat_xyzw"])
         self.floor = grasp["scan"]["table_z_m"] + settings["table_clearance_m"]
@@ -420,9 +431,10 @@ class Experiment:
         self.prepare_local_fk()
         print("Arm, MoveIt and camera are ready.", flush=True)
 
-    def new_marker(self, marker_id, order):
-        """Point the tracker at the next marker (marker_id None = choose by `order`): fresh live goal and tracking."""
-        self.tracker = AutoMarkerTracker(self.camera, dict(self.reference["feature_tracking"], marker_id=marker_id, marker_order=order))
+    def new_marker(self, marker_id, order, goal_px=None):
+        """Point the tracker at the next marker (marker_id None = choose by `order`): fresh live goal (or goal_px) and tracking."""
+        self.tracker = AutoMarkerTracker(self.camera, dict(self.reference["feature_tracking"], marker_id=marker_id, marker_order=order,
+                                                           taught_goal_px=goal_px))
         self.display.marker_id = -1
         self.detection, self.phase = None, "ALIGN"
         self.tracking_epoch += 1
@@ -780,8 +792,10 @@ class Experiment:
             self.csv_file.flush()
             return xy, Z, rms, maximum
         if self.is_marker:
-            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs | tracker: %s | frames handled: %s | rejected: %s | image handler error: %s'
-                               % (getattr(self.tracker, 'status', ''), getattr(self, 'frames_processed', 0), why, getattr(self, 'callback_error', None)))
+            hint = ("NO IMAGES reached the handler: nothing is publishing %s (is the camera running under one of these names?)"
+                    % " or ".join(p + "/color/image_raw" for p in self.camera_prefixes)) if not getattr(self, "frames_processed", 0) else ""
+            raise TrackingLost('no valid marker in fresh synchronized camera/depth pairs | tracker: %s | frames handled: %s | rejected: %s | image handler error: %s %s'
+                               % (getattr(self.tracker, 'status', ''), getattr(self, 'frames_processed', 0), why, getattr(self, 'callback_error', None), hint))
         raise RuntimeError('no stable reference marker in fresh synchronized camera/depth pairs')
 
     def average_observation(self):
@@ -900,7 +914,7 @@ class Experiment:
                                         advance_m=self.args.advance_m, advance_step_m=self.args.advance_step_m,
                                         advance_speed_mps=self.args.advance_speed_mps, advance_margin_m=self.args.advance_margin_m,
                                         allow_contact=self.args.allow_contact, all_markers=self.args.all_markers,
-                                        marker_order=self.args.marker_order, no_checks=self.skip_checks), result)
+                                        marker_order=self.args.marker_order, no_checks=self.skip_checks, then_goal=self.args.then_goal), result)
             return result
         xy, Z, rms, maximum = self.capture()
         initial = rms
@@ -998,6 +1012,12 @@ class Experiment:
 POSITIONING_ORDERS = ([(0, 5), (4,), (2, 3), (1,)], [(1,), (2, 3), (4,), (0, 5)], [(1,), (4,), (2, 3), (0, 5)], [(2, 3), (4,), (0, 5), (1,)])
 
 
+def camera_prefixes(reference):
+    """Topic prefixes the camera may publish under: the configured one (eih_cam) and the default (/camera/camera, what the grasp stack starts)."""
+    configured = reference.get("camera_topic_prefix", "/camera/camera").rstrip("/")
+    return [configured] + [p for p in ("/camera/camera",) if p != configured]
+
+
 def scale_speeds(settings, scale):
     """Multiply the software speed limits; shorter minimum move and settling so the faster moves are not eaten by waiting."""
     for key in ("joint_speed_deg_s", "linear_speed_m_s", "angular_speed_deg_s"):
@@ -1020,6 +1040,7 @@ def add_advance_arguments(parser):
     parser.add_argument("--advance-margin-m", type=float, default=.015, help="stay this far from the wall unless --allow-contact")
     parser.add_argument("--allow-contact", action="store_true", help="do the full forward distance even if the gripper/plug reaches the wall (insertion stroke)")
     parser.add_argument("--no-checks", action="store_true", help="skip the stale-data, arrival, collision-scene, preflight and wall-clearance checks (the arm's own limits, IK-jump, floor and follow-through guards stay)")
+    parser.add_argument("--then-goal", help="after the forward move, servo to this goal from taught_goals.yaml (centre marker only), e.g. audio_insertion")
     parser.add_argument("--all-markers", action="store_true", help="visit every marker in view, left to right: align, go forward, back out, next")
     parser.add_argument("--marker-order", choices=("left", "nearest"), default="left", help="which marker comes first in --all-markers mode")
 
@@ -1060,6 +1081,13 @@ def main():
         parser.error("--all-markers visits every marker: do not force one with --socket/--marker-id/--taught")
     if args.taught and not args.socket:
         parser.error("--taught needs --socket (usb_a, audio, ac)")
+    if args.then_goal:
+        if args.all_markers:
+            parser.error("--then-goal is for a single marker, not --all-markers")
+        try:
+            taught_goal(args.then_goal)
+        except ValueError as error:
+            parser.error(str(error))
     scale_speeds(settings, args.speed_scale)
     args.advance_speed_mps = min(.03, args.advance_speed_mps * args.speed_scale)
     marker = reference.get("feature_type") == "marker"

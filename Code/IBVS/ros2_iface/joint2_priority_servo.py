@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from alignment_test import Experiment, ROOT, PROJECT, load_inputs, add_advance_arguments, scale_speeds
+from alignment_test import Experiment, ROOT, PROJECT, load_inputs, add_advance_arguments, scale_speeds, taught_goal
 from ibvs.advance import backproject, clearance, fit_wall, plan_travel
 from ibvs.depth import scene_near_depth
 from ibvs.alignment import camera_joint_jacobian, within_limits, smooth_servo_path
@@ -274,9 +274,24 @@ def run_markers(report, next_marker, servo_one, retract):
     report['status'] = 'CONVERGED'
 
 
+def second_stage(e, args, report):
+    """After the forward move: servo to a second goal (a photo of the insertion pose) on one marker, no further forward move."""
+    goal = taught_goal(args.then_goal)
+    print('Second target %s: marker %d, goal %.0f px wide.' % (args.then_goal, goal['marker_id'],
+          np.linalg.norm(np.array(goal['corners_image_px'][1]) - np.array(goal['corners_image_px'][0]))), flush=True)
+    e.new_marker(goal['marker_id'], 'nearest', goal['corners_image_px'])
+    report['then'] = sub = {}
+    stage = SimpleNamespace(**{**vars(args), 'advance_m': 0.})
+    servo_one(e, stage, sub)
+    report['status'] = sub['status']
+
+
 def servo(e, args, report):
     if not getattr(args, 'all_markers', False):
-        return servo_one(e, args, report)
+        servo_one(e, args, report)
+        if getattr(args, 'then_goal', None) and report.get('status') in ('CONVERGED', 'ALREADY_ALIGNED') and 'error' not in report.get('advance', {}):
+            second_stage(e, args, report)
+        return
     run_markers(report, lambda marker_id: e.new_marker(marker_id, args.marker_order), lambda sub: servo_one(e, args, sub),
                 lambda sub: retract(e, args, sub['advance']) if 'advance' in sub else None)
 
@@ -292,6 +307,13 @@ def run_advance(e, scene, args, report, execute):
         print('ADVANCE STOPPED:', error, flush=True)
 
 
+class NoScene:
+    """Stand-in when no collision scene is built (--no-checks, or a target too close for one)."""
+    install = staticmethod(lambda *a, **k: None)
+    check = staticmethod(lambda q: None)
+    close = staticmethod(lambda: None)
+
+
 def servo_one(e, args, report):
     e.servo_report = report
     report.update(recoveries=0, steps=0, motion_attempts=0)
@@ -303,9 +325,15 @@ def servo_one(e, args, report):
     print('Marker %d chosen live (visible, left to right: %s). Goal: centred, upright, %.0f px wide.' % (
         report['marker_id'], report['sequence'], np.linalg.norm(e.tracker.target_px[0][1] - e.tracker.target_px[0][0])), flush=True)
     report['initial_metrics'] = shape_metrics(e.detection[1][0], e.tracker.target_px[0])
-    scene = ObservedScene(e)
+    scene = NoScene() if e.skip_checks else ObservedScene(e)
     try:
-        scene.install(float(np.mean(Z)), getattr(args, 'resume_run', None))
+        try:
+            scene.install(float(np.mean(Z)), getattr(args, 'resume_run', None))
+        except RuntimeError as error:
+            if 'too close' not in str(error):
+                raise
+            print('Target is closer than the collision-scene range: continuing without a frozen scene.', flush=True)
+            scene = NoScene()
         report['preflight'] = dict(status='SKIPPED') if e.skip_checks else reach_check(e, scene, xy, Z)
         if not args.live:
             report['status'] = 'PREVIEW'
@@ -542,7 +570,7 @@ def main():
                                       close_gripper=args.close_gripper,advance_m=args.advance_m,advance_step_m=args.advance_step_m,
                                       advance_speed_mps=args.advance_speed_mps,advance_margin_m=args.advance_margin_m,
                                       allow_contact=args.allow_contact,all_markers=args.all_markers,marker_order=args.marker_order,
-                                      no_checks=args.no_checks), c, ref, g, out)
+                                      no_checks=args.no_checks,then_goal=args.then_goal), c, ref, g, out)
         if args.home_first:
             if not args.live:
                 raise RuntimeError('--home-first requires --live; preview checks the current pose without moving')

@@ -87,3 +87,21 @@ def test_failure_reports_an_error_inside_the_image_handler(tmp_path):
     e.tracker.detect = lambda gray: 1 / 0
     with pytest.raises(TrackingLost, match="image handler error: ZeroDivisionError"):
         e.capture()
+
+
+def test_camera_is_listened_to_under_both_namings():
+    assert at.camera_prefixes(dict(camera_topic_prefix="/eih_cam")) == ["/eih_cam", "/camera/camera"]
+    assert at.camera_prefixes(dict(camera_topic_prefix="/eih_cam/")) == ["/eih_cam", "/camera/camera"]
+    assert at.camera_prefixes(dict(camera_topic_prefix="/camera/camera")) == ["/camera/camera"]
+
+
+def test_no_images_at_all_is_called_out_with_the_topic_names(tmp_path):
+    e = experiment(tmp_path)
+    e.camera_prefixes = ["/eih_cam", "/camera/camera"]
+    e.pump = lambda seconds=.05: time.sleep(.02)                     # the handler never runs: no images arrive
+    e.r._img.clear()
+    e.frames_processed = 0
+    e.r._img.update(color=SimpleNamespace(header=SimpleNamespace(stamp=SimpleNamespace(sec=1, nanosec=0))),
+                    depth=SimpleNamespace(header=SimpleNamespace(stamp=SimpleNamespace(sec=1, nanosec=0))))
+    with pytest.raises(TrackingLost, match=r"NO IMAGES reached the handler: nothing is publishing /eih_cam/color/image_raw or /camera/camera/color/image_raw"):
+        e.capture()

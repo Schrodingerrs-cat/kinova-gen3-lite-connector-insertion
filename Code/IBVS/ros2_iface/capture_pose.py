@@ -26,13 +26,15 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, default=ROOT.parents[1] / "Media" / "IBVS" / "poses")
     a = ap.parse_args()
     cfg = yaml.safe_load(a.config.read_text())
-    prefix = cfg["camera_topic_prefix"].rstrip("/")
+    configured = cfg["camera_topic_prefix"].rstrip("/")
+    prefixes = [configured] + [p for p in ("/camera/camera",) if p != configured]      # the camera runs under one naming or the other
     rclpy.init()
     node, got = Node("capture_pose"), {}
     q = QoSProfile(depth=2, reliability=ReliabilityPolicy.RELIABLE)
-    node.create_subscription(Image, prefix + "/color/image_raw", lambda m: got.__setitem__("color", m), q)
-    node.create_subscription(Image, prefix + "/aligned_depth_to_color/image_raw", lambda m: got.__setitem__("depth", m), q)
-    node.create_subscription(CameraInfo, prefix + "/color/camera_info", lambda m: got.__setitem__("info", m), q)
+    for prefix in prefixes:
+        node.create_subscription(Image, prefix + "/color/image_raw", lambda m: got.__setitem__("color", m), q)
+        node.create_subscription(Image, prefix + "/aligned_depth_to_color/image_raw", lambda m: got.__setitem__("depth", m), q)
+        node.create_subscription(CameraInfo, prefix + "/color/camera_info", lambda m: got.__setitem__("info", m), q)
     node.create_subscription(JointState, "/joint_states", lambda m: got.__setitem__("joints", dict(zip(m.name, m.position))), 10)
     t0 = time.time()
     while not all(k in got for k in ("color", "depth", "info")) and time.time() - t0 < 10:
@@ -43,7 +45,7 @@ def main():
     node.destroy_node()
     rclpy.shutdown()
     if "color" in missing:
-        sys.exit("no camera image on %s/color/image_raw: is the camera running?" % prefix)
+        sys.exit("no camera image on %s: is the camera running?" % " or ".join(p + "/color/image_raw" for p in prefixes))
     folder = a.out / ("%s_%s" % (a.name, time.strftime("%Y%m%d_%H%M%S")))
     folder.mkdir(parents=True)
     joints = [float(np.degrees(got["joints"][j])) for j in JOINTS] if "joints" in got else None
