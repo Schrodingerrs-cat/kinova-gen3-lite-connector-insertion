@@ -217,3 +217,32 @@ def test_goal_offset_moves_the_goal_in_the_image_only():
     for _ in range(5):
         t2.detect(row())
     assert np.allclose(t2.target_px[0] - t0.target_px[0], [-3, 0])
+
+
+# ---- the taught goal (--taught --socket): the goal comes from config/taught_goals.yaml ----
+def test_tracker_with_a_taught_goal_uses_it_as_given_and_accepts_any_marker_rotation():
+    taught = [[300, 150], [500, 140], [510, 330], [310, 340]]
+    t = AutoMarkerTracker(CAMERA, {**AUTO, "marker_id": 11, "taught_goal_px": taught})
+    for _ in range(5):
+        t.detect(row(rotate={11: 1}))                                       # a rotated marker would be refused for the live goal
+    assert t.locked == 11 and np.allclose(t.target_px[0], taught) and np.allclose(t.star[0], t.normalize(taught))
+
+
+def test_taught_goal_is_read_for_the_socket_and_refused_when_missing_or_mismatched(tmp_path):
+    goals = tmp_path / "goals.yaml"
+    save_goal(goals, "audio", 11, GOAL, K, .1)
+    _, ref, _ = load_inputs(ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", "audio", None, True, goals)
+    assert ref["feature_tracking"]["marker_id"] == 11 and ref["feature_tracking"]["taught_goal_px"] == [list(map(float, p)) for p in GOAL]
+    assert ref["camera_K"] == [list(map(float, r)) for r in K]
+    with pytest.raises(ValueError, match="teach_goal.py --socket usb_a"):
+        load_inputs(ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", "usb_a", None, True, goals)
+    with pytest.raises(ValueError, match="--taught needs --socket"):
+        load_inputs(ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", None, None, True, goals)
+    save_goal(goals, "audio", 99, GOAL, K, .1)
+    with pytest.raises(ValueError, match="taught on marker 99"):
+        load_inputs(ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", "audio", None, True, goals)
+
+
+def test_the_goal_taught_for_audio_in_the_repo_loads():
+    _, ref, _ = load_inputs(ROOT / "config" / "alignment.yaml", ROOT / "config" / "marker_goal.yaml", "audio", None, True)
+    assert ref["feature_tracking"]["marker_id"] == 11 and len(ref["feature_tracking"]["taught_goal_px"]) == 4

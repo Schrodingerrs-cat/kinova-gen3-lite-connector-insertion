@@ -35,7 +35,7 @@ from ibvs.overlay import FeatureOverlay  # noqa: E402
 from ibvs.recording import TimedVideo  # noqa: E402
 
 
-def load_inputs(settings_path, reference_path, socket=None, marker_id=None):
+def load_inputs(settings_path, reference_path, socket=None, marker_id=None, taught=False, goals_path=None):
     settings = yaml.safe_load(settings_path.read_text())
     for key, value in settings.items():
         if not isinstance(value, (int, float)) or not np.isfinite(value) or value <= 0:
@@ -56,6 +56,16 @@ def load_inputs(settings_path, reference_path, socket=None, marker_id=None):
         # Nothing is taught: marker and goal are chosen from the live view (AutoMarkerTracker); this square is only a placeholder.
         reference["feature_tracking"] = dict(reference["feature_tracking"], ids=[forced if forced is not None else 0], marker_id=forced)
         reference["corners_image_px"] = [[w/2-30, h/2-30], [w/2+30, h/2-30], [w/2+30, h/2+30], [w/2-30, h/2+30]]
+        if taught:                                                       # use the goal taught for this socket (teach_goal.py) instead of the live one
+            if socket is None:
+                raise ValueError("--taught needs --socket")
+            entry = (yaml.safe_load(Path(goals_path or ROOT / "config" / "taught_goals.yaml").read_text()) or {}).get(socket)
+            if not entry:
+                raise ValueError("no taught goal for socket %s: run ros2_iface/teach_goal.py --socket %s" % (socket, socket))
+            if entry["marker_id"] != reference["sockets"][socket]:
+                raise ValueError("the goal for %s was taught on marker %s, config says %s" % (socket, entry["marker_id"], reference["sockets"][socket]))
+            reference["feature_tracking"].update(taught_goal_px=entry["corners_image_px"], marker_id=entry["marker_id"])
+            reference["corners_image_px"], reference["camera_K"] = entry["corners_image_px"], entry["camera_K"]
         settings["damping"] = 0.0
         settings["max_servo_joint_step_deg"] = 5.5
         FeatureOverlay(reference)
@@ -387,6 +397,8 @@ class Experiment:
         if self.is_marker:
             if info.header.frame_id != self.reference["camera_frame_id"] and not self.skip_checks:
                 raise RuntimeError("camera frame differs from the marker configuration")
+            if "camera_K" in self.reference and np.abs(np.array(self.camera["K"]) - np.array(self.reference["camera_K"])).max() > 1.0 and not self.skip_checks:
+                raise RuntimeError("camera intrinsics differ from the taught goal; teach the goal again")
             self.tracker = AutoMarkerTracker(self.camera, self.reference["feature_tracking"])
         else:
             self.tracker = Tracker(self.camera, {**self.reference, "min_side_px": self.c["min_marker_side_px"],
@@ -1001,6 +1013,7 @@ def main():
     parser.add_argument("--reference", type=Path, default=ROOT / "config" / "marker_goal.yaml")
     parser.add_argument('--socket', help='optional: force the marker of this socket (usb_a, audio, ac) instead of choosing live')
     parser.add_argument('--marker-id', type=int, help='optional: force this ArUco id instead of choosing live')
+    parser.add_argument('--taught', action='store_true', help='use the goal taught for --socket (config/taught_goals.yaml) instead of building it from the live view')
     parser.add_argument("--hand-eye", type=Path, help="reuse a local_hand_eye.json from this unchanged camera mount; default: measure local mapping")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -1015,9 +1028,11 @@ def main():
         parser.error("advance: distance 0..0.30 m, step 0..0.05 m, speed 0..0.02 m/s, margin >= 0")
     if not 1. <= args.speed_scale <= 3.:
         parser.error("--speed-scale must be between 1 and 3")
-    settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket, args.marker_id)
-    if args.all_markers and (args.socket or args.marker_id is not None):
-        parser.error("--all-markers visits every marker: do not force one with --socket/--marker-id")
+    settings, reference, grasp = load_inputs(args.settings, args.reference, args.socket, args.marker_id, args.taught)
+    if args.all_markers and (args.socket or args.marker_id is not None or args.taught):
+        parser.error("--all-markers visits every marker: do not force one with --socket/--marker-id/--taught")
+    if args.taught and not args.socket:
+        parser.error("--taught needs --socket (usb_a, audio, ac)")
     scale_speeds(settings, args.speed_scale)
     args.advance_speed_mps = min(.03, args.advance_speed_mps * args.speed_scale)
     marker = reference.get("feature_type") == "marker"

@@ -32,6 +32,7 @@ Every command from the `insertion_task` folder. The arm driver, MoveIt and the c
 | Whole job: close gripper → home → post-grasp → every marker (servo, 15 cm forward, back out) | `bash Code/IBVS/run_end_to_end.sh --show-image --live --bringup` (drop `--live` for a preview) | yes |
 | Go to the configured post-grasp pose (safest route from wherever the arm is) | `bash Code/IBVS/run_go_to_pose.sh` (`--pose home`, `--dry` plan only) | yes |
 | Photo + depth + joint values (degrees) + visible markers of the current pose | `bash Code/IBVS/run_capture_pose.sh --name my_pose` → `Media/IBVS/poses/` | no |
+| AUX (audio) socket with the goal taught for it: close gripper → home → post-grasp → marker 11 → forward 15 cm | `bash Code/IBVS/run_aux.sh --show-image --live --bringup` (preview without `--live`) | yes |
 | One marker only, from the current pose | `bash Code/IBVS/run_joint2_priority.sh --show-image --live` (`--marker-id N`) | yes |
 | Home → post-grasp → one marker | `bash Code/IBVS/run_alignment.sh --show-image --live --bringup` | yes |
 | Print the markers | `markers/aruco_markers.pdf` (regenerate: `python3 Code/IBVS/markers/make_markers.py`) | no |

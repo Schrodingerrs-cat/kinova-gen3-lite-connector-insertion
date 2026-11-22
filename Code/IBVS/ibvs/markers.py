@@ -131,14 +131,18 @@ class AutoMarkerTracker:
         return min(usable, key=lambda i: np.linalg.norm(usable[i].mean(0) - centre)) if usable else None
 
     def lock(self, marker_id, corners):
-        tilt = float(np.degrees(np.arctan2(*(corners[1] - corners[0])[::-1])))
-        if abs(tilt) > 20.:
-            self.status = "marker %d is rotated %.0f deg in the image: the camera is not facing the wall upright" % (marker_id, tilt)
-            return
-        h = self.sides(corners).mean() / 2
-        dx, dy = self.m.get("goal_offset_px", [0, 0])                 # image x right, y DOWN
-        cx, cy = self.K[0, 2] + dx, self.K[1, 2] + dy
-        goal = np.array([[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]])
+        taught = self.m.get("taught_goal_px")
+        if taught is not None:                                          # the goal that was taught for this socket
+            goal = np.array(taught, float)
+        else:
+            tilt = float(np.degrees(np.arctan2(*(corners[1] - corners[0])[::-1])))
+            if abs(tilt) > 20.:
+                self.status = "marker %d is rotated %.0f deg in the image: the camera is not facing the wall upright" % (marker_id, tilt)
+                return
+            h = self.sides(corners).mean() / 2
+            dx, dy = self.m.get("goal_offset_px", [0, 0])                 # image x right, y DOWN
+            cx, cy = self.K[0, 2] + dx, self.K[1, 2] + dy
+            goal = np.array([[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]])
         self.target_px, self.star = goal.reshape(1, 4, 2), self.normalize(goal).reshape(1, 4, 2)
         self.ids, self.locked, self.prev = [marker_id], marker_id, {marker_id: corners}
         self.sequence = sorted(self.visible, key=self.visible.get)               # every usable marker in view, left to right

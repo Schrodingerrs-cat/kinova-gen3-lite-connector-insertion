@@ -473,6 +473,7 @@ def main():
     parser.add_argument('--reference', type=Path, default=ROOT/'config/marker_goal.yaml')
     parser.add_argument('--socket', help='optional: force the marker of this socket (usb_a, audio, ac) instead of choosing live')
     parser.add_argument('--marker-id', type=int, help='optional: force this ArUco id instead of choosing live')
+    parser.add_argument('--taught', action='store_true', help='use the goal taught for --socket (config/taught_goals.yaml) instead of building it from the live view')
     add_advance_arguments(parser)
     parser.add_argument('--close-gripper',action='store_true',help='close the gripper before the servo')
     parser.add_argument('--fast',action='store_true',help='UNVALIDATED faster profile: bigger steps, short settling, coarser collision sampling')
@@ -486,15 +487,17 @@ def main():
         parser.error('--resume-run continues the current pose and cannot be combined with --home-first')
     if args.resume_run and args.near_scene:
         parser.error('choose either a fresh near scene or a saved scene')
-    c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket, args.marker_id)
+    c, ref, g = load_inputs(ROOT/'config/alignment.yaml', args.reference, args.socket, args.marker_id, args.taught)
     if args.control_hz is not None and (not np.isfinite(args.control_hz) or not .2<=args.control_hz<=3.):
         parser.error('control-hz must be between 0.2 and 3')
     if not (0. <= args.advance_m <= .30 and 0. < args.advance_step_m <= .05 and 0. < args.advance_speed_mps <= .02 and args.advance_margin_m >= 0.):
         parser.error('advance: distance 0..0.30 m, step 0..0.05 m, speed 0..0.02 m/s, margin >= 0')
     if not 1. <= args.speed_scale <= 3.:
         parser.error('--speed-scale must be between 1 and 3')
-    if args.all_markers and (args.socket or args.marker_id is not None):
-        parser.error('--all-markers visits every marker: do not force one with --socket/--marker-id')
+    if args.all_markers and (args.socket or args.marker_id is not None or args.taught):
+        parser.error('--all-markers visits every marker: do not force one with --socket/--marker-id/--taught')
+    if args.taught and not args.socket:
+        parser.error('--taught needs --socket (usb_a, audio, ac)')
     if args.fast and (args.smooth or args.control_hz is not None):parser.error('--fast replaces --smooth and --control-hz')
     if args.fast:fast_profile(c)
     elif args.smooth:smooth_profile(c,2. if args.control_hz is None else args.control_hz)
