@@ -12,8 +12,7 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 
 1. Terminal 1, the arm and MoveIt (the grasp stack's bringup, the same one the grasp pipeline uses; wait until the controllers are up).
 2. Terminal 2, the camera as the grasp stack starts it (`/camera/camera/...` with aligned depth; this script reads these topics).
-3. Terminal 3, put the arm at the post-grasp pose: `bash Code/IBVS/go_post_grasp.sh` (the grasp pipeline does this itself after a real grasp).
-4. Terminal 3, run the servo:
+3. Terminal 3, one command does everything from any arm pose: home, post-grasp, look at the markers, servo the wire's marker (pre-insertion, 1 s stop, insertion). It does not grasp; run it after the grasp, with the plug held.
 
 | Mode | Command |
 | --- | --- |
