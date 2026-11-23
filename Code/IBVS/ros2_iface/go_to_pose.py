@@ -16,6 +16,8 @@ from control_msgs.action import FollowJointTrajectory
 from rcl_interfaces.srv import GetParameters
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from moveit_msgs.msg import RobotState
+from moveit_msgs.srv import GetStateValidity
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectoryPoint
 
@@ -77,7 +79,26 @@ def main():
     routes = [sequenced_joint_path(q0, target, g) for g in ORDERS] + [np.linspace(q0, target, n)]
     min_height = grasp["scan"]["table_z_m"] + MARGIN_ABOVE_TABLE_M
     max_reach = max(MAX_REACH_M, extremes([q0])[1] + .005)       # the arm may already stand beyond the limit: the route just must not go farther out
-    ok = [p for p in routes if extremes(p)[0] >= min_height and extremes(p)[1] <= max_reach] or routes
+    check = node.create_client(GetStateValidity, "/check_state_validity")
+    have_check = check.wait_for_service(timeout_sec=5)
+    if not have_check:
+        print("WARNING: MoveIt /check_state_validity not up, self-collision not checked", flush=True)
+
+    def collision_free(path):
+        """MoveIt self-collision check on every 3rd sample (and the last) of the route."""
+        for q in list(path[::3]) + [path[-1]]:
+            request = GetStateValidity.Request(group_name="arm", robot_state=RobotState())
+            request.robot_state.joint_state.name, request.robot_state.joint_state.position = JOINTS, [float(v) for v in q]
+            future = check.call_async(request)
+            rclpy.spin_until_future_complete(node, future, timeout_sec=5)
+            if future.result() is None or not future.result().valid:
+                return False
+        return True
+
+    inside = [p for p in routes if extremes(p)[0] >= min_height and extremes(p)[1] <= max_reach] or routes
+    ok = [p for p in inside if not have_check or collision_free(p)]
+    if not ok:
+        sys.exit("REFUSED: every route home collides with the arm itself or the scene")
     path = max(ok, key=lambda p: extremes(p)[0])                  # among the routes inside the limits, the one that stays highest
     low, reach = extremes(path)
     print("current joints deg:", np.round(np.degrees(q0), 1).tolist(), "\ntarget %s deg:" % a.pose, np.round(np.degrees(target), 1).tolist())
