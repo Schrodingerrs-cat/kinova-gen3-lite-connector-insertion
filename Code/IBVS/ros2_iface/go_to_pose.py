@@ -75,12 +75,13 @@ def main():
 
     n = max(2, int(np.ceil(np.degrees(np.abs(target - q0).max()))) + 1)
     routes = [sequenced_joint_path(q0, target, g) for g in ORDERS] + [np.linspace(q0, target, n)]
-    path = max(routes, key=lambda p: extremes(p)[0])
+    min_height = grasp["scan"]["table_z_m"] + MARGIN_ABOVE_TABLE_M
+    max_reach = max(MAX_REACH_M, extremes([q0])[1] + .005)       # the arm may already stand beyond the limit: the route just must not go farther out
+    ok = [p for p in routes if extremes(p)[0] >= min_height and extremes(p)[1] <= max_reach] or routes
+    path = max(ok, key=lambda p: extremes(p)[0])                  # among the routes inside the limits, the one that stays highest
     low, reach = extremes(path)
     print("current joints deg:", np.round(np.degrees(q0), 1).tolist(), "\ntarget %s deg:" % a.pose, np.round(np.degrees(target), 1).tolist())
     print("route: lowest point %.0f mm, farthest reach %.0f mm, %d samples" % (low * 1e3, reach * 1e3, len(path)))
-    min_height = grasp["scan"]["table_z_m"] + MARGIN_ABOVE_TABLE_M
-    max_reach = max(MAX_REACH_M, extremes([q0])[1] + .005)       # the arm may already stand beyond the limit: the route just must not go farther out
     if low < min_height or reach > max_reach:
         sys.exit("REFUSED: the best route goes below %.0f mm (table + %.0f mm) or beyond %.0f mm" % (min_height * 1e3, MARGIN_ABOVE_TABLE_M * 1e3, max_reach * 1e3))
     times = trajectory_times(path, 5. * a.speed_scale, 0., .1, peak_factor=1.25)
