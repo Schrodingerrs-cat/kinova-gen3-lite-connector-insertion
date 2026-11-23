@@ -2,7 +2,7 @@
 """Move the arm to the configured post_grasp (or home) pose by the safest joint route, as one smooth trajectory.
   python3 ros2_iface/go_to_pose.py --pose post_grasp [--speed-scale 2] [--dry]
 Routes: joint groups one after another (several orders) or straight; the one whose lowest point is highest is used.
-Refuses a route that comes within 3 cm of the base plane or reaches farther than 0.50 m (the wall is at 0.55 m)."""
+Refuses a route that comes within 3 cm of the table plane (grasp.yaml scan.table_z_m) or reaches farther than 0.50 m (the wall is at 0.55 m)."""
 import argparse
 import pathlib
 import sys
@@ -27,7 +27,7 @@ from ibvs.kinematics import UrdfChain  # noqa: E402
 
 JOINTS = [f"joint_{i}" for i in range(1, 7)]
 ORDERS = ([(0, 5), (4,), (2, 3), (1,)], [(1,), (2, 3), (4,), (0, 5)], [(1,), (4,), (2, 3), (0, 5)], [(2, 3), (4,), (0, 5), (1,)])
-MIN_HEIGHT_M, MAX_REACH_M = .03, .50
+MARGIN_ABOVE_TABLE_M, MAX_REACH_M = .03, .50     # height limit = the real table plane (grasp.yaml scan.table_z_m, base frame) + this
 
 
 def main():
@@ -79,8 +79,9 @@ def main():
     low, reach = extremes(path)
     print("current joints deg:", np.round(np.degrees(q0), 1).tolist(), "\ntarget %s deg:" % a.pose, np.round(np.degrees(target), 1).tolist())
     print("route: lowest point %.0f mm, farthest reach %.0f mm, %d samples" % (low * 1e3, reach * 1e3, len(path)))
-    if low < MIN_HEIGHT_M or reach > MAX_REACH_M:
-        sys.exit("REFUSED: the best route goes below %.0f mm or beyond %.0f mm" % (MIN_HEIGHT_M * 1e3, MAX_REACH_M * 1e3))
+    min_height = grasp["scan"]["table_z_m"] + MARGIN_ABOVE_TABLE_M
+    if low < min_height or reach > MAX_REACH_M:
+        sys.exit("REFUSED: the best route goes below %.0f mm (table + %.0f mm) or beyond %.0f mm" % (min_height * 1e3, MARGIN_ABOVE_TABLE_M * 1e3, MAX_REACH_M * 1e3))
     times = trajectory_times(path, 5. * a.speed_scale, 0., .1, peak_factor=1.25)
     print("duration %.1f s at speed scale %.1f" % (times[-1], a.speed_scale))
     if a.dry:
