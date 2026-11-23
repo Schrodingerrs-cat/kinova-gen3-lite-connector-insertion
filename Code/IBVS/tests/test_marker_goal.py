@@ -25,7 +25,8 @@ def tracker(marker_id=10, **extra):
 
 def canvas(marker_id=10, rotate=0, x=300, y=150, size=160):
     img = np.full((480, 848), 255, np.uint8)
-    marker = np.rot90(cv2.aruco.generateImageMarker(DICT, marker_id, size), rotate)
+    draw = cv2.aruco.generateImageMarker if hasattr(cv2.aruco, "generateImageMarker") else cv2.aruco.drawMarker
+    marker = np.rot90(draw(DICT, marker_id, size), rotate)
     img[y:y + size, x:x + size] = marker
     return img
 
@@ -104,7 +105,8 @@ AUTO = dict(aruco_dict="DICT_4X4_50", min_side_px=20, max_jump_px=30, lock_frame
 def row(ids=(10, 11, 12), xs=(120, 340, 560), size=100, rotate=None):
     img = np.full((480, 848), 255, np.uint8)
     for i, x in zip(ids, xs):
-        m = cv2.aruco.generateImageMarker(DICT, i, size)
+        draw = cv2.aruco.generateImageMarker if hasattr(cv2.aruco, "generateImageMarker") else cv2.aruco.drawMarker
+        m = draw(DICT, i, size)
         img[190:190 + size, x:x + size] = np.rot90(m, (rotate or {}).get(i, 0))
     return img
 

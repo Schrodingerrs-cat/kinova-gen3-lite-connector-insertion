@@ -92,6 +92,7 @@ motion:                       # joint moves and straight lines go to the control
   reach_tol_deg: 2            # after a joint move every joint must be within this of its target, else stop (a faulted arm ignores moves but the controller still says success)
 post_grasp:
   # Leveled on the wall 2026-11-21 from the camera: wall-normal tilt <0.5 deg and marker row level, wall 289 mm away.
+  # Source: Media/IBVS/run_20261121_172647_leveling_post_grasp/leveled_pose.json.
   # Previous pose (2026-11-18, tilted 19.5/11.8/4.5 deg against the wall): [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
   joint_waypoints_deg:        # J1-J6 in degrees; keep the grasp gripper position
     - [36.1993, -81.9997, 134.2784, -49.1608, 122.4039, -66.7142]

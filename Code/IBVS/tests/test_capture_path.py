@@ -22,7 +22,8 @@ DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 def wall_image():
     img = np.full((480, 848), 255, np.uint8)
     for i, x in ((10, 340), (11, 436), (12, 532)):
-        img[205:250, x:x + 45] = cv2.aruco.generateImageMarker(DICT, i, 45)
+        draw = cv2.aruco.generateImageMarker if hasattr(cv2.aruco, "generateImageMarker") else cv2.aruco.drawMarker
+        img[205:250, x:x + 45] = draw(DICT, i, 45)
     return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
 
