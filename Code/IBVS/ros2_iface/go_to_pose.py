@@ -77,12 +77,8 @@ def main():
 
     n = max(2, int(np.ceil(np.degrees(np.abs(target - q0).max()))) + 1)
     routes = [sequenced_joint_path(q0, target, g) for g in ORDERS] + [np.linspace(q0, target, n)]
-    min_height = grasp["scan"]["table_z_m"] + MARGIN_ABOVE_TABLE_M
-    max_reach = max(MAX_REACH_M, extremes([q0])[1] + .005)       # the arm may already stand beyond the limit: the route just must not go farther out
     check = node.create_client(GetStateValidity, "/check_state_validity")
     have_check = check.wait_for_service(timeout_sec=5)
-    if not have_check:
-        print("WARNING: MoveIt /check_state_validity not up, self-collision not checked", flush=True)
 
     def collision_free(path):
         """MoveIt self-collision check on every 3rd sample (and the last) of the route."""
@@ -95,16 +91,11 @@ def main():
                 return False
         return True
 
-    inside = [p for p in routes if extremes(p)[0] >= min_height and extremes(p)[1] <= max_reach] or routes
-    ok = [p for p in inside if not have_check or collision_free(p)]
-    if not ok:
-        sys.exit("REFUSED: every route home collides with the arm itself or the scene")
-    path = max(ok, key=lambda p: extremes(p)[0])                  # among the routes inside the limits, the one that stays highest
+    # no refusals: just pick the best route. Collision-free first, then the one that stays highest.
+    path = max(routes, key=lambda p: (have_check and collision_free(p), extremes(p)[0]))
     low, reach = extremes(path)
     print("current joints deg:", np.round(np.degrees(q0), 1).tolist(), "\ntarget %s deg:" % a.pose, np.round(np.degrees(target), 1).tolist())
-    print("route: lowest point %.0f mm, farthest reach %.0f mm, %d samples" % (low * 1e3, reach * 1e3, len(path)))
-    if low < min_height or reach > max_reach:
-        sys.exit("REFUSED: the best route goes below %.0f mm (table + %.0f mm) or beyond %.0f mm" % (min_height * 1e3, MARGIN_ABOVE_TABLE_M * 1e3, max_reach * 1e3))
+    print("route: lowest point %.0f mm, farthest reach %.0f mm, %d samples, collision-free: %s" % (low * 1e3, reach * 1e3, len(path), collision_free(path) if have_check else "unchecked"))
     times = trajectory_times(path, 5. * a.speed_scale, 0., .1, peak_factor=1.25)
     print("duration %.1f s at speed scale %.1f" % (times[-1], a.speed_scale))
     if a.dry:

@@ -94,6 +94,7 @@ def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol_m, name):
             return
         step = d * min(1.0, step_m / n)
         T_goal = goal_pose(r, T_EC, hold_R, step)
+        print("  step in base frame (mm): %s, tool height %.0f mm" % (np.round((T_goal[:3, 3] - r.tool_matrix()[:3, 3]) * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True)
         try:
             r.send_line(line(r, T_goal), max(0.6, float(np.linalg.norm(step)) / speed))
         except NoPath as e:
@@ -135,7 +136,7 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, ho
         d, side = offset(c, K, goal, L)
         n = float(np.linalg.norm(d))
         if time.time() - last > 0.5:
-            print("%s: marker %.0f px, still %.1f mm to go" % (name, side, n * 1e3), flush=True); last = time.time()
+            print("%s: marker %.0f px, still %.1f mm to go, camera-frame offset (mm) %s, tool height %.0f mm" % (name, side, n * 1e3, np.round(d * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True); last = time.time()
         if n < tol_m:
             r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
             return
