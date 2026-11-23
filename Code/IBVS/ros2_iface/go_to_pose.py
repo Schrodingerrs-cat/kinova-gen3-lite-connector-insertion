@@ -80,8 +80,9 @@ def main():
     print("current joints deg:", np.round(np.degrees(q0), 1).tolist(), "\ntarget %s deg:" % a.pose, np.round(np.degrees(target), 1).tolist())
     print("route: lowest point %.0f mm, farthest reach %.0f mm, %d samples" % (low * 1e3, reach * 1e3, len(path)))
     min_height = grasp["scan"]["table_z_m"] + MARGIN_ABOVE_TABLE_M
-    if low < min_height or reach > MAX_REACH_M:
-        sys.exit("REFUSED: the best route goes below %.0f mm (table + %.0f mm) or beyond %.0f mm" % (min_height * 1e3, MARGIN_ABOVE_TABLE_M * 1e3, MAX_REACH_M * 1e3))
+    max_reach = max(MAX_REACH_M, extremes([q0])[1] + .005)       # the arm may already stand beyond the limit: the route just must not go farther out
+    if low < min_height or reach > max_reach:
+        sys.exit("REFUSED: the best route goes below %.0f mm (table + %.0f mm) or beyond %.0f mm" % (min_height * 1e3, MARGIN_ABOVE_TABLE_M * 1e3, max_reach * 1e3))
     times = trajectory_times(path, 5. * a.speed_scale, 0., .1, peak_factor=1.25)
     print("duration %.1f s at speed scale %.1f" % (times[-1], a.speed_scale))
     if a.dry:
