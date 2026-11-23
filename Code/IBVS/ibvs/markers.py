@@ -104,11 +104,13 @@ class AutoMarkerTracker:
         self.dist = np.array(cfg_cam["distortion"], float)
         self.m, self.forced, self.order = cfg, cfg.get("marker_id"), cfg.get("marker_order", "nearest")
         self.visible, self.sequence = {}, []
-        dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg["aruco_dict"]))
-        params = cv2.aruco.DetectorParameters()
+        self.dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg["aruco_dict"]))
+        modern = hasattr(cv2.aruco, "ArucoDetector")
+        params = cv2.aruco.DetectorParameters() if modern else cv2.aruco.DetectorParameters_create()
         params.detectInvertedMarker = bool(cfg.get("detect_inverted_marker", False))
         params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-        self.det = cv2.aruco.ArucoDetector(dictionary, params)
+        self.params = params
+        self.det = cv2.aruco.ArucoDetector(self.dictionary, params) if modern else None
         self.ids, self.prev, self.candidates, self.status = [], {}, [], "looking for a marker"
         self.locked, self._seen, self._count = None, None, 0
         self.target_px = np.zeros((1, 4, 2))
@@ -150,7 +152,8 @@ class AutoMarkerTracker:
 
     def detect(self, gray):
         """(px (1,4,2) NaN when invalid, valid (1,)). Unlocked: choose; locked: track the chosen id."""
-        corners, ids, _ = self.det.detectMarkers(gray)
+        corners, ids, _ = (self.det.detectMarkers(gray) if self.det is not None
+                           else cv2.aruco.detectMarkers(gray, self.dictionary, parameters=self.params))
         seen = {} if ids is None else {int(i): c.reshape(4, 2) for i, c in zip(ids.ravel(), corners)}
         self.candidates = sorted(seen)
         self.visible = {i: float(c[:, 0].mean()) for i, c in seen.items() if self.sides(c).min() >= self.m["min_side_px"]}
