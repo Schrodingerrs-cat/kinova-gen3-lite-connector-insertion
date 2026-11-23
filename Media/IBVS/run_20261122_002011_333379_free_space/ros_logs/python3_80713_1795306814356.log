@@ -1,0 +1,3 @@
+[INFO] [1795306814.400954627] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+[INFO] [1795306815.123098543] [spawner_gen3_lite_2f_gripper_controller]: [94mLoaded [1mgen3_lite_2f_gripper_controller[0m
+[INFO] [1795306815.354130259] [spawner_gen3_lite_2f_gripper_controller]: [92mConfigured and activated [1mgen3_lite_2f_gripper_controller[0m

@@ -1,0 +1,63 @@
+# STRIP MODE (run_pipeline.py --mode strip): cables lie on a white strip, each plug's orientation is known from the strip's, a green sticker marks each cable.
+# find strip (yaw, top height) + stickers from home -> the cable = the sticker in the connector's predefined slot on the strip -> 3 close views across the strip -> rectangle at the KNOWN yaw on the plug's top band -> hover at pre-grasp, refit -> grasp. No hints, no blocking gates.
+# Values marked (S) come from Sahil Gajera's measured runs of 2026-11-19 (branch sahil, close_scan_pipeline/): not verified by us yet, check the plots before trusting a number.
+active: usb_a
+
+strip:                          # the white strip the cables lie on
+  size_mm: [150, 51]            # top face, long x short (measured 151 x 51 on our crib, 2026-11-21)
+  min_fill: 0.65                # a view counts for the strip yaw only if the strip-sized box is this full of white (the crib has holes) ...
+  min_score: 0.55               # ... and its fill minus the white in an 8 mm ring around it is at least this
+  white: {s_max: 90, v_min: 150}                # colour test of the strip (HSV); add h: [lo, hi] if the light gives it a colour cast
+  search_radius_m: 0.18         # the white strip is searched this far around the stickers
+  top_band_mm: 6                # strip top face = dominant white height +- this
+  min_points: 400
+  margin_mm: 10                 # a sticker counts as "on the strip" up to this far outside its outline
+
+views:                          # 3 close views, azimuth = strip long axis + across_deg, so the left / right views look at the plug's two wide faces
+  list:
+    - {across_deg: 90, tilt_deg: 30}
+    - {across_deg: 0, tilt_deg: 0}
+    - {across_deg: -90, tilt_deg: 30}
+  distance_m: 0.20              # camera to the sticker
+  tip_clear_mm: 35              # fingertips at least this far above the sticker height in every view
+  settle_s: 0.4
+  frames: 5                     # median depth of this many frames
+
+plug:                           # plug rectangle settings (nothing here blocks a grasp)
+  top_band_mm: [-6, 3]          # footprint = points within this height window around the plug top (the sticker's 90th percentile height)
+  min_points_view: 20           # a view needs this many top-band points to count (the home view sees the plug small)
+  edge_pct: 3                   # rectangle edges = this and (100 - this) percentile of the top-band points
+
+select:
+  slot_tol_mm: 15               # the sticker must sit this close to the connector's slot
+
+refine:                         # one more fit from the pre-grasp hover (camera straight above), before the descent; the grasp uses its centre
+  frames: 5
+
+connectors:
+  usb_a:                        # wide face parallel to the crib's SHORT edge (user, 2026-11-21): thin along the crib, wide across it; the jaws close along the crib's long axis
+    slot_mm: [-52, 2]           # where the plug stands on the crib: (along the crib's long axis, across) from its centre, u toward base +y (measured from the real frames, 2026-11-21)
+    long_axis_rel_strip_deg: 0  # the footprint's first extent runs along the strip
+    jaw_rel_strip_deg: 0        # jaw axis relative to the strip's long axis
+    open_width_m: 0.0315        # (S) opening during the descent: 7.5 mm + 2 x 12 mm
+    clear_mm: 8                 # fingertip above the strip top. Sahil's 12 mm was for a taller plug; ours stands 25-29 mm (measured), so the pads sit at 8-20 mm. CHECK before --grasp
+    dark_v: 90
+    roi_radius_mm: 20           # (S) plug points within this of the sticker
+  aux:                          # round jack: orientation does not matter, position only (user, 2026-11-20)
+    slot_mm: [-2, 1.5]          # measured from the real frames, 2026-11-21: about the crib centre
+    long_axis_rel_strip_deg: null
+    jaw_rel_strip_deg: 0        # (S) jaws along the strip direction
+    open_width_m: 0.0315
+    clear_mm: 6                 # (S) measured: barrel spans ~2-8 mm to ~24 mm above the board, the cable joins at 27-34 mm
+    dark_v: 90
+    roi_radius_mm: 15
+  power:                        # PENDING: orientation relative to the strip not given yet (user: tomorrow). Refused until `status` is removed and the fields are filled in.
+    status: pending
+    slot_mm: [50, 0]            # not measured yet
+    long_axis_rel_strip_deg: null
+    jaw_rel_strip_deg: 0
+    open_width_m: 0.052
+    clear_mm: 10
+    dark_v: 90
+    roi_radius_mm: 45
+    marker: {h: [75, 105], s_min: 100, v_min: 80}   # bright teal only: leaves the black cable out

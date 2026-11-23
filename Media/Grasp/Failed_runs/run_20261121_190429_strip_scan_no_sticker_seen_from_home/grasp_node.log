@@ -1,0 +1,4 @@
+/home/aryans-cat/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+1794096871.740045 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+[INFO] [1794096871.897408827] [grasp_node]: grasp_node ready (dry_run=False)

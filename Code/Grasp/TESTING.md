@@ -46,10 +46,10 @@ Needs Terminal 1 up and the camera over the sticker (Step 0 leaves it there).
 ```bash
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode head
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode cloud
-python3 ros2_iface/run_pipeline.py $RUN --mode cad --connector micro_jack          # one cable (--hint 0.26,-0.02 if several stickers are in view)
+python3 ros2_iface/run_pipeline.py $RUN --mode cad --connector micro_jack          # one cable, found by its predefined spot
 python3 ros2_iface/run_pipeline.py $RUN --mode cad --connector usb_a micro_jack --grasp   # two cables in turn; --between pause|release|stop (default pause: you take the cable, press Enter)
 python3 ros2_iface/run_pipeline.py $RUN --mode strip --connector usb_a                  # strip mode: strip + stickers, 3 close views, rectangle, gates (no --grasp: never goes to the pre-grasp)
-python3 ros2_iface/run_pipeline.py $RUN --mode strip --connector usb_a --hint 0.28,0.0 --grasp   # pick the cable nearest x,y; hover refit, then the grasp
+python3 ros2_iface/run_pipeline.py $RUN --mode strip --connector usb_a --grasp   # the sticker in usb_a's slot on the crib; hover refit, then the grasp
 python3 ros2_iface/run_pipeline.py $RUN --mode cad                   # no scan stage: sticker, 3 close views, fit, place. Connector: ros2 param set /grasp_node connector micro_jack (default: connectors.yaml active). Several stickers in view: ros2 param set /grasp_node hint 0.26,-0.02
 python3 ros2_iface/run_pipeline.py $RUN --skip-scan --mode model     # only after the tag is on the panel and config/panel_map.yaml is measured (PIPELINE.md 5.4)
 ```

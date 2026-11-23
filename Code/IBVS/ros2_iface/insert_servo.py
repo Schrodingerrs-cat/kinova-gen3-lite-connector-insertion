@@ -21,7 +21,13 @@ class NoPath(Exception):
         super().__init__("no Cartesian path for this step")
         self.T_goal = T_goal
 
-DETECTOR = cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50), cv2.aruco.DetectorParameters())
+DICTIONARY = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+if hasattr(cv2.aruco, "ArucoDetector"):
+    _detector = cv2.aruco.ArucoDetector(DICTIONARY, cv2.aruco.DetectorParameters())
+    detect_markers = _detector.detectMarkers
+else:                                                   # OpenCV < 4.7
+    _params = cv2.aruco.DetectorParameters_create()
+    detect_markers = lambda gray: cv2.aruco.detectMarkers(gray, DICTIONARY, parameters=_params)
 
 
 def observe(r, marker_id, tries=30):
@@ -33,7 +39,7 @@ def observe(r, marker_id, tries=30):
             color, _, K = r.grab()
         except Exception:
             continue
-        corners, ids, _ = DETECTOR.detectMarkers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
+        corners, ids, _ = detect_markers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
         if ids is not None and marker_id in ids.ravel():
             c = corners[list(ids.ravel()).index(marker_id)].reshape(4, 2)
             return c, np.asarray(K, float)
@@ -116,7 +122,7 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, ho
         try:
             r.spin_until(lambda: False, 0.02)
             color, _, K = r.grab()
-            corners, ids, _ = DETECTOR.detectMarkers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
+            corners, ids, _ = detect_markers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
             if ids is None or marker_id not in ids.ravel():
                 raise RuntimeError("marker not seen")
             c, K = corners[list(ids.ravel()).index(marker_id)].reshape(4, 2), np.asarray(K, float)

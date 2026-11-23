@@ -75,7 +75,7 @@ camera:
   hand_eye_quat_xyzw: [0.0097493, -0.0046708, -0.0127007, 0.9998609]
 grasp:
   open_margin_m: 0.012        # per-side clearance when open (hand-eye error is ~10 mm)
-  max_joint_dev_deg: 120      # pre-grasp joints may differ this much from the view pose (jaw yaw can need ~90 deg of joint 6)
+  max_joint_dev_deg: 360      # no cap (was 120, which refused every CAD pick: joint 6 needs ~160 deg to turn the jaws). The joint-limit check in arm.go_joints still applies
   standoff_m: 0.06            # pre-grasp distance along the approach
   lift_m: 0.08
 hold_check:                   # wrist camera check after the lift (HW7 rule: 0 false positives in 319 empty-hand frames there)
@@ -87,11 +87,14 @@ motion:                       # joint moves and straight lines go to the control
   min_move_s: 1.0             # shortest joint move (was 2.0)
   line_speed_mps: 0.05        # descent / lift average speed; arrives at the grasp point at rest (was 0.04)
   min_line_s: 1.5             # shortest straight line (was 2.0)
+  joint_limits_deg: [153.6, 149.5, 149.5, 149.0, 145.0, 149.0]   # +- limit per joint (robot description, as found by Sahil Gajera's branch)
+  joint_margin_deg: 3         # a commanded joint target must stay this far inside its limit
+  reach_tol_deg: 2            # after a joint move every joint must be within this of its target, else stop (a faulted arm ignores moves but the controller still says success)
 post_grasp:
   # Leveled on the wall 2026-11-21 from the camera: wall-normal tilt <0.5 deg and marker row level, wall 289 mm away.
   # Previous pose (2026-11-18, tilted 19.5/11.8/4.5 deg against the wall): [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
   joint_waypoints_deg:        # J1-J6 in degrees; keep the grasp gripper position
-    - [19.9369, -64.2328, 147.4973, -82.8603, 103.8072, -90.8854]
+    - [36.1993, -81.9997, 134.2784, -49.1608, 122.4039, -66.7142]
 scan:                         # predefined workspace scan (/grasp/scan): 7 recorded joint poses (2026-11-10); the earlier Cartesian view lists (15 views, then 7) are in git (commit b547df6 and the one before)
   table_z_m: -0.041           # support plane height in base frame, fitted on the real table in 3 runs (2026-11-03)
   home_joints_deg: [3.0266, 356.8712, 93.4037, 271.4634, 272.3364, 277.3673]  # HW7 scan_joints.json 'config 2'; /grasp/home goes here

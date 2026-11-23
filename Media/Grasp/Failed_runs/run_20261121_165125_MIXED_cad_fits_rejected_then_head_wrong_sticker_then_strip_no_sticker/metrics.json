@@ -1,0 +1,36 @@
+{
+ "started": "2026-11-21T17:03:15",
+ "grasp_requested": false,
+ "mode": "head",
+ "connector": null,
+ "hint": null,
+ "stages": {
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (-0.000 rad)"
+  },
+  "scan": {
+   "ok": true,
+   "seconds": 30.8,
+   "message": "scan 20261121_170315: 6 views (skipped [0]), 775635 fused points, 2560 marker points; no ICP (views stacked as the kinematics place them)"
+  },
+  "color_target": {
+   "ok": true,
+   "seconds": 5.0,
+   "message": "merged scan 20261121_170315: table tilt 3.0 deg (74734 inliers), 32 above-table clusters, marker clusters [2033, 128, 39, 23, 18]; target (marker centroid) [249.0, 23.0, -1.0] mm. Orientation of the merged patch is NOT used (registration smear)"
+  },
+  "view": {
+   "ok": true,
+   "seconds": 3.2,
+   "message": "camera over [ 0.249  0.023 -0.001] at 180 mm"
+  },
+  "head_grasp": {
+   "ok": false,
+   "seconds": 0.6,
+   "message": "only 6 marker points in the close view: camera over the sticker? (/grasp/view)"
+  }
+ },
+ "outcome": "STOPPED_BEFORE_GRASP: only 6 marker points in the close view: camera over the sticker? (/grasp/view)",
+ "seconds_total": 40.9
+}

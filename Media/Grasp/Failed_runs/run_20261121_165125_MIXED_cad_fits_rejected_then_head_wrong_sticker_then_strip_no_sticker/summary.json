@@ -1,0 +1,14 @@
+{
+ "connectors": [
+  {
+   "connector": "usb_a",
+   "folder": "01_usb_a",
+   "outcome": "ERROR: RuntimeError: strip_scan failed",
+   "picked": false
+  }
+ ],
+ "not_run": [
+  "aux"
+ ],
+ "between": "pause"
+}

@@ -11,6 +11,7 @@ from rclpy.qos import qos_profile_sensor_data
 from scipy.spatial.transform import Rotation as R
 
 from builtin_interfaces.msg import Duration
+from example_interfaces.msg import Bool
 from control_msgs.action import FollowJointTrajectory, GripperCommand
 from geometry_msgs.msg import PoseStamped
 from moveit_msgs.msg import MoveItErrorCodes, RobotState
@@ -39,12 +40,14 @@ def matrix(p, q):
 class Robot(Node):
     def __init__(self, name='grasp_robot', background=False):
         """background=True: own thread keeps joints/TF/camera fresh (use inside a long-running node)."""
-        super().__init__(name)
+        super().__init__(name, use_global_arguments=False)   # launch's -r __node:=grasp_node must not rename this helper too: two /grasp_node = set_parameters hits the wrong one
         self._ex = SingleThreadedExecutor()
         self._ex.add_node(self)
         self._bg = background
         self.q = None
         self.grip_pos_msr = None
+        self.fault = False
+        self.create_subscription(Bool, '/fault_controller/internal_fault', lambda m: setattr(self, 'fault', bool(m.data)), 10)
         self.create_subscription(JointState, '/joint_states', self._js, 10)
         self.tfbuf = tf2_ros.Buffer()
         self.tfl = tf2_ros.TransformListener(self.tfbuf, self)

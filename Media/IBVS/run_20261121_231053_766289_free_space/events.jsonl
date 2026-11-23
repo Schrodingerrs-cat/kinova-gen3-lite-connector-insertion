@@ -1,0 +1,4 @@
+{"event": "SEQUENCE_START", "timestamp_ns": 1795302654139657222, "process_id": 46845}
+{"event": "GRIPPER_CLOSED", "timestamp_ns": 1795302656452573274, "process_id": 46845, "position": 0.8350101837158203, "empty_closes_to": 0.81}
+{"event": "POSITIONING_SCENE_READY", "timestamp_ns": 1795302656673650289, "process_id": 46845, "minimum_depth_m": 0.18, "voxels": 1254}
+{"event": "HOME_START", "timestamp_ns": 1795302656673824410, "process_id": 46845}

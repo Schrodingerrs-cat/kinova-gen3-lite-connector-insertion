@@ -1,0 +1,3 @@
+[INFO] [1795308086.213106745] [spawner_fault_controller]: waiting for service /controller_manager/list_controllers to become available...
+[WARN] [1795308086.857802823] [spawner_fault_controller]: [93mController already loaded, skipping load_controller[0m
+[ERROR] [1795308087.097384834] [spawner_fault_controller]: [91mFailed to configure controller[0m

@@ -1,0 +1,6 @@
+[   0.2 s] open_gripper -> OK: gripper already open (-0.000 rad)
+[  31.1 s] scan -> OK: scan 20261121_170315: 6 views (skipped [0]), 775635 fused points, 2560 marker points; no ICP (views stacked as the kinematics place them)
+[  36.1 s] color_target -> OK: merged scan 20261121_170315: table tilt 3.0 deg (74734 inliers), 32 above-table clusters, marker clusters [2033, 128, 39, 23, 18]; target (marker centroid) [249.0, 23.0, -1.0] mm. Orientation of the merged patch is NOT used (registration smear)
+[  39.3 s] view -> OK: camera over [ 0.249  0.023 -0.001] at 180 mm
+[  40.9 s] head_grasp -> FAILED: only 6 marker points in the close view: camera over the sticker? (/grasp/view)
+[  41.0 s] outcome: STOPPED_BEFORE_GRASP: only 6 marker points in the close view: camera over the sticker? (/grasp/view)

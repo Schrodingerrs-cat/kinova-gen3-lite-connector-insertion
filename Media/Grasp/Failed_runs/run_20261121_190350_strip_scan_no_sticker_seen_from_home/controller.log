@@ -1,0 +1,5 @@
+[   4.7 s] home -> OK: at home (was 103 deg away)
+[   9.7 s] open_gripper -> OK: gripper was at 0.810 rad, opened to -0.001 rad
+[  10.3 s] strip_scan -> FAILED: no sticker seen from home
+[  10.3 s] ERROR: RuntimeError: strip_scan failed
+[  10.4 s] outcome: ERROR: RuntimeError: strip_scan failed

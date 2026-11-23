@@ -6,7 +6,7 @@ import yaml
 from .connectors import MARKER_KEYS
 
 CONFIG = pathlib.Path(__file__).resolve().parents[1] / "config" / "strip.yaml"
-CONNECTOR_KEYS = ("long_axis_rel_strip_deg", "footprint_mm", "footprint_tol_mm", "jaw_rel_strip_deg", "open_width_m", "clear_mm", "band_mm", "top_margin_mm", "dark_v", "roi_radius_mm")
+CONNECTOR_KEYS = ("slot_mm", "long_axis_rel_strip_deg", "jaw_rel_strip_deg", "open_width_m", "clear_mm", "dark_v", "roi_radius_mm")
 
 
 def _need(ok, msg):
@@ -22,25 +22,22 @@ def validate_connector(name, c):
     where = "strip connector '%s': " % name
     for k in CONNECTOR_KEYS:
         _need(k in c, where + "missing key '%s'" % k)
+    _need(isinstance(c["slot_mm"], (list, tuple)) and len(c["slot_mm"]) == 2 and all(_num(x) for x in c["slot_mm"]), where + "slot_mm must be [u, v] mm from the crib centre")
     _need(c["long_axis_rel_strip_deg"] is None or _num(c["long_axis_rel_strip_deg"]), where + "long_axis_rel_strip_deg must be a number or null (round: orientation does not matter)")
-    _need(isinstance(c["footprint_mm"], (list, tuple)) and len(c["footprint_mm"]) == 2 and all(_num(x) and x > 0 for x in c["footprint_mm"]), where + "footprint_mm must be [along strip, across strip] in mm")
-    _need(_num(c["footprint_tol_mm"]) and c["footprint_tol_mm"] > 0 and _num(c["jaw_rel_strip_deg"]), where + "footprint_tol_mm > 0 and jaw_rel_strip_deg a number")
-    _need(all(_num(c[k]) and c[k] > 0 for k in ("open_width_m", "clear_mm", "band_mm", "top_margin_mm", "roi_radius_mm")) and 0 < c["dark_v"] <= 255, where + "open_width_m, clear_mm, band_mm, top_margin_mm, roi_radius_mm must be > 0 and dark_v in (0, 255]")
-    _need(c["open_width_m"] > min(c["footprint_mm"]) * 1e-3, where + "open_width_m must exceed the footprint")
+    _need(_num(c["jaw_rel_strip_deg"]), where + "jaw_rel_strip_deg must be a number")
+    _need(all(_num(c[k]) and c[k] > 0 for k in ("open_width_m", "clear_mm", "roi_radius_mm")) and 0 < c["dark_v"] <= 255, where + "open_width_m, clear_mm, roi_radius_mm must be > 0 and dark_v in (0, 255]")
     if "marker" in c:
         _need(set(c["marker"]) <= set(MARKER_KEYS), where + "marker may only override %s" % (MARKER_KEYS,))
 
 
 def validate(cfg):
     s, v, p, sel, r = cfg["strip"], cfg["views"], cfg["plug"], cfg["select"], cfg["refine"]
-    _need(len(s["size_mm"]) == 2 and s["size_mm"][0] >= s["size_mm"][1] > 0 and 0 < s["size_tol"] < 0.5, "strip.size_mm must be [long, short] and size_tol in (0, 0.5)")
-    _need(s["yaw_spread_deg"] > 0 and s["min_points"] > 0 and s["search_radius_m"] > 0, "strip: yaw_spread_deg, min_points, search_radius_m must be > 0")
+    _need(len(s["size_mm"]) == 2 and s["size_mm"][0] >= s["size_mm"][1] > 0 and 0 < s["min_fill"] <= 1 and 0 < s["min_score"] <= 1, "strip.size_mm must be [long, short], min_fill and min_score in (0, 1]")
+    _need(s["min_points"] > 0 and s["search_radius_m"] > 0, "strip: min_points, search_radius_m must be > 0")
     _need(len(v["list"]) >= 2 and all({"across_deg", "tilt_deg"} <= set(e) and 0 <= e["tilt_deg"] <= 70 for e in v["list"]), "views.list needs >= 2 entries with across_deg and tilt_deg (0-70)")
     _need(v["distance_m"] >= 0.07 and v["frames"] >= 1 and v["tip_clear_mm"] >= 0, "views: distance_m >= 0.07 (D405 minimum range), frames >= 1, tip_clear_mm >= 0")
-    _need(len(p["top_band_mm"]) == 2 and p["top_band_mm"][0] < p["top_band_mm"][1] and 0 < p["edge_pct"] < 20, "plug: top_band_mm must be [low, high], edge_pct in (0, 20)")
-    _need(all(p[k] > 0 for k in ("min_points_view", "loo_mm", "top_spread_mm", "yaw_check_deg", "yaw_check_aspect")), "plug: gate values must be > 0")
-    _need(sel["neighbour_radius_mm"] > 0 and sel["finger_margin_mm"] >= 0, "select: neighbour_radius_mm > 0, finger_margin_mm >= 0")
-    _need(r["max_shift_mm"] > 0 and r["frames"] >= 1 and isinstance(r["require"], bool), "refine: max_shift_mm > 0, frames >= 1, require true/false")
+    _need(len(p["top_band_mm"]) == 2 and p["top_band_mm"][0] < p["top_band_mm"][1] and 0 < p["edge_pct"] < 20 and p["min_points_view"] > 0, "plug: top_band_mm must be [low, high], edge_pct in (0, 20), min_points_view > 0")
+    _need(sel["slot_tol_mm"] > 0 and r["frames"] >= 1, "select.slot_tol_mm > 0 and refine.frames >= 1")
     _need(cfg["active"] in cfg["connectors"], "strip.yaml: active '%s' is not a connector (%s)" % (cfg["active"], ", ".join(cfg["connectors"])))
     for name, c in cfg["connectors"].items():
         if c.get("status") != "pending":

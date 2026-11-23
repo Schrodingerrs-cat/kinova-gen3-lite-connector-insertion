@@ -15,4 +15,5 @@ arm = Arm(Robot('grasp_open', background=True), None, None, 0.0, cfg['gripper'][
 assert arm.r.wait_ready(10.0) and arm.r.spin_until(lambda: arm.r.grip_pos_msr is not None, 5.0), 'no driver'
 print('gripper before: %.3f rad' % arm.grip_pos())
 print('gripper now:    %.3f rad (0 = open)' % arm.grip_to(0.0, 20.0, rate=0.3)[0])
-rclpy.shutdown()
+sys.stdout.flush()
+os._exit(0)   # the background rclpy thread would abort the interpreter at exit

@@ -17,7 +17,7 @@ def strip(centre=(0.30, 0.0), yaw=20.0):
     return box(centre, yaw, (0.150, 0.051), TABLE_Z, STRIP_TOP, top_bgr=(235, 232, 230), side_bgr=(220, 220, 220))
 
 
-def plug(centre, yaw, size=(0.015, 0.0075), height=0.045):
+def plug(centre, yaw, size=(0.0045, 0.012), height=0.045):
     return box(centre, yaw, size, STRIP_TOP, STRIP_TOP + height)
 
 

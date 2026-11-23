@@ -1,0 +1,26 @@
+[INFO] [1795308052.724852904] [controller_manager]: Subscribing to '~/robot_description' topic for robot description file.
+[INFO] [1795308052.725479696] [controller_manager]: update rate is 1000 Hz
+[INFO] [1795308052.725507203] [controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+[WARN] [1795308052.725595876] [controller_manager]: Could not enable FIFO RT scheduling policy: with error number <1>(Operation not permitted). See [https://control.ros.org/master/doc/ros2_control/controller_manager/doc/userdoc.html] for details on how to enable realtime scheduling.
+[INFO] [1795308052.726614678] [controller_manager]: Received robot description file.
+[INFO] [1795308052.726807047] [resource_manager]: Loading hardware 'KortexMultiInterfaceHardware' 
+[INFO] [1795308052.731187868] [KortexMultiInterfaceHardware]: Setting severity threshold to DEBUG
+[INFO] [1795308052.731227437] [resource_manager]: Initialize hardware 'KortexMultiInterfaceHardware' 
+[INFO] [1795308052.731234391] [KortexMultiInterfaceHardware]: Configuring Hardware Interface
+[INFO] [1795308052.731246298] [KortexMultiInterfaceHardware]: Robot ip is '192.168.1.10'
+[INFO] [1795308052.731248493] [KortexMultiInterfaceHardware]: Username is 'admin'
+[INFO] [1795308052.731251481] [KortexMultiInterfaceHardware]: Port used '10000'
+[INFO] [1795308052.731253611] [KortexMultiInterfaceHardware]: Realtime port used '10001'
+[INFO] [1795308052.731255864] [KortexMultiInterfaceHardware]: Session inactivity timeout is '60000'
+[INFO] [1795308052.731258006] [KortexMultiInterfaceHardware]: Connection inactivity timeout is '2000'
+[INFO] [1795308052.731259980] [KortexMultiInterfaceHardware]: Gripper joint name is 'right_finger_bottom_joint'
+[INFO] [1795308052.731270309] [KortexMultiInterfaceHardware]: Connecting to robot at 192.168.1.10
+[INFO] [1795308052.731763229] [KortexMultiInterfaceHardware]: Creating session for communication
+[ERROR] [1795308052.731884492] [controller_manager]: The published robot description file (urdf) seems not to be genuine. The following error was caught:not connected !!!
+[INFO] [1795308052.731984570] [controller_manager]: Received robot description file.
+[WARN] [1795308052.732010025] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+[INFO] [1795308052.738402595] [controller_manager]: Received robot description file.
+[WARN] [1795308052.738448431] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+[INFO] [1795308085.942005517] [controller_manager]: Received robot description file.
+[WARN] [1795308085.942055730] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+[INFO] [1795321338.475949247] [rclcpp]: signal_handler(signum=15)

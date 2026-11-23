@@ -1,0 +1,4 @@
+[   0.3 s] open_gripper -> OK: gripper already open (-0.000 rad)
+[   1.1 s] strip_scan -> FAILED: no sticker seen from home
+[   1.1 s] ERROR: RuntimeError: strip_scan failed
+[   1.1 s] outcome: ERROR: RuntimeError: strip_scan failed

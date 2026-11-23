@@ -1,0 +1,7 @@
+{"event": "SEQUENCE_START", "timestamp_ns": 1795302302201185415, "process_id": 44148}
+{"event": "GRIPPER_CLOSED", "timestamp_ns": 1795302304589700424, "process_id": 44148, "position": 0.8400180541992188, "empty_closes_to": 0.81}
+{"event": "POSITIONING_SCENE_READY", "timestamp_ns": 1795302304671676566, "process_id": 44148, "minimum_depth_m": 0.18, "voxels": 2264}
+{"event": "HOME_START", "timestamp_ns": 1795302304671857622, "process_id": 44148}
+{"event": "HOME_REACHED", "timestamp_ns": 1795302305196541749, "process_id": 44148, "joints_deg": [3.015045166015625, -3.1251831054687402, 93.50311279296875, -88.45941162109376, -87.69818115234374, -82.673583984375]}
+{"event": "POST_GRASP_START", "timestamp_ns": 1795302305196634215, "process_id": 44148}
+{"event": "POST_GRASP_REACHED", "timestamp_ns": 1795302332020708702, "process_id": 44148, "joints_deg": [36.2073974609375, -82.0532531738281, 134.1766357421875, -49.189880371093764, 122.34771728515625, -66.79916381835936]}

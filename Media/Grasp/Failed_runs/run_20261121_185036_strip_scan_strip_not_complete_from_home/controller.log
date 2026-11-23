@@ -1,0 +1,4 @@
+[   0.3 s] open_gripper -> OK: gripper already open (-0.001 rad)
+[   1.3 s] strip_scan -> FAILED: white strip not seen complete from home (size 150 x 51 mm, expected [150, 51]): check the light, strip.white and that the whole strip is in view
+[   1.3 s] ERROR: RuntimeError: strip_scan failed
+[   1.4 s] outcome: ERROR: RuntimeError: strip_scan failed

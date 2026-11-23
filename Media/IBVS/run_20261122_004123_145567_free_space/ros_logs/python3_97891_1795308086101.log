@@ -1,0 +1,3 @@
+[INFO] [1795308086.165990323] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+[WARN] [1795308086.855205877] [spawner_gen3_lite_2f_gripper_controller]: [93mController already loaded, skipping load_controller[0m
+[ERROR] [1795308087.312843893] [spawner_gen3_lite_2f_gripper_controller]: [91mFailed to activate controller : gen3_lite_2f_gripper_controller[0m

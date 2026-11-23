@@ -1,0 +1,20 @@
+{
+ "started": "2026-11-21T18:51:27",
+ "grasp_requested": false,
+ "mode": "cad",
+ "connector": "usb_a",
+ "stages": {
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.4,
+   "message": "gripper already open (-0.001 rad)"
+  },
+  "cad_scan": {
+   "ok": false,
+   "seconds": 0.8,
+   "message": "no sticker within 30 mm of usb_a's spot [252, -23] mm; seen at [[309, -209], [305, -226], [253, 20]]"
+  }
+ },
+ "outcome": "ERROR: RuntimeError: cad_scan failed",
+ "seconds_total": 1.3
+}

@@ -9,6 +9,7 @@ CONFIG = ROOT / "Code" / "Grasp" / "config" / "connectors.yaml"
 SYMMETRIES = ("flip", "axial", "none")
 COARSE = ("never", "fallback", "always")
 MARKER_KEYS = ("h", "s_min", "v_min")
+AT_TOL_MM = 30   # the sticker must be this close to the connector's predefined spot at_mm
 
 
 def _need(ok, msg):
@@ -33,6 +34,9 @@ def validate_connector(name, c, root=ROOT):
     _need(c["fit_u_mm"][0] <= c["seat_u_mm"] <= c["fit_u_mm"][1], where + "seat_u_mm %s is outside fit_u_mm %s" % (c["seat_u_mm"], c["fit_u_mm"]))
     _need(c["symmetry"] in SYMMETRIES, where + "symmetry must be one of %s" % (SYMMETRIES,))
     _need(c["roi_radius_mm"] > 0 and 0 < c["dark_v"] <= 255, where + "roi_radius_mm must be > 0 and dark_v in (0, 255]")
+    _need("jaw_model_yaw_deg" not in c or isinstance(c["jaw_model_yaw_deg"], (int, float)), where + "jaw_model_yaw_deg must be a number (model yaw the jaws close along, deg)")
+    _need("yaw_rel_crib_deg" not in c or isinstance(c["yaw_rel_crib_deg"], (int, float)), where + "yaw_rel_crib_deg must be a number (model x axis from the crib's long axis, deg)")
+    _need(isinstance(c.get("at_mm"), (list, tuple)) and len(c["at_mm"]) == 2 and all(isinstance(x, (int, float)) for x in c["at_mm"]), where + "at_mm must be the [x, y] base-frame spot of the connector in mm")
     if "marker" in c:
         m = c["marker"]
         _need(set(m) <= set(MARKER_KEYS), where + "marker may only override %s" % (MARKER_KEYS,))
@@ -46,14 +50,14 @@ def validate(cfg, root=ROOT):
     _need(isinstance(v["n"], int) and 2 <= v["n"] <= len(v["azimuths_deg"]), "views.n must be an integer >= 2 and at most the number of azimuths_deg")
     _need(v["distance_m"] >= 0.07 and 0 <= v["tilt_deg"] <= 70 and v["frames"] >= 1 and v["tip_clear_mm"] >= 0, "views: distance_m >= 0.07 (D405 minimum range), tilt_deg 0-70, frames >= 1, tip_clear_mm >= 0")
     _need(v["coarse"] in COARSE, "views.coarse must be one of %s" % (COARSE,))
-    _need(0.3 < f["trim"] <= 1.0 and f["train_per_view"] > f["min_points_view"] > 0 and f["tilt_max_deg"] >= 0, "fit: trim in (0.3, 1], train_per_view > min_points_view > 0, tilt_max_deg >= 0")
+    _need(0.3 < f["trim"] <= 1.0 and f["train_per_view"] > f["min_points_view"] > 0 and f["tilt_max_deg"] >= 0 and f["crib_yaw_tol_deg"] > 0, "fit: trim in (0.3, 1], train_per_view > min_points_view > 0, tilt_max_deg >= 0")
     g = f["gate"]
     for k in ("p80_mm", "within_mm", "min_within_pct", "pos_spread_mm", "axis_spread_deg", "seat_tol_mm"):
         _need(isinstance(g.get(k), (int, float)) and g[k] > 0, "fit.gate.%s must be a positive number" % k)
     _need(isinstance(g.get("require"), bool), "fit.gate.require must be true or false")
     _pair(p["ring_mm"], "panel.ring_mm")
     _need(p["min_inliers"] <= p["min_points"] and 0 < p["max_tilt_deg"] <= 20, "panel: min_inliers <= min_points and 0 < max_tilt_deg <= 20")
-    _need(pl["clearance_mm"] >= 0 and pl["max_hits"] >= 0 and pl["max_candidates"] >= 1 and len(pl["jaw_yaw_offsets_deg"]) >= 1, "place: clearance_mm >= 0, max_hits >= 0, max_candidates >= 1, jaw_yaw_offsets_deg not empty")
+    _need(pl["jaw_yaw_tol_deg"] > 0 and pl["clearance_mm"] >= 0 and pl["max_hits"] >= 0 and pl["max_candidates"] >= 1 and len(pl["jaw_yaw_offsets_deg"]) >= 1, "place: clearance_mm >= 0, max_hits >= 0, max_candidates >= 1, jaw_yaw_offsets_deg not empty")
     for name, c in cfg["connectors"].items():
         validate_connector(name, c, root)
 

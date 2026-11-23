@@ -47,3 +47,32 @@ this is after we added a litt
     measurement. If you'd rather not push the fingers down that far, I can set w_depth
     to 0 so every depth ranks equally, or choose a fixed depth such as 5 mm. I haven't
     changed anything.
+
+
+
+
+    grasp pipeline is failing, cz of muiltiple markers,
+    remove all caps limits,
+
+    recalibrate
+
+    some issues wiht graos pipeline aswell
+
+    now we have reference how the image should look like fromup xclose, we could keep tracking the marker, the issue with current pipeline (not the aux one) is it mvoe the camera frame towards the tagta nd converges, but that doesnt necessarily mean the robtos gripper is aligned and so going striaghtmight not solve that 
+
+    in ibvs 
+    we need to tune the poisiton of the targetr square in teh camera frame so gripper aligns well with the placehllder, also going 8cm is not good we should just track the arcuo as wel go closer can we do that conitnously? or not?
+
+this is how I want, we got to psot grasp pose, from their we see 3 markers, based on the type of wire we have (decided by grasping) we choose the marker and servo to it, we dont want to servo camera algining to it by cahngin camera angle but actually the robto which makes the camera and ghripepr both aligned... it should lay flat.
+
+now to help oyou withthat, i have thought of doing this in 2 stages,one is pre insertion and one is insertion pose, both of them are in poses folder checl them out
+
+if you think its not going to work we could try flat ttracking so camera angle changing shouldnt happen but the whole robot shoudl servo to that.
+
+Anotehr isuses in current ibvs its super slow from home to post grasp and vice versa and also slow on servoing down... also its not smooth and its join  control and not cartesian or trajectory control sowe gotta change that 
+
+another mode in ibvs I want you do add is to track teh cente of those markers isneat of the whole box.. but I am not sure which would hlkpe us cz orientation alsomterr so box would be better... but just add this...
+
+final comments, dont keep pre checks, or harsh limits or caps, I would say dont keep any unelss you thinl something is important..and tehn tell me about that I and I will make th call about that, keep this simple and easy, make this professioonal really smooth motion like we have in the grasp pipeline, its supr fast as well, we need exactly mootion like that. ask for anyclarifications or questions
+
+so this ibvs pipeline si different from aux learned I hope you know that...tell me if I am wrong

@@ -1,12 +1,7 @@
 """Plots of the merged-scan colour-marker stages (matplotlib, no display needed)."""
-import os
-
 import matplotlib
-import mpl_toolkits
 import numpy as np
-
-mpl_toolkits.__path__.insert(0, os.path.join(os.path.dirname(os.path.dirname(matplotlib.__file__)), "mpl_toolkits"))  # the system mpl_toolkits (3.5) shadows the pip matplotlib's; 3D plots need the matching one
-from mpl_toolkits.mplot3d import Axes3D  # noqa: E402,F401
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  (registers the 3d projection)
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402

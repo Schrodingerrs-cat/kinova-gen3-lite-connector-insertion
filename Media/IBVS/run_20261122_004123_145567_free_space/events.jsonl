@@ -1,0 +1,15 @@
+{"event": "SEQUENCE_START", "timestamp_ns": 1795308083520232500, "process_id": 97696}
+{"event": "GRIPPER_CLOSED", "timestamp_ns": 1795308089363467260, "process_id": 97696, "position": 0.8388946266174316, "empty_closes_to": 0.81}
+{"event": "POSITIONING_SCENE_READY", "timestamp_ns": 1795308089432556895, "process_id": 97696, "minimum_depth_m": 0.18, "voxels": 1050}
+{"event": "HOME_START", "timestamp_ns": 1795308089432771674, "process_id": 97696}
+{"event": "HOME_REACHED", "timestamp_ns": 1795308101934928111, "process_id": 97696, "joints_deg": [2.9571685791015625, -3.15066528320317, 93.51080322265626, -88.4846496582031, -87.62145996093751, -82.54071044921876]}
+{"event": "POST_GRASP_START", "timestamp_ns": 1795308101935044810, "process_id": 97696}
+{"event": "POST_GRASP_REACHED", "timestamp_ns": 1795308147886735307, "process_id": 97696, "joints_deg": [36.18257141113281, -82.13482666015626, 134.21343994140622, -49.20788574218747, 122.31167602539061, -66.69891357421874]}
+{"event": "MARKER_CHOSEN", "timestamp_ns": 1795308148559888585, "process_id": 97696, "marker_id": 11, "candidates": [10, 11, 12]}
+{"event": "IBVS_START", "timestamp_ns": 1795308148580386912, "process_id": 97696, "rms_px": 5.235457197250275, "max_corner_px": 5.361018144618746}
+{"event": "CONVERGED", "timestamp_ns": 1795308149865525995, "process_id": 97696, "center_error_px": 2.887126119875386, "size_ratio": 0.9977334983150841, "rms_px": 2.891420954861497, "max_corner_px": 3.122044993427447, "orientation_error_deg": -0.05445738891556655, "fresh_observations": 5}
+{"event": "ADVANCE_START", "timestamp_ns": 1795308150036740050, "process_id": 97696, "requested_m": 0.08, "planned_m": 0.08, "clearance_m": 0.15231579827218103, "wall_tilt_deg": 0.8951367385189059, "wall_support_points": 41383, "margin_m": 0.015, "allow_contact": true, "trimmed": false, "executed_m": 0.0}
+{"event": "ADVANCE_DONE", "timestamp_ns": 1795308154535887428, "process_id": 97696, "executed_m": 0.08022379589488918}
+{"event": "MARKER_CHOSEN", "timestamp_ns": 1795308155060916828, "process_id": 97696, "marker_id": 11, "candidates": [10, 11, 12]}
+{"event": "IBVS_START", "timestamp_ns": 1795308155158757424, "process_id": 97696, "rms_px": 42.039646812708526, "max_corner_px": 59.79754363387785}
+{"event": "TRACKING_HOLD", "timestamp_ns": 1795308204879401031, "process_id": 97696, "recovery": 1, "reason": "the marker was lost during the step"}

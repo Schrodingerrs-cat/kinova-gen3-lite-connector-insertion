@@ -1,0 +1,32 @@
+[INFO] [1795306821.363090675] [eih_cam]: RealSense ROS v4.58.4
+[INFO] [1795306821.363136919] [eih_cam]: Built with LibRealSense v2.58.4
+[INFO] [1795306821.363144841] [eih_cam]: Running with LibRealSense v2.58.4
+[INFO] [1795306821.524164490] [eih_cam]: Device with serial number 261922278433 was found.
+
+[INFO] [1795306821.524209313] [eih_cam]: Device with physical ID /sys/devices/pci0000:00/0000:00:14.0/usb3/3-4/3-4.3/3-4.3:1.0/video4linux/video0 was found.
+[INFO] [1795306821.524222762] [eih_cam]: Device with name RealSense D405 was found.
+[INFO] [1795306821.524353137] [eih_cam]: Device with port number 3-4.3 was found.
+[INFO] [1795306821.524359756] [eih_cam]: Device USB type: 2.1
+[WARN] [1795306821.524365337] [eih_cam]: Device 261922278433 is connected using a 2.1 port. Reduced performance is expected.
+[INFO] [1795306821.524373937] [eih_cam]: Starting device RealSense D405 (Product ID: 0x0B5B)
+[INFO] [1795306821.524410571] [eih_cam]: getParameters...
+[INFO] [1795306821.524891669] [eih_cam]: JSON file is not provided
+[INFO] [1795306821.524911664] [eih_cam]: Device Name: RealSense D405
+[INFO] [1795306821.524917925] [eih_cam]: Device Serial No: 261922278433
+[INFO] [1795306821.524925557] [eih_cam]: Device physical port: /sys/devices/pci0000:00/0000:00:14.0/usb3/3-4/3-4.3/3-4.3:1.0/video4linux/video0
+[INFO] [1795306821.524931199] [eih_cam]: Device FW version: 5.17.0.10
+[INFO] [1795306821.524936283] [eih_cam]: Device Product ID: 0x0B5B
+[INFO] [1795306821.524941045] [eih_cam]: Sync Mode: Off
+[ERROR] [1795306821.614436315] [eih_cam]: Given value, 848x480x30 is invalid. Run 'ros2 param describe <your_node_name> depth_module.depth_profile' to get the list of supported profiles. Setting ROS param back to: 848x480x10
+[ERROR] [1795306821.614900334] [eih_cam]: Given value, 848x480x30 is invalid. Run 'ros2 param describe <your_node_name> depth_module.color_profile' to get the list of supported profiles. Setting ROS param back to: 848x480x10
+[INFO] [1795306821.615162070] [eih_cam]: Set ROS param depth_module.infra_profile to default: 848x480x10
+[INFO] [1795306821.618830383] [eih_cam]: Stopping Sensor: Depth Module
+[INFO] [1795306821.633272342] [eih_cam]: Starting Sensor: Depth Module
+[INFO] [1795306821.638636158] [eih_cam]: Open profile: stream_type: Color(0), Format: RGB8, Width: 848, Height: 480, FPS: 10
+[INFO] [1795306821.638672808] [eih_cam]: Open profile: stream_type: Depth(0), Format: Z16, Width: 848, Height: 480, FPS: 10
+[INFO] [1795306821.641172158] [eih_cam]: RealSense Node Is Up!
+[ERROR] [1795309401.946181086] [eih_cam]: The device has been disconnected!
+[INFO] [1795309401.946330076] [eih_cam]: Stop Sensor: Depth Module
+[INFO] [1795309401.946349132] [eih_cam]: Close Sensor. 
+[INFO] [1795309402.229218020] [eih_cam]: Close Sensor - Done. 
+[INFO] [1795321338.475587815] [rclcpp]: signal_handler(signum=15)

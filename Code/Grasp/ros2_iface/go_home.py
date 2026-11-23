@@ -20,4 +20,5 @@ d = np.abs(home - arm.q_deg())
 print('joints now (deg):', np.round(arm.q_deg(), 1), '\nhome      (deg):', np.round(home, 1), '\nlargest joint move: %.0f deg' % d.max(), flush=True)
 arm.go_joints(home)
 print('at home, max joint error %.2f deg' % np.abs(home - arm.q_deg()).max())
-rclpy.shutdown()
+sys.stdout.flush()
+os._exit(0)   # the background rclpy thread would abort the interpreter at exit

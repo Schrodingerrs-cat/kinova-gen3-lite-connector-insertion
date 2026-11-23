@@ -1,0 +1,823 @@
+1795301800.5112481 [INFO] [launch]: All log files can be found below /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261121_225637_890867_free_space/ros_logs/2026-11-21-17-56-40-510545-aryan-40652
+1795301800.5113451 [INFO] [launch]: Default logging verbosity is set to INFO
+1795301800.6617792 [INFO] [ros2_control_node-1]: process started with pid [40698]
+1795301800.6619186 [INFO] [robot_state_publisher-2]: process started with pid [40700]
+1795301800.6620142 [INFO] [spawner-3]: process started with pid [40702]
+1795301800.6620877 [INFO] [spawner-4]: process started with pid [40704]
+1795301800.6621530 [INFO] [spawner-5]: process started with pid [40706]
+1795301800.6622150 [INFO] [spawner-6]: process started with pid [40708]
+1795301800.6622877 [INFO] [spawner-7]: process started with pid [40710]
+1795301800.6703672 [robot_state_publisher-2] 1795301800.669987 [0] robot_stat: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.6774030 [robot_state_publisher-2] [INFO] [1795301800.677036712] [robot_state_publisher]: got segment arm_link
+1795301800.6779082 [robot_state_publisher-2] [INFO] [1795301800.677119235] [robot_state_publisher]: got segment base_link
+1795301800.6780589 [robot_state_publisher-2] [INFO] [1795301800.677128503] [robot_state_publisher]: got segment dummy_link
+1795301800.6781728 [robot_state_publisher-2] [INFO] [1795301800.677134190] [robot_state_publisher]: got segment end_effector_link
+1795301800.6784384 [robot_state_publisher-2] [INFO] [1795301800.677139487] [robot_state_publisher]: got segment forearm_link
+1795301800.6785388 [robot_state_publisher-2] [INFO] [1795301800.677144896] [robot_state_publisher]: got segment gripper_base_link
+1795301800.6786256 [robot_state_publisher-2] [INFO] [1795301800.677161167] [robot_state_publisher]: got segment left_finger_dist_link
+1795301800.6787097 [robot_state_publisher-2] [INFO] [1795301800.677167107] [robot_state_publisher]: got segment left_finger_prox_link
+1795301800.6787939 [robot_state_publisher-2] [INFO] [1795301800.677172178] [robot_state_publisher]: got segment lower_wrist_link
+1795301800.6788762 [robot_state_publisher-2] [INFO] [1795301800.677177486] [robot_state_publisher]: got segment right_finger_dist_link
+1795301800.6789589 [robot_state_publisher-2] [INFO] [1795301800.677182758] [robot_state_publisher]: got segment right_finger_prox_link
+1795301800.6790392 [robot_state_publisher-2] [INFO] [1795301800.677187866] [robot_state_publisher]: got segment shoulder_link
+1795301800.6791191 [robot_state_publisher-2] [INFO] [1795301800.677193215] [robot_state_publisher]: got segment tool_frame
+1795301800.6791985 [robot_state_publisher-2] [INFO] [1795301800.677198611] [robot_state_publisher]: got segment upper_wrist_link
+1795301800.6792917 [robot_state_publisher-2] [INFO] [1795301800.677203774] [robot_state_publisher]: got segment world
+1795301800.6806817 [ros2_control_node-1] 1795301800.680450 [0] ros2_contr: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.6939416 [ros2_control_node-1] [INFO] [1795301800.693358362] [controller_manager]: Subscribing to '~/robot_description' topic for robot description file.
+1795301800.6953151 [ros2_control_node-1] [INFO] [1795301800.694812635] [controller_manager]: update rate is 1000 Hz
+1795301800.6956146 [ros2_control_node-1] [INFO] [1795301800.694886857] [controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+1795301800.6963024 [ros2_control_node-1] [WARN] [1795301800.695088590] [controller_manager]: Could not enable FIFO RT scheduling policy: with error number <1>(Operation not permitted). See [https://control.ros.org/master/doc/ros2_control/controller_manager/doc/userdoc.html] for details on how to enable realtime scheduling.
+1795301800.6974216 [ros2_control_node-1] [INFO] [1795301800.697004622] [controller_manager]: Received robot description file.
+1795301800.6981511 [ros2_control_node-1] [INFO] [1795301800.697771082] [resource_manager]: Loading hardware 'KortexMultiInterfaceHardware' 
+1795301800.7099493 [ros2_control_node-1] [INFO] [1795301800.709518843] [KortexMultiInterfaceHardware]: Setting severity threshold to DEBUG
+1795301800.7106445 [ros2_control_node-1] [INFO] [1795301800.709613646] [resource_manager]: Initialize hardware 'KortexMultiInterfaceHardware' 
+1795301800.7109056 [ros2_control_node-1] [INFO] [1795301800.709635519] [KortexMultiInterfaceHardware]: Configuring Hardware Interface
+1795301800.7110488 [ros2_control_node-1] [INFO] [1795301800.709674660] [KortexMultiInterfaceHardware]: Robot ip is '192.168.1.10'
+1795301800.7111738 [ros2_control_node-1] [INFO] [1795301800.709683190] [KortexMultiInterfaceHardware]: Username is 'admin'
+1795301800.7115121 [ros2_control_node-1] [INFO] [1795301800.709694547] [KortexMultiInterfaceHardware]: Port used '10000'
+1795301800.7116582 [ros2_control_node-1] [INFO] [1795301800.709702529] [KortexMultiInterfaceHardware]: Realtime port used '10001'
+1795301800.7117207 [ros2_control_node-1] [INFO] [1795301800.709709942] [KortexMultiInterfaceHardware]: Session inactivity timeout is '60000'
+1795301800.7117739 [ros2_control_node-1] [INFO] [1795301800.709717517] [KortexMultiInterfaceHardware]: Connection inactivity timeout is '2000'
+1795301800.7121515 [ros2_control_node-1] [INFO] [1795301800.709725486] [KortexMultiInterfaceHardware]: Gripper joint name is 'right_finger_bottom_joint'
+1795301800.7122624 [ros2_control_node-1] [INFO] [1795301800.709753592] [KortexMultiInterfaceHardware]: Connecting to robot at 192.168.1.10
+1795301800.7124953 [ros2_control_node-1] [INFO] [1795301800.710558370] [KortexMultiInterfaceHardware]: Creating session for communication
+1795301800.9301426 [spawner-6] 1795301800.929861 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.9306517 [spawner-3] 1795301800.930009 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.9385388 [spawner-7] 1795301800.938316 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.9644942 [spawner-5] 1795301800.964256 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.9759555 [spawner-4] 1795301800.975782 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795301800.9762523 [spawner-3] [INFO] [1795301800.976028755] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+1795301800.9837539 [ros2_control_node-1] [INFO] [1795301800.983563065] [KortexMultiInterfaceHardware]: Session created
+1795301800.9968827 [spawner-6] [INFO] [1795301800.996690371] [spawner_fault_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795301800.9972706 [spawner-7] [INFO] [1795301800.997188100] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795301801.0079250 [spawner-5] [INFO] [1795301801.007757283] [spawner_twist_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795301801.0137780 [spawner-4] [INFO] [1795301801.013684726] [spawner_joint_trajectory_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795301801.5665340 [ros2_control_node-1] [INFO] [1795301801.566201176] [KortexMultiInterfaceHardware]: Actuator count reported by robot is '6'
+1795301801.5667117 [ros2_control_node-1] [INFO] [1795301801.566255473] [KortexMultiInterfaceHardware]: Using internal bus communication for gripper!
+1795301801.5667732 [ros2_control_node-1] [INFO] [1795301801.566260314] [KortexMultiInterfaceHardware]: Hardware Interface successfully configured
+1795301801.5668509 [ros2_control_node-1] [INFO] [1795301801.566279535] [resource_manager]: Successful initialization of hardware 'KortexMultiInterfaceHardware'
+1795301801.5668929 [ros2_control_node-1] [DEBUG] [1795301801.566287611] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_1
+1795301801.5672128 [ros2_control_node-1] [DEBUG] [1795301801.566291656] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_2
+1795301801.5673268 [ros2_control_node-1] [DEBUG] [1795301801.566296319] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_3
+1795301801.5673771 [ros2_control_node-1] [DEBUG] [1795301801.566299426] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_4
+1795301801.5674222 [ros2_control_node-1] [DEBUG] [1795301801.566302380] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_5
+1795301801.5674632 [ros2_control_node-1] [DEBUG] [1795301801.566305400] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_6
+1795301801.5675015 [ros2_control_node-1] [DEBUG] [1795301801.566308313] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: right_finger_bottom_joint
+1795301801.5677743 [ros2_control_node-1] [INFO] [1795301801.566409601] [resource_manager]: 'configure' hardware 'KortexMultiInterfaceHardware' 
+1795301801.5678527 [ros2_control_node-1] [INFO] [1795301801.566416950] [resource_manager]: Successful 'configure' of hardware 'KortexMultiInterfaceHardware'
+1795301801.5679038 [ros2_control_node-1] [INFO] [1795301801.566431849] [resource_manager]: 'activate' hardware 'KortexMultiInterfaceHardware' 
+1795301801.5679476 [ros2_control_node-1] [INFO] [1795301801.566435963] [KortexMultiInterfaceHardware]: Activating KortexMultiInterfaceHardware...
+1795301801.5681856 [ros2_control_node-1] [INFO] [1795301801.567142529] [KortexMultiInterfaceHardware]: Gripper initial position is '0.012905'.
+1795301801.5684257 [ros2_control_node-1] [INFO] [1795301801.567912891] [KortexMultiInterfaceHardware]: KortexMultiInterfaceHardware successfully activated!
+1795301801.5685472 [ros2_control_node-1] [INFO] [1795301801.567941398] [resource_manager]: Successful 'activate' of hardware 'KortexMultiInterfaceHardware'
+1795301801.5694773 [ros2_control_node-1] [DEBUG] [1795301801.569176261] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5700505 [ros2_control_node-1] [DEBUG] [1795301801.569608847] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5705688 [ros2_control_node-1] [DEBUG] [1795301801.570164537] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5710998 [ros2_control_node-1] [DEBUG] [1795301801.570562392] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5717063 [ros2_control_node-1] [DEBUG] [1795301801.570913752] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5718553 [ros2_control_node-1] [DEBUG] [1795301801.571183059] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5723579 [ros2_control_node-1] [DEBUG] [1795301801.571573472] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5725539 [ros2_control_node-1] [DEBUG] [1795301801.571951417] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5730393 [ros2_control_node-1] [DEBUG] [1795301801.572693097] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5735183 [ros2_control_node-1] [DEBUG] [1795301801.573119809] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5739074 [ros2_control_node-1] [DEBUG] [1795301801.573588456] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5742812 [ros2_control_node-1] [INFO] [1795301801.573921742] [controller_manager]: Received robot description file.
+1795301801.5743897 [ros2_control_node-1] [WARN] [1795301801.573987913] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+1795301801.5744698 [ros2_control_node-1] [DEBUG] [1795301801.573934166] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5748041 [ros2_control_node-1] [DEBUG] [1795301801.574327594] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5751791 [ros2_control_node-1] [DEBUG] [1795301801.574639024] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5754609 [ros2_control_node-1] [DEBUG] [1795301801.574933176] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5757372 [ros2_control_node-1] [DEBUG] [1795301801.575517558] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5760701 [ros2_control_node-1] [DEBUG] [1795301801.575816662] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5763769 [ros2_control_node-1] [DEBUG] [1795301801.576117463] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5770156 [ros2_control_node-1] [DEBUG] [1795301801.576583731] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5776014 [ros2_control_node-1] [DEBUG] [1795301801.576884021] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5777121 [ros2_control_node-1] [DEBUG] [1795301801.577165626] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5780158 [ros2_control_node-1] [DEBUG] [1795301801.577544394] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5783424 [ros2_control_node-1] [DEBUG] [1795301801.577845265] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5786402 [ros2_control_node-1] [DEBUG] [1795301801.578144788] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5789759 [ros2_control_node-1] [DEBUG] [1795301801.578576092] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5793705 [ros2_control_node-1] [DEBUG] [1795301801.578923062] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5797057 [ros2_control_node-1] [DEBUG] [1795301801.579234204] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5800455 [ros2_control_node-1] [DEBUG] [1795301801.579603668] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5803440 [ros2_control_node-1] [DEBUG] [1795301801.579929362] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5806744 [ros2_control_node-1] [DEBUG] [1795301801.580503315] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5810082 [ros2_control_node-1] [DEBUG] [1795301801.580818532] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5813432 [ros2_control_node-1] [DEBUG] [1795301801.581096312] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5818887 [ros2_control_node-1] [DEBUG] [1795301801.581573105] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5824268 [ros2_control_node-1] [DEBUG] [1795301801.581877110] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5829363 [ros2_control_node-1] [DEBUG] [1795301801.582193903] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5832827 [ros2_control_node-1] [DEBUG] [1795301801.582600015] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5835700 [ros2_control_node-1] [DEBUG] [1795301801.582939345] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5839214 [ros2_control_node-1] [DEBUG] [1795301801.583515284] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5842960 [ros2_control_node-1] [DEBUG] [1795301801.583839545] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5846570 [ros2_control_node-1] [DEBUG] [1795301801.584143737] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5850158 [ros2_control_node-1] [DEBUG] [1795301801.584585477] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5853624 [ros2_control_node-1] [DEBUG] [1795301801.584889304] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5856993 [ros2_control_node-1] [DEBUG] [1795301801.585236643] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5860498 [ros2_control_node-1] [DEBUG] [1795301801.585561608] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5864346 [ros2_control_node-1] [DEBUG] [1795301801.585866568] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5867884 [ros2_control_node-1] [DEBUG] [1795301801.586171418] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5871263 [ros2_control_node-1] [DEBUG] [1795301801.586567203] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5874684 [ros2_control_node-1] [DEBUG] [1795301801.586884004] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5878050 [ros2_control_node-1] [DEBUG] [1795301801.587172245] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5881665 [ros2_control_node-1] [DEBUG] [1795301801.587553926] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5884950 [ros2_control_node-1] [DEBUG] [1795301801.587829545] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5887992 [ros2_control_node-1] [DEBUG] [1795301801.588212182] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5891862 [ros2_control_node-1] [DEBUG] [1795301801.588544032] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5894883 [ros2_control_node-1] [DEBUG] [1795301801.588907462] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5897901 [ros2_control_node-1] [DEBUG] [1795301801.589203880] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5901239 [ros2_control_node-1] [DEBUG] [1795301801.589571915] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5904479 [ros2_control_node-1] [DEBUG] [1795301801.589921155] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5907996 [ros2_control_node-1] [DEBUG] [1795301801.590211957] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5911598 [ros2_control_node-1] [DEBUG] [1795301801.590566466] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5914457 [ros2_control_node-1] [DEBUG] [1795301801.590825933] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5916901 [ros2_control_node-1] [DEBUG] [1795301801.591143430] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5919881 [ros2_control_node-1] [DEBUG] [1795301801.591584658] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5923030 [ros2_control_node-1] [DEBUG] [1795301801.591946464] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5926099 [ros2_control_node-1] [DEBUG] [1795301801.592280469] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5929537 [ros2_control_node-1] [DEBUG] [1795301801.592587610] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5932546 [ros2_control_node-1] [DEBUG] [1795301801.592901198] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5935843 [ros2_control_node-1] [DEBUG] [1795301801.593224510] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5939467 [ros2_control_node-1] [DEBUG] [1795301801.593634015] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5943229 [ros2_control_node-1] [DEBUG] [1795301801.594075640] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5948057 [ros2_control_node-1] [DEBUG] [1795301801.594674452] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5950999 [ros2_control_node-1] [DEBUG] [1795301801.594993114] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5954173 [ros2_control_node-1] [DEBUG] [1795301801.595304551] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5957103 [ros2_control_node-1] [DEBUG] [1795301801.595602862] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5959845 [ros2_control_node-1] [DEBUG] [1795301801.595877245] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5962942 [ros2_control_node-1] [DEBUG] [1795301801.596185184] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5966794 [ros2_control_node-1] [DEBUG] [1795301801.596573653] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5969808 [ros2_control_node-1] [DEBUG] [1795301801.596881704] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5972545 [ros2_control_node-1] [DEBUG] [1795301801.597150140] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5976379 [ros2_control_node-1] [DEBUG] [1795301801.597535027] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5980434 [ros2_control_node-1] [DEBUG] [1795301801.597937891] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5984445 [ros2_control_node-1] [DEBUG] [1795301801.598260154] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5988562 [ros2_control_node-1] [DEBUG] [1795301801.598720583] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5993357 [ros2_control_node-1] [DEBUG] [1795301801.599201495] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5996325 [ros2_control_node-1] [DEBUG] [1795301801.599520565] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.5998948 [ros2_control_node-1] [DEBUG] [1795301801.599791630] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6001406 [ros2_control_node-1] [DEBUG] [1795301801.600042353] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6006713 [ros2_control_node-1] [DEBUG] [1795301801.600545790] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6009438 [ros2_control_node-1] [DEBUG] [1795301801.600791352] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6011906 [ros2_control_node-1] [DEBUG] [1795301801.601023922] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6014783 [ros2_control_node-1] [DEBUG] [1795301801.601259296] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6017408 [ros2_control_node-1] [DEBUG] [1795301801.601521121] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6020026 [ros2_control_node-1] [DEBUG] [1795301801.601825113] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6023078 [ros2_control_node-1] [DEBUG] [1795301801.602099516] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6026967 [ros2_control_node-1] [DEBUG] [1795301801.602549267] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6029949 [ros2_control_node-1] [DEBUG] [1795301801.602791031] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6035089 [ros2_control_node-1] [DEBUG] [1795301801.603205868] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6038985 [ros2_control_node-1] [DEBUG] [1795301801.603672834] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6044066 [ros2_control_node-1] [DEBUG] [1795301801.604144332] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6049888 [ros2_control_node-1] [DEBUG] [1795301801.604655759] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6053653 [ros2_control_node-1] [DEBUG] [1795301801.605070442] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6056869 [ros2_control_node-1] [DEBUG] [1795301801.605509179] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6059692 [ros2_control_node-1] [DEBUG] [1795301801.605762244] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6063035 [ros2_control_node-1] [DEBUG] [1795301801.606027472] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6066179 [ros2_control_node-1] [DEBUG] [1795301801.606485878] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6068852 [ros2_control_node-1] [DEBUG] [1795301801.606766763] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6071589 [ros2_control_node-1] [DEBUG] [1795301801.607011457] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6074252 [ros2_control_node-1] [DEBUG] [1795301801.607278221] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6076736 [ros2_control_node-1] [DEBUG] [1795301801.607507653] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6079280 [ros2_control_node-1] [DEBUG] [1795301801.607795747] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6082368 [ros2_control_node-1] [DEBUG] [1795301801.608092889] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6086502 [ros2_control_node-1] [DEBUG] [1795301801.608522582] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6089683 [ros2_control_node-1] [DEBUG] [1795301801.608857500] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6092796 [ros2_control_node-1] [DEBUG] [1795301801.609150987] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6096385 [ros2_control_node-1] [DEBUG] [1795301801.609531542] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6099253 [ros2_control_node-1] [DEBUG] [1795301801.609823583] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6101639 [ros2_control_node-1] [DEBUG] [1795301801.610068024] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6106310 [ros2_control_node-1] [DEBUG] [1795301801.610532216] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6108708 [ros2_control_node-1] [DEBUG] [1795301801.610784941] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6111224 [ros2_control_node-1] [DEBUG] [1795301801.611031637] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6115825 [ros2_control_node-1] [DEBUG] [1795301801.611496218] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6118124 [ros2_control_node-1] [DEBUG] [1795301801.611731889] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6120365 [ros2_control_node-1] [DEBUG] [1795301801.611956586] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6122909 [ros2_control_node-1] [DEBUG] [1795301801.612211280] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6126702 [ros2_control_node-1] [DEBUG] [1795301801.612581144] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6128831 [ros2_control_node-1] [DEBUG] [1795301801.612815283] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6131301 [ros2_control_node-1] [DEBUG] [1795301801.613064438] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6136317 [ros2_control_node-1] [DEBUG] [1795301801.613500107] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6138830 [ros2_control_node-1] [DEBUG] [1795301801.613763562] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6140857 [ros2_control_node-1] [DEBUG] [1795301801.614014039] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6145551 [ros2_control_node-1] [DEBUG] [1795301801.614457678] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6147838 [ros2_control_node-1] [DEBUG] [1795301801.614715100] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6150329 [ros2_control_node-1] [DEBUG] [1795301801.614965171] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6153028 [ros2_control_node-1] [DEBUG] [1795301801.615235564] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6155865 [ros2_control_node-1] [DEBUG] [1795301801.615520465] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6158531 [ros2_control_node-1] [DEBUG] [1795301801.615787554] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6161027 [ros2_control_node-1] [DEBUG] [1795301801.616035466] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6167233 [ros2_control_node-1] [DEBUG] [1795301801.616616041] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6169615 [ros2_control_node-1] [DEBUG] [1795301801.616894587] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6172087 [ros2_control_node-1] [DEBUG] [1795301801.617146458] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6176875 [ros2_control_node-1] [DEBUG] [1795301801.617587019] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6179070 [ros2_control_node-1] [DEBUG] [1795301801.617839441] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6181536 [ros2_control_node-1] [DEBUG] [1795301801.618088654] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6186194 [ros2_control_node-1] [DEBUG] [1795301801.618527487] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6188865 [ros2_control_node-1] [DEBUG] [1795301801.618824358] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6191514 [ros2_control_node-1] [DEBUG] [1795301801.619086281] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6196213 [ros2_control_node-1] [DEBUG] [1795301801.619526045] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6198561 [ros2_control_node-1] [DEBUG] [1795301801.619765527] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6200783 [ros2_control_node-1] [DEBUG] [1795301801.620009982] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6202874 [ros2_control_node-1] [DEBUG] [1795301801.620221691] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6206045 [ros2_control_node-1] [DEBUG] [1795301801.620533617] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6208570 [ros2_control_node-1] [DEBUG] [1795301801.620790261] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6210964 [ros2_control_node-1] [DEBUG] [1795301801.621035304] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6216378 [ros2_control_node-1] [DEBUG] [1795301801.621531104] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6219289 [ros2_control_node-1] [DEBUG] [1795301801.621861635] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6221895 [ros2_control_node-1] [DEBUG] [1795301801.622125997] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6226659 [ros2_control_node-1] [DEBUG] [1795301801.622568155] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6229131 [ros2_control_node-1] [DEBUG] [1795301801.622836518] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6231971 [ros2_control_node-1] [DEBUG] [1795301801.623106373] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6235466 [ros2_control_node-1] [DEBUG] [1795301801.623475702] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6237872 [ros2_control_node-1] [DEBUG] [1795301801.623714670] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6240368 [ros2_control_node-1] [DEBUG] [1795301801.623964283] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6245539 [ros2_control_node-1] [DEBUG] [1795301801.624469553] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6248128 [ros2_control_node-1] [DEBUG] [1795301801.624730632] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6250565 [ros2_control_node-1] [DEBUG] [1795301801.624971233] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6253295 [ros2_control_node-1] [DEBUG] [1795301801.625231503] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6256366 [ros2_control_node-1] [DEBUG] [1795301801.625542115] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6258776 [ros2_control_node-1] [DEBUG] [1795301801.625786046] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6264057 [ros2_control_node-1] [DEBUG] [1795301801.626062379] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6269627 [ros2_control_node-1] [DEBUG] [1795301801.626515348] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6274123 [ros2_control_node-1] [DEBUG] [1795301801.626806998] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6275604 [ros2_control_node-1] [DEBUG] [1795301801.627112689] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6278210 [ros2_control_node-1] [DEBUG] [1795301801.627565291] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6280892 [ros2_control_node-1] [DEBUG] [1795301801.627878095] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6283464 [ros2_control_node-1] [DEBUG] [1795301801.628177313] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6287835 [ros2_control_node-1] [DEBUG] [1795301801.628554572] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6292336 [ros2_control_node-1] [DEBUG] [1795301801.628866991] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6297078 [ros2_control_node-1] [DEBUG] [1795301801.629480513] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6300111 [ros2_control_node-1] [DEBUG] [1795301801.629756616] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6302965 [ros2_control_node-1] [DEBUG] [1795301801.630030362] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6308053 [ros2_control_node-1] [DEBUG] [1795301801.630546695] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6313400 [ros2_control_node-1] [DEBUG] [1795301801.630845946] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6318111 [ros2_control_node-1] [DEBUG] [1795301801.631185153] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6322725 [ros2_control_node-1] [DEBUG] [1795301801.631537107] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6326919 [ros2_control_node-1] [DEBUG] [1795301801.631837826] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6331103 [ros2_control_node-1] [DEBUG] [1795301801.632111490] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6335590 [ros2_control_node-1] [DEBUG] [1795301801.632556234] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6339724 [ros2_control_node-1] [DEBUG] [1795301801.632866434] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6344538 [ros2_control_node-1] [DEBUG] [1795301801.633161866] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6348588 [ros2_control_node-1] [DEBUG] [1795301801.633597182] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6351571 [ros2_control_node-1] [DEBUG] [1795301801.633924094] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6353943 [ros2_control_node-1] [DEBUG] [1795301801.634262339] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6356645 [ros2_control_node-1] [DEBUG] [1795301801.634645940] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6359010 [ros2_control_node-1] [DEBUG] [1795301801.634941088] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6361504 [ros2_control_node-1] [DEBUG] [1795301801.635506726] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6366837 [ros2_control_node-1] [DEBUG] [1795301801.635826132] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6370499 [ros2_control_node-1] [DEBUG] [1795301801.636152624] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6373308 [ros2_control_node-1] [DEBUG] [1795301801.636572044] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6376066 [ros2_control_node-1] [DEBUG] [1795301801.636898232] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6378400 [ros2_control_node-1] [DEBUG] [1795301801.637239392] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6380744 [ros2_control_node-1] [DEBUG] [1795301801.637535295] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6383100 [ros2_control_node-1] [DEBUG] [1795301801.637831898] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6385050 [ros2_control_node-1] [DEBUG] [1795301801.638131679] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6387525 [ros2_control_node-1] [DEBUG] [1795301801.638581921] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6392269 [ros2_control_node-1] [DEBUG] [1795301801.638904837] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6397724 [ros2_control_node-1] [DEBUG] [1795301801.639228040] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6402416 [ros2_control_node-1] [DEBUG] [1795301801.639655159] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6406672 [ros2_control_node-1] [DEBUG] [1795301801.640009441] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6411252 [ros2_control_node-1] [DEBUG] [1795301801.640632628] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6415048 [ros2_control_node-1] [DEBUG] [1795301801.640981847] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6417861 [ros2_control_node-1] [DEBUG] [1795301801.641518611] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6420810 [ros2_control_node-1] [DEBUG] [1795301801.641811623] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6423643 [ros2_control_node-1] [DEBUG] [1795301801.642113941] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6428595 [ros2_control_node-1] [DEBUG] [1795301801.642592924] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6434062 [ros2_control_node-1] [DEBUG] [1795301801.642909055] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6438251 [ros2_control_node-1] [DEBUG] [1795301801.643543085] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6441536 [ros2_control_node-1] [DEBUG] [1795301801.643894313] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6444986 [ros2_control_node-1] [DEBUG] [1795301801.644209148] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6448421 [ros2_control_node-1] [DEBUG] [1795301801.644621343] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6452119 [ros2_control_node-1] [DEBUG] [1795301801.644975921] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6455531 [ros2_control_node-1] [DEBUG] [1795301801.645290855] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6459064 [ros2_control_node-1] [DEBUG] [1795301801.645618029] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6462383 [ros2_control_node-1] [DEBUG] [1795301801.645916514] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6465364 [ros2_control_node-1] [DEBUG] [1795301801.646210930] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6468055 [ros2_control_node-1] [DEBUG] [1795301801.646556633] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6470871 [ros2_control_node-1] [DEBUG] [1795301801.646869235] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6473956 [ros2_control_node-1] [DEBUG] [1795301801.647167254] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6478269 [ros2_control_node-1] [DEBUG] [1795301801.647596983] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6482487 [ros2_control_node-1] [DEBUG] [1795301801.647883242] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6486893 [ros2_control_node-1] [DEBUG] [1795301801.648516766] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6490557 [ros2_control_node-1] [DEBUG] [1795301801.648810106] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6493976 [ros2_control_node-1] [DEBUG] [1795301801.649077994] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6497407 [ros2_control_node-1] [DEBUG] [1795301801.649520440] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6500578 [ros2_control_node-1] [DEBUG] [1795301801.649793671] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6504385 [ros2_control_node-1] [DEBUG] [1795301801.650092370] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6506932 [ros2_control_node-1] [DEBUG] [1795301801.650475989] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6508868 [ros2_control_node-1] [DEBUG] [1795301801.650727173] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6510859 [ros2_control_node-1] [DEBUG] [1795301801.650997955] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6518695 [ros2_control_node-1] [DEBUG] [1795301801.651626385] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6523466 [ros2_control_node-1] [DEBUG] [1795301801.651920449] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6527166 [ros2_control_node-1] [DEBUG] [1795301801.652180800] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6529572 [ros2_control_node-1] [DEBUG] [1795301801.652604669] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6532521 [ros2_control_node-1] [DEBUG] [1795301801.652908163] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6535120 [ros2_control_node-1] [DEBUG] [1795301801.653193467] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6537447 [ros2_control_node-1] [DEBUG] [1795301801.653545326] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6539767 [ros2_control_node-1] [DEBUG] [1795301801.653808251] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6542394 [ros2_control_node-1] [DEBUG] [1795301801.654082996] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6547766 [ros2_control_node-1] [DEBUG] [1795301801.654517563] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6552768 [ros2_control_node-1] [DEBUG] [1795301801.654776484] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6557090 [ros2_control_node-1] [DEBUG] [1795301801.655040241] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6561172 [ros2_control_node-1] [DEBUG] [1795301801.655488098] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6565342 [ros2_control_node-1] [DEBUG] [1795301801.655785022] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6568968 [ros2_control_node-1] [DEBUG] [1795301801.656096006] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6572065 [ros2_control_node-1] [DEBUG] [1795301801.656480780] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6575584 [ros2_control_node-1] [DEBUG] [1795301801.656832737] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6578419 [ros2_control_node-1] [DEBUG] [1795301801.657111737] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6581061 [ros2_control_node-1] [DEBUG] [1795301801.657534574] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6583674 [ros2_control_node-1] [DEBUG] [1795301801.657808640] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6585789 [ros2_control_node-1] [DEBUG] [1795301801.658114567] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6588275 [ros2_control_node-1] [DEBUG] [1795301801.658554413] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6590886 [ros2_control_node-1] [DEBUG] [1795301801.658829555] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6593602 [ros2_control_node-1] [DEBUG] [1795301801.659132787] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6599007 [ros2_control_node-1] [DEBUG] [1795301801.659548768] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6604869 [ros2_control_node-1] [DEBUG] [1795301801.659865266] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6606455 [ros2_control_node-1] [DEBUG] [1795301801.660159206] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6609614 [ros2_control_node-1] [DEBUG] [1795301801.660607261] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6612649 [ros2_control_node-1] [DEBUG] [1795301801.661003738] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6615295 [ros2_control_node-1] [DEBUG] [1795301801.661281464] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6617935 [ros2_control_node-1] [DEBUG] [1795301801.661611412] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6620846 [ros2_control_node-1] [DEBUG] [1795301801.661906423] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6627769 [ros2_control_node-1] [DEBUG] [1795301801.662481655] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6632817 [ros2_control_node-1] [DEBUG] [1795301801.662763242] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6636589 [ros2_control_node-1] [DEBUG] [1795301801.663114119] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6639898 [ros2_control_node-1] [DEBUG] [1795301801.663530862] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6643238 [ros2_control_node-1] [DEBUG] [1795301801.663810267] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6645918 [ros2_control_node-1] [DEBUG] [1795301801.664088065] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6648731 [ros2_control_node-1] [DEBUG] [1795301801.664497550] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6651433 [ros2_control_node-1] [DEBUG] [1795301801.664773569] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6654041 [ros2_control_node-1] [DEBUG] [1795301801.665046498] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6657019 [ros2_control_node-1] [DEBUG] [1795301801.665519723] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6659884 [ros2_control_node-1] [DEBUG] [1795301801.665802086] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6662915 [ros2_control_node-1] [DEBUG] [1795301801.666094809] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6667540 [ros2_control_node-1] [DEBUG] [1795301801.666534328] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6671095 [ros2_control_node-1] [DEBUG] [1795301801.666796481] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6674557 [ros2_control_node-1] [DEBUG] [1795301801.667067734] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6677799 [ros2_control_node-1] [DEBUG] [1795301801.667553474] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6679821 [ros2_control_node-1] [DEBUG] [1795301801.667884409] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6682796 [ros2_control_node-1] [DEBUG] [1795301801.668196022] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6686175 [ros2_control_node-1] [DEBUG] [1795301801.668520384] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6689222 [ros2_control_node-1] [DEBUG] [1795301801.668832008] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6692560 [ros2_control_node-1] [DEBUG] [1795301801.669140123] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6696692 [ros2_control_node-1] [DEBUG] [1795301801.669541336] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6699090 [ros2_control_node-1] [DEBUG] [1795301801.669800233] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6703749 [ros2_control_node-1] [DEBUG] [1795301801.670092535] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6707747 [ros2_control_node-1] [DEBUG] [1795301801.670545975] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6711886 [ros2_control_node-1] [DEBUG] [1795301801.670817611] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6716175 [ros2_control_node-1] [DEBUG] [1795301801.671142937] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6719618 [ros2_control_node-1] [DEBUG] [1795301801.671613679] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6722951 [ros2_control_node-1] [DEBUG] [1795301801.671998825] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6726415 [ros2_control_node-1] [DEBUG] [1795301801.672296766] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6729531 [ros2_control_node-1] [DEBUG] [1795301801.672640851] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6733468 [ros2_control_node-1] [DEBUG] [1795301801.672967388] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6739950 [ros2_control_node-1] [DEBUG] [1795301801.673625766] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6746261 [ros2_control_node-1] [DEBUG] [1795301801.674037359] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6751955 [ros2_control_node-1] [DEBUG] [1795301801.674602952] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6759369 [ros2_control_node-1] [DEBUG] [1795301801.674991741] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6761718 [ros2_control_node-1] [DEBUG] [1795301801.675314215] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6766455 [ros2_control_node-1] [DEBUG] [1795301801.675675468] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6767778 [ros2_control_node-1] [DEBUG] [1795301801.676063105] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6771438 [ros2_control_node-1] [DEBUG] [1795301801.676587013] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6775217 [ros2_control_node-1] [DEBUG] [1795301801.676931547] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6778171 [ros2_control_node-1] [DEBUG] [1795301801.677320411] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6781054 [ros2_control_node-1] [DEBUG] [1795301801.677662070] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6784110 [ros2_control_node-1] [DEBUG] [1795301801.677991307] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6788986 [ros2_control_node-1] [DEBUG] [1795301801.678583219] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6794064 [ros2_control_node-1] [DEBUG] [1795301801.678883271] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6796334 [ros2_control_node-1] [DEBUG] [1795301801.679173864] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6798096 [ros2_control_node-1] [DEBUG] [1795301801.679538867] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6799850 [ros2_control_node-1] [DEBUG] [1795301801.679808343] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6803365 [ros2_control_node-1] [DEBUG] [1795301801.680130884] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6807697 [ros2_control_node-1] [DEBUG] [1795301801.680639193] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6810541 [ros2_control_node-1] [DEBUG] [1795301801.680905026] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6813159 [ros2_control_node-1] [DEBUG] [1795301801.681173988] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6816478 [ros2_control_node-1] [DEBUG] [1795301801.681539168] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6819060 [ros2_control_node-1] [DEBUG] [1795301801.681798243] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6821549 [ros2_control_node-1] [DEBUG] [1795301801.682037038] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6826577 [ros2_control_node-1] [DEBUG] [1795301801.682502459] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6829560 [ros2_control_node-1] [DEBUG] [1795301801.682821082] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6832283 [ros2_control_node-1] [DEBUG] [1795301801.683080817] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6836121 [ros2_control_node-1] [DEBUG] [1795301801.683486212] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6839020 [ros2_control_node-1] [DEBUG] [1795301801.683752661] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6841829 [ros2_control_node-1] [DEBUG] [1795301801.684031914] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6846814 [ros2_control_node-1] [DEBUG] [1795301801.684557681] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6849627 [ros2_control_node-1] [DEBUG] [1795301801.684848926] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6852469 [ros2_control_node-1] [DEBUG] [1795301801.685130488] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6856821 [ros2_control_node-1] [DEBUG] [1795301801.685563383] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6859574 [ros2_control_node-1] [DEBUG] [1795301801.685849835] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6861968 [ros2_control_node-1] [DEBUG] [1795301801.686098224] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6866512 [ros2_control_node-1] [DEBUG] [1795301801.686473408] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6869802 [ros2_control_node-1] [DEBUG] [1795301801.686772734] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6873076 [ros2_control_node-1] [DEBUG] [1795301801.687105973] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6876290 [ros2_control_node-1] [DEBUG] [1795301801.687518632] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6878884 [ros2_control_node-1] [DEBUG] [1795301801.687784352] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6881189 [ros2_control_node-1] [DEBUG] [1795301801.688026686] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6883466 [ros2_control_node-1] [DEBUG] [1795301801.688252925] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6886356 [ros2_control_node-1] [DEBUG] [1795301801.688532094] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6888807 [ros2_control_node-1] [DEBUG] [1795301801.688785367] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6891401 [ros2_control_node-1] [DEBUG] [1795301801.689041950] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6897106 [ros2_control_node-1] [DEBUG] [1795301801.689579880] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6899362 [ros2_control_node-1] [DEBUG] [1795301801.689843827] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6901934 [ros2_control_node-1] [DEBUG] [1795301801.690093198] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6906714 [ros2_control_node-1] [DEBUG] [1795301801.690555577] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6909215 [ros2_control_node-1] [DEBUG] [1795301801.690818997] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6911979 [ros2_control_node-1] [DEBUG] [1795301801.691095821] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6916015 [ros2_control_node-1] [DEBUG] [1795301801.691490181] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6918926 [ros2_control_node-1] [DEBUG] [1795301801.691763964] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6921787 [ros2_control_node-1] [DEBUG] [1795301801.692074793] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6926539 [ros2_control_node-1] [DEBUG] [1795301801.692546568] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6929488 [ros2_control_node-1] [DEBUG] [1795301801.692828411] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6932490 [ros2_control_node-1] [DEBUG] [1795301801.693132592] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6936784 [ros2_control_node-1] [DEBUG] [1795301801.693576685] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6939380 [ros2_control_node-1] [DEBUG] [1795301801.693828253] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6941636 [ros2_control_node-1] [DEBUG] [1795301801.694069072] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6945739 [ros2_control_node-1] [DEBUG] [1795301801.694475378] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6948092 [ros2_control_node-1] [DEBUG] [1795301801.694718850] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6950722 [ros2_control_node-1] [DEBUG] [1795301801.694978673] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6955676 [ros2_control_node-1] [DEBUG] [1795301801.695472767] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6958098 [ros2_control_node-1] [DEBUG] [1795301801.695722291] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6960580 [ros2_control_node-1] [DEBUG] [1795301801.695971662] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6963308 [ros2_control_node-1] [DEBUG] [1795301801.696244081] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6966159 [ros2_control_node-1] [DEBUG] [1795301801.696528859] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6968734 [ros2_control_node-1] [DEBUG] [1795301801.696791378] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6971142 [ros2_control_node-1] [DEBUG] [1795301801.697033023] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6976745 [ros2_control_node-1] [DEBUG] [1795301801.697554263] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6979449 [ros2_control_node-1] [DEBUG] [1795301801.697863616] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6982148 [ros2_control_node-1] [DEBUG] [1795301801.698134460] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6985912 [ros2_control_node-1] [DEBUG] [1795301801.698514203] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6988189 [ros2_control_node-1] [DEBUG] [1795301801.698743533] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6990662 [ros2_control_node-1] [DEBUG] [1795301801.698989772] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6993043 [ros2_control_node-1] [DEBUG] [1795301801.699225549] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6995866 [ros2_control_node-1] [DEBUG] [1795301801.699512236] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.6998360 [ros2_control_node-1] [DEBUG] [1795301801.699763276] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7000864 [ros2_control_node-1] [DEBUG] [1795301801.700013041] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7006884 [ros2_control_node-1] [DEBUG] [1795301801.700573537] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7009299 [ros2_control_node-1] [DEBUG] [1795301801.700853314] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7011962 [ros2_control_node-1] [DEBUG] [1795301801.701122685] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7015893 [ros2_control_node-1] [DEBUG] [1795301801.701515893] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7018821 [ros2_control_node-1] [DEBUG] [1795301801.701810210] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7021563 [ros2_control_node-1] [DEBUG] [1795301801.702086517] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7024138 [ros2_control_node-1] [DEBUG] [1795301801.702338479] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7026801 [ros2_control_node-1] [DEBUG] [1795301801.702610715] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7029037 [ros2_control_node-1] [DEBUG] [1795301801.702836932] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7031305 [ros2_control_node-1] [DEBUG] [1795301801.703062504] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7036152 [ros2_control_node-1] [DEBUG] [1795301801.703511588] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7038193 [ros2_control_node-1] [DEBUG] [1795301801.703753975] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7040327 [ros2_control_node-1] [DEBUG] [1795301801.703965880] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7043073 [ros2_control_node-1] [DEBUG] [1795301801.704240206] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7045863 [ros2_control_node-1] [DEBUG] [1795301801.704516700] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7048321 [ros2_control_node-1] [DEBUG] [1795301801.704762285] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7050767 [ros2_control_node-1] [DEBUG] [1795301801.705012224] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7052891 [ros2_control_node-1] [DEBUG] [1795301801.705225088] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7055838 [ros2_control_node-1] [DEBUG] [1795301801.705520367] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7058496 [ros2_control_node-1] [DEBUG] [1795301801.705787543] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7061393 [ros2_control_node-1] [DEBUG] [1795301801.706078199] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7066000 [ros2_control_node-1] [DEBUG] [1795301801.706512688] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7068214 [ros2_control_node-1] [DEBUG] [1795301801.706764538] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7070658 [ros2_control_node-1] [DEBUG] [1795301801.707004145] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7073221 [ros2_control_node-1] [DEBUG] [1795301801.707245350] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7075863 [ros2_control_node-1] [DEBUG] [1795301801.707522762] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7078371 [ros2_control_node-1] [DEBUG] [1795301801.707777326] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7080753 [ros2_control_node-1] [DEBUG] [1795301801.708014880] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7086992 [ros2_control_node-1] [DEBUG] [1795301801.708593451] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7089088 [ros2_control_node-1] [DEBUG] [1795301801.708849807] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7091436 [ros2_control_node-1] [DEBUG] [1795301801.709085431] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7097003 [ros2_control_node-1] [DEBUG] [1795301801.709588757] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7098978 [ros2_control_node-1] [DEBUG] [1795301801.709838923] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7101424 [ros2_control_node-1] [DEBUG] [1795301801.710085630] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7105296 [ros2_control_node-1] [DEBUG] [1795301801.710466860] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7107780 [ros2_control_node-1] [DEBUG] [1795301801.710720212] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7110159 [ros2_control_node-1] [DEBUG] [1795301801.710962044] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7115173 [ros2_control_node-1] [DEBUG] [1795301801.711462530] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7117679 [ros2_control_node-1] [DEBUG] [1795301801.711710218] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7120299 [ros2_control_node-1] [DEBUG] [1795301801.711972215] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7122858 [ros2_control_node-1] [DEBUG] [1795301801.712229456] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7125947 [ros2_control_node-1] [DEBUG] [1795301801.712538032] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7128165 [ros2_control_node-1] [DEBUG] [1795301801.712760233] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7130444 [ros2_control_node-1] [DEBUG] [1795301801.712988637] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7132821 [ros2_control_node-1] [DEBUG] [1795301801.713226204] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7135730 [ros2_control_node-1] [DEBUG] [1795301801.713513468] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7138460 [ros2_control_node-1] [DEBUG] [1795301801.713791369] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7141323 [ros2_control_node-1] [DEBUG] [1795301801.714077074] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7146714 [ros2_control_node-1] [DEBUG] [1795301801.714568903] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7148638 [ros2_control_node-1] [DEBUG] [1795301801.714808028] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7150900 [ros2_control_node-1] [DEBUG] [1795301801.715035652] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7155440 [ros2_control_node-1] [DEBUG] [1795301801.715480159] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7158182 [ros2_control_node-1] [DEBUG] [1795301801.715759091] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7160952 [ros2_control_node-1] [DEBUG] [1795301801.716038107] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7163475 [ros2_control_node-1] [DEBUG] [1795301801.716287472] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7165911 [ros2_control_node-1] [DEBUG] [1795301801.716534119] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7168863 [ros2_control_node-1] [DEBUG] [1795301801.716822740] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7171412 [ros2_control_node-1] [DEBUG] [1795301801.717083794] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7175715 [ros2_control_node-1] [DEBUG] [1795301801.717510616] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7178459 [ros2_control_node-1] [DEBUG] [1795301801.717787573] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7181368 [ros2_control_node-1] [DEBUG] [1795301801.718082491] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7186334 [ros2_control_node-1] [DEBUG] [1795301801.718524889] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7188444 [ros2_control_node-1] [DEBUG] [1795301801.718789269] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7190883 [ros2_control_node-1] [DEBUG] [1795301801.719033141] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7196209 [ros2_control_node-1] [DEBUG] [1795301801.719511311] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7198365 [ros2_control_node-1] [DEBUG] [1795301801.719775434] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7201130 [ros2_control_node-1] [DEBUG] [1795301801.720055580] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7205908 [ros2_control_node-1] [DEBUG] [1795301801.720521869] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7208245 [ros2_control_node-1] [DEBUG] [1795301801.720761332] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7210603 [ros2_control_node-1] [DEBUG] [1795301801.721001304] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7212987 [ros2_control_node-1] [DEBUG] [1795301801.721236391] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7215910 [ros2_control_node-1] [DEBUG] [1795301801.721533404] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7218251 [ros2_control_node-1] [DEBUG] [1795301801.721766625] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7220931 [ros2_control_node-1] [DEBUG] [1795301801.722035731] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7226694 [ros2_control_node-1] [DEBUG] [1795301801.722555000] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7229133 [ros2_control_node-1] [DEBUG] [1795301801.722858289] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7231610 [ros2_control_node-1] [DEBUG] [1795301801.723105829] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7236421 [ros2_control_node-1] [DEBUG] [1795301801.723540916] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7238529 [ros2_control_node-1] [DEBUG] [1795301801.723797555] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7240927 [ros2_control_node-1] [DEBUG] [1795301801.724033843] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7243223 [ros2_control_node-1] [DEBUG] [1795301801.724264584] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7245824 [ros2_control_node-1] [DEBUG] [1795301801.724523572] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7248495 [ros2_control_node-1] [DEBUG] [1795301801.724787396] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7251201 [ros2_control_node-1] [DEBUG] [1795301801.725059018] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7256138 [ros2_control_node-1] [DEBUG] [1795301801.725515838] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7257905 [ros2_control_node-1] [DEBUG] [1795301801.725734795] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7260213 [ros2_control_node-1] [DEBUG] [1795301801.725963272] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7262456 [ros2_control_node-1] [DEBUG] [1795301801.726183937] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7265630 [ros2_control_node-1] [DEBUG] [1795301801.726503212] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7268195 [ros2_control_node-1] [DEBUG] [1795301801.726761667] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7270682 [ros2_control_node-1] [DEBUG] [1795301801.727011174] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7276194 [ros2_control_node-1] [DEBUG] [1795301801.727560398] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7278697 [ros2_control_node-1] [DEBUG] [1795301801.727810374] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7281201 [ros2_control_node-1] [DEBUG] [1795301801.728058548] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7286112 [ros2_control_node-1] [INFO] [1795301801.728484092] [controller_manager]: Loading controller 'joint_state_broadcaster'
+1795301801.7288067 [ros2_control_node-1] [DEBUG] [1795301801.728554688] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7289531 [ros2_control_node-1] [DEBUG] [1795301801.728808488] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7291327 [ros2_control_node-1] [DEBUG] [1795301801.729067576] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7298682 [ros2_control_node-1] [DEBUG] [1795301801.729538537] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7304730 [ros2_control_node-1] [DEBUG] [1795301801.729918362] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7310369 [ros2_control_node-1] [DEBUG] [1795301801.730792092] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7314501 [ros2_control_node-1] [DEBUG] [1795301801.731172283] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7320032 [ros2_control_node-1] [DEBUG] [1795301801.731604284] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7325842 [ros2_control_node-1] [DEBUG] [1795301801.731951831] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7329767 [ros2_control_node-1] [DEBUG] [1795301801.732292053] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7331269 [ros2_control_node-1] [DEBUG] [1795301801.732632054] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7335873 [ros2_control_node-1] [DEBUG] [1795301801.732915010] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7337401 [ros2_control_node-1] [DEBUG] [1795301801.733268583] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7341571 [ros2_control_node-1] [DEBUG] [1795301801.733679028] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7346506 [ros2_control_node-1] [DEBUG] [1795301801.734099866] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7350905 [ros2_control_node-1] [DEBUG] [1795301801.734578563] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7354383 [ros2_control_node-1] [DEBUG] [1795301801.734912680] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7359931 [ros2_control_node-1] [DEBUG] [1795301801.735302218] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7363310 [ros2_control_node-1] [DEBUG] [1795301801.735689078] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7365549 [spawner-3] [INFO] [1795301801.735785645] [spawner_joint_state_broadcaster]: [94mLoaded [1mjoint_state_broadcaster[0m
+1795301801.7367697 [ros2_control_node-1] [DEBUG] [1795301801.736007974] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7369971 [ros2_control_node-1] [DEBUG] [1795301801.736528409] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7372513 [ros2_control_node-1] [DEBUG] [1795301801.736792179] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7374132 [ros2_control_node-1] [INFO] [1795301801.737016361] [controller_manager]: Configuring controller 'joint_state_broadcaster'
+1795301801.7375178 [ros2_control_node-1] [DEBUG] [1795301801.737040895] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7375834 [ros2_control_node-1] [INFO] [1795301801.737096019] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+1795301801.7377803 [ros2_control_node-1] [DEBUG] [1795301801.737492828] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7379866 [ros2_control_node-1] [DEBUG] [1795301801.737744369] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7381699 [ros2_control_node-1] [DEBUG] [1795301801.738044530] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7386277 [ros2_control_node-1] [DEBUG] [1795301801.738515745] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7389479 [ros2_control_node-1] [DEBUG] [1795301801.738772567] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7392223 [ros2_control_node-1] [DEBUG] [1795301801.739075760] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7396321 [ros2_control_node-1] [DEBUG] [1795301801.739545964] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7398801 [ros2_control_node-1] [DEBUG] [1795301801.739814223] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7401292 [ros2_control_node-1] [DEBUG] [1795301801.740065340] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7405808 [ros2_control_node-1] [DEBUG] [1795301801.740486896] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7408299 [ros2_control_node-1] [DEBUG] [1795301801.740764618] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7411218 [ros2_control_node-1] [DEBUG] [1795301801.741064019] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7416496 [ros2_control_node-1] [DEBUG] [1795301801.741538867] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7417750 [spawner-3] [INFO] [1795301801.741625733] [spawner_joint_state_broadcaster]: [92mConfigured and activated [1mjoint_state_broadcaster[0m
+1795301801.7419560 [ros2_control_node-1] [DEBUG] [1795301801.741854727] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7422128 [ros2_control_node-1] [DEBUG] [1795301801.742150143] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7426662 [ros2_control_node-1] [DEBUG] [1795301801.742586636] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7429025 [ros2_control_node-1] [DEBUG] [1795301801.742843658] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7431519 [ros2_control_node-1] [DEBUG] [1795301801.743100910] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7435229 [ros2_control_node-1] [DEBUG] [1795301801.743467300] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7437668 [ros2_control_node-1] [DEBUG] [1795301801.743716107] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7440937 [ros2_control_node-1] [DEBUG] [1795301801.743971607] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7447574 [ros2_control_node-1] [DEBUG] [1795301801.744632105] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7449553 [ros2_control_node-1] [DEBUG] [1795301801.744890173] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7452483 [ros2_control_node-1] [DEBUG] [1795301801.745145038] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7456422 [ros2_control_node-1] [DEBUG] [1795301801.745558588] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7458382 [ros2_control_node-1] [DEBUG] [1795301801.745776005] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7460608 [ros2_control_node-1] [DEBUG] [1795301801.746003251] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7467515 [ros2_control_node-1] [DEBUG] [1795301801.746644553] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7469506 [ros2_control_node-1] [DEBUG] [1795301801.746897961] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7471564 [ros2_control_node-1] [DEBUG] [1795301801.747106407] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7475750 [ros2_control_node-1] [DEBUG] [1795301801.747517383] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7478111 [ros2_control_node-1] [DEBUG] [1795301801.747759398] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7480597 [ros2_control_node-1] [DEBUG] [1795301801.748009713] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7483633 [ros2_control_node-1] [DEBUG] [1795301801.748247556] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7486207 [ros2_control_node-1] [DEBUG] [1795301801.748543503] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7488804 [ros2_control_node-1] [DEBUG] [1795301801.748804078] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7490816 [ros2_control_node-1] [INFO] [1795301801.748871107] [controller_manager]: Loading controller 'fault_controller'
+1795301801.7496245 [ros2_control_node-1] [DEBUG] [1795301801.749417208] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7498906 [ros2_control_node-1] [DEBUG] [1795301801.749791461] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7502563 [ros2_control_node-1] [DEBUG] [1795301801.750141394] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7506680 [ros2_control_node-1] [DEBUG] [1795301801.750568733] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7509553 [ros2_control_node-1] [DEBUG] [1795301801.750880755] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7512629 [ros2_control_node-1] [DEBUG] [1795301801.751181555] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7516458 [ros2_control_node-1] [INFO] [1795301801.751522529] [controller_manager]: Loading controller 'gen3_lite_2f_gripper_controller'
+1795301801.7521291 [ros2_control_node-1] [DEBUG] [1795301801.751551747] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7525423 [ros2_control_node-1] [DEBUG] [1795301801.751914672] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7530241 [ros2_control_node-1] [DEBUG] [1795301801.752548624] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7533941 [spawner-6] [INFO] [1795301801.752654015] [spawner_fault_controller]: [94mLoaded [1mfault_controller[0m
+1795301801.7539616 [ros2_control_node-1] [DEBUG] [1795301801.752922656] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7544823 [ros2_control_node-1] [DEBUG] [1795301801.753292467] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7550037 [ros2_control_node-1] [DEBUG] [1795301801.754129524] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7553861 [ros2_control_node-1] [DEBUG] [1795301801.754632774] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7557991 [ros2_control_node-1] [DEBUG] [1795301801.755279511] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7562499 [ros2_control_node-1] [DEBUG] [1795301801.755773795] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7567253 [ros2_control_node-1] [DEBUG] [1795301801.756265925] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7570477 [ros2_control_node-1] [DEBUG] [1795301801.756718996] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7576511 [ros2_control_node-1] [DEBUG] [1795301801.757324907] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7582605 [ros2_control_node-1] [DEBUG] [1795301801.757811273] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7588501 [ros2_control_node-1] [DEBUG] [1795301801.758299820] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7595758 [ros2_control_node-1] [DEBUG] [1795301801.758809593] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7601233 [ros2_control_node-1] [DEBUG] [1795301801.759353298] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7606328 [ros2_control_node-1] [DEBUG] [1795301801.759891496] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7610948 [ros2_control_node-1] [DEBUG] [1795301801.760656195] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7615242 [ros2_control_node-1] [INFO] [1795301801.760884650] [controller_manager]: Configuring controller 'fault_controller'
+1795301801.7616618 [ros2_control_node-1] [DEBUG] [1795301801.761116844] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7620478 [ros2_control_node-1] [DEBUG] [1795301801.761592108] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7623982 [spawner-7] [INFO] [1795301801.761907303] [spawner_gen3_lite_2f_gripper_controller]: [94mLoaded [1mgen3_lite_2f_gripper_controller[0m
+1795301801.7628577 [ros2_control_node-1] [DEBUG] [1795301801.761924230] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7633708 [ros2_control_node-1] [DEBUG] [1795301801.762264152] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7635071 [ros2_control_node-1] [DEBUG] [1795301801.762566421] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7638512 [ros2_control_node-1] [DEBUG] [1795301801.763037987] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7641428 [ros2_control_node-1] [DEBUG] [1795301801.763612399] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7645125 [ros2_control_node-1] [DEBUG] [1795301801.764096864] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7646368 [ros2_control_node-1] [INFO] [1795301801.764105319] [controller_manager]: Loading controller 'twist_controller'
+1795301801.7649658 [ros2_control_node-1] [DEBUG] [1795301801.764600304] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7652864 [ros2_control_node-1] [DEBUG] [1795301801.765005266] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7656138 [ros2_control_node-1] [DEBUG] [1795301801.765368968] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7664468 [ros2_control_node-1] [DEBUG] [1795301801.765809012] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7669888 [ros2_control_node-1] [DEBUG] [1795301801.766648064] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7674899 [ros2_control_node-1] [DEBUG] [1795301801.767108148] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7679615 [ros2_control_node-1] [DEBUG] [1795301801.767615038] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7684712 [ros2_control_node-1] [DEBUG] [1795301801.768094031] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7689934 [ros2_control_node-1] [DEBUG] [1795301801.768681416] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7695324 [ros2_control_node-1] [DEBUG] [1795301801.769152451] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7702374 [ros2_control_node-1] [DEBUG] [1795301801.769697404] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7710419 [ros2_control_node-1] [DEBUG] [1795301801.770188220] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7712889 [ros2_control_node-1] [DEBUG] [1795301801.770621211] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7718389 [ros2_control_node-1] [DEBUG] [1795301801.771158520] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7723887 [ros2_control_node-1] [DEBUG] [1795301801.771585080] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7725980 [ros2_control_node-1] [DEBUG] [1795301801.771989654] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7731714 [ros2_control_node-1] [DEBUG] [1795301801.772520163] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7736971 [ros2_control_node-1] [DEBUG] [1795301801.772885950] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7738707 [ros2_control_node-1] [INFO] [1795301801.772956594] [controller_manager]: Configuring controller 'gen3_lite_2f_gripper_controller'
+1795301801.7740045 [ros2_control_node-1] [INFO] [1795301801.773059422] [gen3_lite_2f_gripper_controller]: Action status changes will be monitored at 20.000000 Hz.
+1795301801.7741263 [ros2_control_node-1] [DEBUG] [1795301801.773253451] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7747092 [ros2_control_node-1] [DEBUG] [1795301801.773605674] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7749171 [ros2_control_node-1] [DEBUG] [1795301801.773925751] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.7753141 [spawner-5] [INFO] [1795301801.773701876] [spawner_twist_controller]: [94mLoaded [1mtwist_controller[0m
+1795301801.9529328 [INFO] [spawner-3]: process has finished cleanly [pid 40702]
+1795301801.9758122 [ros2_control_node-1] [DEBUG] [1795301801.975591104] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9763732 [ros2_control_node-1] [DEBUG] [1795301801.975949140] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9765103 [ros2_control_node-1] [INFO] [1795301801.976053751] [controller_manager]: Loading controller 'joint_trajectory_controller'
+1795301801.9769711 [ros2_control_node-1] [DEBUG] [1795301801.976248200] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9771192 [ros2_control_node-1] [DEBUG] [1795301801.976548676] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9774847 [spawner-6] [INFO] [1795301801.976430589] [spawner_fault_controller]: [92mConfigured and activated [1mfault_controller[0m
+1795301801.9779518 [ros2_control_node-1] [DEBUG] [1795301801.976883163] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9780729 [ros2_control_node-1] [DEBUG] [1795301801.977242667] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9784048 [ros2_control_node-1] [DEBUG] [1795301801.977569791] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9788764 [ros2_control_node-1] [DEBUG] [1795301801.978003723] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9793048 [ros2_control_node-1] [DEBUG] [1795301801.978632064] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9796364 [ros2_control_node-1] [DEBUG] [1795301801.979043786] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9800038 [ros2_control_node-1] [DEBUG] [1795301801.979609516] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9803436 [ros2_control_node-1] [DEBUG] [1795301801.979952101] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9806476 [ros2_control_node-1] [DEBUG] [1795301801.980300066] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9809356 [ros2_control_node-1] [DEBUG] [1795301801.980663550] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9813590 [ros2_control_node-1] [DEBUG] [1795301801.981153450] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9817719 [ros2_control_node-1] [DEBUG] [1795301801.981593700] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9821343 [ros2_control_node-1] [DEBUG] [1795301801.981943788] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9828355 [ros2_control_node-1] [DEBUG] [1795301801.982576634] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9835289 [ros2_control_node-1] [DEBUG] [1795301801.983056610] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9840353 [ros2_control_node-1] [DEBUG] [1795301801.983615516] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9844990 [ros2_control_node-1] [DEBUG] [1795301801.983992684] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9850245 [ros2_control_node-1] [DEBUG] [1795301801.984659751] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9854152 [ros2_control_node-1] [DEBUG] [1795301801.985039092] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9858353 [ros2_control_node-1] [DEBUG] [1795301801.985551485] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9862788 [ros2_control_node-1] [DEBUG] [1795301801.985966732] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9869266 [ros2_control_node-1] [DEBUG] [1795301801.986619682] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9874725 [ros2_control_node-1] [DEBUG] [1795301801.987090017] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9882865 [ros2_control_node-1] [DEBUG] [1795301801.987633602] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9889214 [ros2_control_node-1] [DEBUG] [1795301801.988019039] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9891186 [ros2_control_node-1] [WARN] [1795301801.988147974] [joint_trajectory_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+1795301801.9892774 [ros2_control_node-1] [DEBUG] [1795301801.988387263] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9897287 [ros2_control_node-1] [DEBUG] [1795301801.988745268] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9898863 [ros2_control_node-1] [DEBUG] [1795301801.989138398] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9899969 [ros2_control_node-1] [INFO] [1795301801.989166407] [controller_manager]: Configuring controller 'twist_controller'
+1795301801.9905131 [ros2_control_node-1] [DEBUG] [1795301801.989661757] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9907880 [ros2_control_node-1] [INFO] [1795301801.990035384] [twist_controller]: configure successful
+1795301801.9909379 [ros2_control_node-1] [DEBUG] [1795301801.990082123] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9917355 [spawner-4] [INFO] [1795301801.990008917] [spawner_joint_trajectory_controller]: [94mLoaded [1mjoint_trajectory_controller[0m
+1795301801.9924653 [ros2_control_node-1] [DEBUG] [1795301801.990697086] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9930658 [ros2_control_node-1] [DEBUG] [1795301801.991207907] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301801.9934323 [ros2_control_node-1] [DEBUG] [1795301801.992032551] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1785827 [INFO] [spawner-6]: process has finished cleanly [pid 40708]
+1795301802.1902690 [INFO] [spawner-5]: process has finished cleanly [pid 40706]
+1795301802.1948979 [ros2_control_node-1] [DEBUG] [1795301802.194746603] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1951683 [ros2_control_node-1] [DEBUG] [1795301802.195092491] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1953032 [ros2_control_node-1] [INFO] [1795301802.195095476] [controller_manager]: Configuring controller 'joint_trajectory_controller'
+1795301802.1954112 [ros2_control_node-1] [INFO] [1795301802.195249458] [joint_trajectory_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+1795301802.1954453 [ros2_control_node-1] [INFO] [1795301802.195266248] [joint_trajectory_controller]: Command interfaces are [position] and state interfaces are [position velocity].
+1795301802.1954794 [ros2_control_node-1] [INFO] [1795301802.195281234] [joint_trajectory_controller]: Using 'splines' interpolation method.
+1795301802.1956275 [ros2_control_node-1] [INFO] [1795301802.195519888] [joint_trajectory_controller]: Controller state will be published at 100.00 Hz.
+1795301802.1957443 [ros2_control_node-1] [DEBUG] [1795301802.195558878] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1958334 [spawner-7] [INFO] [1795301802.195674849] [spawner_gen3_lite_2f_gripper_controller]: [92mConfigured and activated [1mgen3_lite_2f_gripper_controller[0m
+1795301802.1961100 [ros2_control_node-1] [DEBUG] [1795301802.195927877] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1967378 [ros2_control_node-1] [DEBUG] [1795301802.196596067] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1979587 [ros2_control_node-1] [DEBUG] [1795301802.197748474] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1980739 [ros2_control_node-1] [INFO] [1795301802.197752243] [joint_trajectory_controller]: Action status changes will be monitored at 20.00 Hz.
+1795301802.1987698 [ros2_control_node-1] [DEBUG] [1795301802.198612525] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.1999016 [ros2_control_node-1] [DEBUG] [1795301802.199626763] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.2010705 [ros2_control_node-1] [DEBUG] [1795301802.200666382] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.2018983 [ros2_control_node-1] [DEBUG] [1795301802.201663181] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+1795301802.4188962 [spawner-4] [INFO] [1795301802.418550159] [spawner_joint_trajectory_controller]: [92mConfigured and activated [1mjoint_trajectory_controller[0m
+1795301802.4330757 [ros2_control_node-1] [INFO] [1795301802.432664969] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+1795301802.4453213 [INFO] [spawner-7]: process has finished cleanly [pid 40710]
+1795301802.6481597 [INFO] [spawner-4]: process has finished cleanly [pid 40704]
+1795301804.2898021 [ros2_control_node-1] [INFO] [1795301804.289330799] [joint_trajectory_controller]: Received new action goal
+1795301804.2899134 [ros2_control_node-1] [INFO] [1795301804.289452985] [joint_trajectory_controller]: Accepted new action goal
+1795301809.0385563 [ros2_control_node-1] [INFO] [1795301809.038318681] [joint_trajectory_controller]: Goal reached, success!
+1795301809.3504729 [ros2_control_node-1] [INFO] [1795301809.350234858] [joint_trajectory_controller]: Received new action goal
+1795301809.3505976 [ros2_control_node-1] [INFO] [1795301809.350276401] [joint_trajectory_controller]: Accepted new action goal
+1795301835.7905190 [ros2_control_node-1] [INFO] [1795301835.790302602] [joint_trajectory_controller]: Goal reached, success!
+1795301836.9334431 [ros2_control_node-1] [INFO] [1795301836.933165132] [joint_trajectory_controller]: Received new action goal
+1795301836.9336147 [ros2_control_node-1] [INFO] [1795301836.933209888] [joint_trajectory_controller]: Accepted new action goal
+1795301837.3345900 [ros2_control_node-1] [INFO] [1795301837.334300715] [joint_trajectory_controller]: Goal reached, success!
+1795301837.8185215 [ros2_control_node-1] [INFO] [1795301837.818319532] [joint_trajectory_controller]: Received new action goal
+1795301837.8186359 [ros2_control_node-1] [INFO] [1795301837.818358050] [joint_trajectory_controller]: Accepted new action goal
+1795301838.2205760 [ros2_control_node-1] [INFO] [1795301838.220302434] [joint_trajectory_controller]: Goal reached, success!
+1795301838.7277524 [ros2_control_node-1] [INFO] [1795301838.727550822] [joint_trajectory_controller]: Received new action goal
+1795301838.7278743 [ros2_control_node-1] [INFO] [1795301838.727590426] [joint_trajectory_controller]: Accepted new action goal
+1795301839.1475487 [ros2_control_node-1] [INFO] [1795301839.147300227] [joint_trajectory_controller]: Goal reached, success!
+1795301839.6264825 [ros2_control_node-1] [INFO] [1795301839.626201326] [joint_trajectory_controller]: Received new action goal
+1795301839.6268220 [ros2_control_node-1] [INFO] [1795301839.626258403] [joint_trajectory_controller]: Accepted new action goal
+1795301840.0295918 [ros2_control_node-1] [INFO] [1795301840.029320507] [joint_trajectory_controller]: Goal reached, success!
+1795301840.5336909 [ros2_control_node-1] [INFO] [1795301840.533266471] [joint_trajectory_controller]: Received new action goal
+1795301840.5339897 [ros2_control_node-1] [INFO] [1795301840.533314690] [joint_trajectory_controller]: Accepted new action goal
+1795301840.9566796 [ros2_control_node-1] [INFO] [1795301840.956301016] [joint_trajectory_controller]: Goal reached, success!
+1795301841.4156017 [ros2_control_node-1] [INFO] [1795301841.415400934] [joint_trajectory_controller]: Received new action goal
+1795301841.4157083 [ros2_control_node-1] [INFO] [1795301841.415439581] [joint_trajectory_controller]: Accepted new action goal
+1795301841.8166187 [ros2_control_node-1] [INFO] [1795301841.816336002] [joint_trajectory_controller]: Goal reached, success!
+1795301842.3146870 [ros2_control_node-1] [INFO] [1795301842.314431439] [joint_trajectory_controller]: Received new action goal
+1795301842.3148601 [ros2_control_node-1] [INFO] [1795301842.314465055] [joint_trajectory_controller]: Accepted new action goal
+1795301842.7165399 [ros2_control_node-1] [INFO] [1795301842.716341848] [joint_trajectory_controller]: Goal reached, success!
+1795302075.9419234 [ros2_control_node-1] [INFO] [1795302075.941644719] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+1795302078.1655116 [ros2_control_node-1] [INFO] [1795302078.165277103] [joint_trajectory_controller]: Received new action goal
+1795302078.1657486 [ros2_control_node-1] [INFO] [1795302078.165342809] [joint_trajectory_controller]: Accepted new action goal
+1795302104.5795677 [ros2_control_node-1] [INFO] [1795302104.579315845] [joint_trajectory_controller]: Goal reached, success!
+1795302104.9240041 [ros2_control_node-1] [INFO] [1795302104.923704053] [joint_trajectory_controller]: Received new action goal
+1795302104.9241736 [ros2_control_node-1] [INFO] [1795302104.923789295] [joint_trajectory_controller]: Accepted new action goal
+1795302105.7729299 [ros2_control_node-1] [INFO] [1795302105.772656699] [joint_trajectory_controller]: Got request to cancel goal
+1795302105.7731199 [ros2_control_node-1] [INFO] [1795302105.772705387] [joint_trajectory_controller]: Canceling active action goal because cancel callback received.
+1795302139.9644897 [ros2_control_node-1] [INFO] [1795302139.964311113] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+1795302142.1244419 [ros2_control_node-1] [INFO] [1795302142.124092217] [joint_trajectory_controller]: Received new action goal
+1795302142.1246426 [ros2_control_node-1] [INFO] [1795302142.124153075] [joint_trajectory_controller]: Accepted new action goal
+1795302142.7984755 [ros2_control_node-1] [INFO] [1795302142.798300105] [joint_trajectory_controller]: Goal reached, success!
+1795302151.6515472 [ros2_control_node-1] [INFO] [1795302151.651383721] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+1795302153.8337572 [ros2_control_node-1] [INFO] [1795302153.833532339] [joint_trajectory_controller]: Received new action goal
+1795302153.8338683 [ros2_control_node-1] [INFO] [1795302153.833574113] [joint_trajectory_controller]: Accepted new action goal
+1795302154.0355723 [ros2_control_node-1] [INFO] [1795302154.035317227] [joint_trajectory_controller]: Goal reached, success!
+1795302210.7952788 [ros2_control_node-1] [INFO] [1795302210.794998170] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+1795302213.1115220 [ros2_control_node-1] [INFO] [1795302213.111350065] [joint_trajectory_controller]: Received new action goal
+1795302213.1116385 [ros2_control_node-1] [INFO] [1795302213.111379667] [joint_trajectory_controller]: Accepted new action goal
+1795302213.3126054 [ros2_control_node-1] [INFO] [1795302213.312320888] [joint_trajectory_controller]: Goal reached, success!
+1795302302.5884295 [ros2_control_node-1] [INFO] [1795302302.588197829] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+1795302304.6946266 [ros2_control_node-1] [INFO] [1795302304.694439497] [joint_trajectory_controller]: Received new action goal
+1795302304.6947308 [ros2_control_node-1] [INFO] [1795302304.694478527] [joint_trajectory_controller]: Accepted new action goal
+1795302304.8965740 [ros2_control_node-1] [INFO] [1795302304.896316633] [joint_trajectory_controller]: Goal reached, success!
+1795302305.2697716 [ros2_control_node-1] [INFO] [1795302305.269382712] [joint_trajectory_controller]: Received new action goal
+1795302305.2699811 [ros2_control_node-1] [INFO] [1795302305.269460744] [joint_trajectory_controller]: Accepted new action goal
+1795302331.7235551 [ros2_control_node-1] [INFO] [1795302331.723308105] [joint_trajectory_controller]: Goal reached, success!
+1795302347.4740663 [ros2_control_node-1] terminate called after throwing an instance of 'std::runtime_error'
+1795302347.4743786 [ros2_control_node-1]   what():  timeout detected: BaseCyclicClient::RefreshFeedback
+1795302347.4744651 [ros2_control_node-1] 
+1795302347.4748316 [ros2_control_node-1] Stack trace (most recent call last) in thread 40728:
+1795302347.4758203 [ros2_control_node-1] #16   Object "", at 0xffffffffffffffff, in 
+1795302347.5249574 [ros2_control_node-1] #15   Source "../sysdeps/unix/sysv/linux/x86_64/clone3.S", line 81, in __clone3 [0x742d5bd2685f]
+1795302347.5254433 [ros2_control_node-1] #14   Source "./nptl/pthread_create.c", line 442, in start_thread [0x742d5bc949e2]
+1795302347.5258710 [ros2_control_node-1] #13   Object "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30", at 0x742d5c0dc252, in 
+1795302347.5259497 [ros2_control_node-1] #12   Object "/opt/ros/humble/lib/controller_manager/ros2_control_node", at 0x62eb3efc8305, in 
+1795302347.5261054 [ros2_control_node-1] #11   Object "/opt/ros/humble/lib/libcontroller_manager.so", at 0x742d5c589264, in controller_manager::ControllerManager::write(rclcpp::Time const&, rclcpp::Duration const&)
+1795302347.5261493 [ros2_control_node-1] #10   Object "/opt/ros/humble/lib/libhardware_interface.so", at 0x742d5bf1cf0c, in hardware_interface::ResourceManager::write(rclcpp::Time const&, rclcpp::Duration const&)
+1795302347.5261815 [ros2_control_node-1] #9    Object "/opt/ros/humble/lib/libhardware_interface.so", at 0x742d5bf3a3bf, in hardware_interface::System::write(rclcpp::Time const&, rclcpp::Duration const&)
+1795302347.5269380 [ros2_control_node-1] #8    Object "/opt/ros/humble/lib/libkortex_driver.so", at 0x742d503fc2ee, in kortex_driver::KortexMultiInterfaceHardware::write(rclcpp::Time const&, rclcpp::Duration const&)
+1795302347.5271590 [ros2_control_node-1] #7    Object "/opt/ros/humble/lib/libkortex_driver.so", at 0x742d5056af83, in Kinova::Api::BaseCyclic::BaseCyclicClient::RefreshFeedback(unsigned int, Kinova::Api::RouterClientSendOptions const&)
+1795302347.5274687 [ros2_control_node-1] #6    Object "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30", at 0x742d5c0ae4d7, in __cxa_throw
+1795302347.5276484 [ros2_control_node-1] #5    Object "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30", at 0x742d5c0ae276, in std::terminate()
+1795302347.5276952 [ros2_control_node-1] #4    Object "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30", at 0x742d5c0ae20b, in 
+1795302347.5278134 [ros2_control_node-1] #3    Object "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30", at 0x742d5c0a2b9d, in 
+1795302347.5279238 [ros2_control_node-1] #2    Source "./stdlib/abort.c", line 79, in abort [0x742d5bc287f2]
+1795302347.5279593 [ros2_control_node-1] #1    Source "../sysdeps/posix/raise.c", line 26, in raise [0x742d5bc42405]
+1795302347.5280852 [ros2_control_node-1] #0  | Source "./nptl/pthread_kill.c", line 89, in __pthread_kill_internal
+1795302347.5281217 [ros2_control_node-1]     | Source "./nptl/pthread_kill.c", line 78, in __pthread_kill_implementation
+1795302347.5281551 [ros2_control_node-1]       Source "./nptl/pthread_kill.c", line 44, in __pthread_kill [0x742d5bc9691c]
+1795302347.5282609 [ros2_control_node-1] Aborted (Signal sent by tkill() 40698 1000)
+1795302348.6114624 [ERROR] [ros2_control_node-1]: process has died [pid 40698, exit code -6, cmd '/opt/ros/humble/lib/controller_manager/ros2_control_node --ros-args --params-file /opt/ros/humble/share/kortex_description/arms/gen3_lite/6dof/config/ros2_controllers.yaml -r ~/robot_description:=/robot_description'].

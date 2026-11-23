@@ -1,0 +1,2 @@
+Copied unchanged from branch origin/sahil, commit 469177a (2026-11-19), path close_scan_pipeline/calibration/.
+Record only: no value here is applied to any config. The test1/test2 raw samples referenced in README.md are not in that branch (only these two files are).

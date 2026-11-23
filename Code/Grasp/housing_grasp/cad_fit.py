@@ -129,12 +129,14 @@ def residual(pts, tree, R, t):
     return tree.query((pts - t) @ R)[0]
 
 
-def _solve(obs, tree, plane, x0, h0, trim, tilt, free_psi, tilt_max):
+def _solve(obs, tree, plane, x0, h0, trim, tilt, free_psi, tilt_max, psi_tol=None):
     """Trimmed robust fit from x0: keep the best `trim` of the points, re-pick, solve (3 rounds)."""
     free = [0, 1, 2] + ([3] if free_psi else []) + ([4, 5] if tilt else [])
     x = x0.copy()
     lo = np.full(len(x), -np.inf); hi = np.full(len(x), np.inf)
     lo[4:6], hi[4:6] = -np.radians(tilt_max), np.radians(tilt_max)
+    if psi_tol is not None:   # yaw known from the crib: stay within psi_tol of the start
+        lo[3], hi[3] = x0[3] - psi_tol, x0[3] + psi_tol
 
     def full(z):
         y = x.copy(); y[free] = z; return y
@@ -150,19 +152,22 @@ def _solve(obs, tree, plane, x0, h0, trim, tilt, free_psi, tilt_max):
     return dict(x=x, R=R, t=t, score=float(np.mean(np.sort(d)[: int(trim * len(d))] ** 2)))
 
 
-def fit_pose(obs, tree, spec, plane, fc, tilt=False, start=None):
-    """Best pose over yaw starts (one start for an axially symmetric connector). obs = Nx3 mm."""
+def fit_pose(obs, tree, spec, plane, fc, tilt=False, start=None, yaw_prior=None):
+    """Best pose over yaw starts (one start for an axially symmetric connector). obs = Nx3 mm. yaw_prior (rad, yaw of the model x axis from the crib):
+    only that yaw (and +180 deg for a flip-symmetric plug) is tried, within fit.crib_yaw_tol_deg."""
     h0 = -spec["seat_u_mm"]
     axial = spec["symmetry"] == "axial"
+    tol = None if yaw_prior is None or axial else np.radians(fc["crib_yaw_tol_deg"])
     if start is not None:
-        return _solve(obs, tree, plane, start["x"], h0, fc["trim"], tilt, not axial, fc["tilt_max_deg"])
+        return _solve(obs, tree, plane, start["x"], h0, fc["trim"], tilt, not axial, fc["tilt_max_deg"], tol)
     R0, t0 = _pose(np.array([0.0, 0.0, h0, 0.0]), plane, False)
     c = np.median(obs, 0) - t0
     e1 = np.cross(plane["n"], [1.0, 0.0, 0.0]); e1 /= np.linalg.norm(e1)
     a = [c @ e1, c @ np.cross(plane["n"], e1)]
     runs = []
-    for psi in ([0.0] if axial else np.radians(np.arange(0, 360, fc["yaw_step_deg"]))):
-        runs.append(_solve(obs, tree, plane, np.array([a[0], a[1], h0, psi, 0.0, 0.0]), h0, fc["trim"], tilt, not axial, fc["tilt_max_deg"]))
+    psis = [0.0] if axial else [yaw_prior, yaw_prior + np.pi] if tol is not None and spec["symmetry"] == "flip" else [yaw_prior] if tol is not None else np.radians(np.arange(0, 360, fc["yaw_step_deg"]))
+    for psi in psis:
+        runs.append(_solve(obs, tree, plane, np.array([a[0], a[1], h0, psi, 0.0, 0.0]), h0, fc["trim"], tilt, not axial, fc["tilt_max_deg"], tol))
     runs.sort(key=lambda r: r["score"])
     return runs[0] | dict(near=[r for r in runs if r["score"] <= 1.2 * runs[0]["score"] + 1e-6])
 
@@ -171,7 +176,7 @@ def _stats(d, within):
     return dict(points=int(len(d)), median_mm=float(np.median(d)), p80_mm=float(np.percentile(d, 80)), p95_mm=float(np.percentile(d, 95)), within_pct=float(100 * np.mean(d < within)))
 
 
-def fit_views(obs_views, M, spec, plane, cfg):
+def fit_views(obs_views, M, spec, plane, cfg, yaw_prior=None):
     """obs_views: list of Nx3 (mm). Fits all views, then leave-one-view-out. Returns report (pose of the best model, per-view held-out stats, gate)."""
     fc, rng = cfg["fit"], np.random.default_rng(0)
     obs = [o if len(o) <= fc["train_per_view"] else o[rng.choice(len(o), fc["train_per_view"], replace=False)] for o in obs_views]
@@ -179,12 +184,12 @@ def fit_views(obs_views, M, spec, plane, cfg):
     ref = np.array([0.0, 0.0, 0.5 * sum(spec["fit_u_mm"])])   # model point used to compare poses (middle of the visible part)
     out, seated = {}, None
     for tilt in (False, True):
-        allfit = fit_pose(np.vstack(obs), tree, spec, plane, fc, tilt, start=seated)      # the free-tilt fit starts from the seated one
+        allfit = fit_pose(np.vstack(obs), tree, spec, plane, fc, tilt, start=seated, yaw_prior=yaw_prior)      # the free-tilt fit starts from the seated one
         seated = allfit if not tilt else seated
         held = []
         for i in range(len(obs)):
             rest = np.vstack([o for j, o in enumerate(obs) if j != i])
-            f = fit_pose(rest, tree, spec, plane, fc, tilt, start=allfit)
+            f = fit_pose(rest, tree, spec, plane, fc, tilt, start=allfit, yaw_prior=yaw_prior)
             held.append(dict(fit=f, stats=_stats(residual(obs_views[i], tree, f["R"], f["t"]), fc["gate"]["within_mm"])))
         axes = np.array([allfit["R"][:, 2]] + [h["fit"]["R"][:, 2] for h in held])
         pts = np.array([allfit["R"] @ ref + allfit["t"]] + [h["fit"]["R"] @ ref + h["fit"]["t"] for h in held])

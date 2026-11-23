@@ -18,6 +18,7 @@ import numpy as np
 MODES = ("head", "cloud", "model", "cad", "strip")
 BETWEEN = ("pause", "release", "stop")
 MODE_SERVICE = dict(head="head_grasp", cloud="cloud_grasp", model="model_grasp")
+CONNECTOR_MODES = ("head", "cloud", "cad", "strip")   # modes that take --connector (the sticker at its predefined spot is the cable)
 TWO_STAGE = dict(cad=("cad_scan", "cad_grasp"), strip=("strip_scan", "strip_grasp"))   # modes without the 7-pose scan: find + close views, then fit + plan
 HOME_TOL_START_DEG, HOME_TOL_DONE_DEG = 1.0, 2.0
 
@@ -29,7 +30,6 @@ class Options:
     skip_scan: bool = False
     mode: str = "head"
     connectors: tuple = ()
-    hints: tuple = ()
     between: str = "pause"
 
 
@@ -38,7 +38,7 @@ class Io:
     def call(self, service, timeout):           # -> (ok, message); raises on timeout / missing service
         raise NotImplementedError
 
-    def set_node_params(self, **values):        # strings only (connector, hint)
+    def set_node_params(self, **values):        # strings only (connector)
         raise NotImplementedError
 
     def joints_deg(self):
@@ -60,26 +60,14 @@ def parse_args(argv=None):
     ap.add_argument("--grasp", action="store_true", help="execute the grasp (default: perception and planning only)")
     ap.add_argument("--skip-scan", action="store_true", help="reuse the last 7-pose scan (head, cloud, model modes)")
     ap.add_argument("--mode", choices=MODES, default="head", help="head (default), cloud, model, cad (STEP model fitted to 3 close views), strip (rectangle on the plug, orientation from the white strip)")
-    ap.add_argument("--connector", nargs="+", metavar="NAME", help="cad / strip mode: connector(s) of config/connectors.yaml / config/strip.yaml to pick, in this order")
-    ap.add_argument("--hint", nargs="+", metavar="X,Y", help="cad / strip mode: approximate base-frame x,y (m) of each connector's sticker, same order as --connector")
+    ap.add_argument("--connector", nargs="+", metavar="NAME", help="connector(s) to pick, in this order: names of config/connectors.yaml (head, cloud, cad) or config/strip.yaml (strip). Each is found by its predefined spot")
     ap.add_argument("--between", choices=BETWEEN, default="pause", help="several cables: after one was picked up, ask the operator (pause), open the gripper at once (release) or stop")
     a = ap.parse_args(argv)
-    if a.connector and a.mode not in TWO_STAGE:
-        ap.error("--connector needs --mode cad or strip")
-    if a.hint and not a.connector:
-        ap.error("--hint needs --connector")
+    if a.connector and a.mode not in CONNECTOR_MODES:
+        ap.error("--connector needs --mode head, cloud, cad or strip")
     if a.connector and len(set(a.connector)) != len(a.connector):
         ap.error("--connector lists a connector twice")
-    hints = []
-    for h in a.hint or []:
-        try:
-            x, y = (float(v) for v in h.split(","))
-        except ValueError:
-            ap.error("--hint %r is not X,Y in metres" % h)
-        hints.append(h)
-    if len(hints) > len(a.connector or []):
-        ap.error("more --hint values than --connector names")
-    return Options(a.run_dir, a.grasp, a.skip_scan, a.mode, tuple(a.connector or ()), tuple(hints), a.between)
+    return Options(a.run_dir, a.grasp, a.skip_scan, a.mode, tuple(a.connector or ()), a.between)
 
 
 PATTERNS = ("runs/2*/plan.json", "scans/*/marker_cloud.npy", "cad/2*/target.json", "strip/2*/target.json")
@@ -184,19 +172,19 @@ class Pipeline:
         snap("03_close_view")
         return call(MODE_SERVICE[self.opts.mode], 300)
 
-    def run_one(self, run_dir, name, hint):
+    def run_one(self, run_dir, name):
         for sub in ("screenshots", "videos", "plots"):
             (run_dir / sub).mkdir(parents=True, exist_ok=True)
         t0, known = self.clock(), snapshot(self.work)
-        metrics = dict(started=time.strftime("%Y-%m-%dT%H:%M:%S"), grasp_requested=self.opts.grasp, mode=self.opts.mode, connector=name, hint=hint, stages={}, outcome="INCOMPLETE")
+        metrics = dict(started=time.strftime("%Y-%m-%dT%H:%M:%S"), grasp_requested=self.opts.grasp, mode=self.opts.mode, connector=name, stages={}, outcome="INCOMPLETE")
         res = Result(name or self.opts.mode, run_dir)
         call = lambda svc, timeout: self._call(run_dir, t0, metrics, svc, timeout)
         snap = lambda n: self.io.snap(run_dir / "screenshots" / (n + ".png"))
         recorder = self.io.start_recorder(run_dir)
         try:
             snap("00_start")
-            if self.opts.mode in TWO_STAGE:
-                self.io.set_node_params(connector=name or "", hint=hint or "")
+            if self.opts.mode in CONNECTOR_MODES:
+                self.io.set_node_params(connector=name or "")
             self._preflight(call)
             planned = self._perceive(call, snap)
             snap("04_after_grasp_plan")
@@ -240,11 +228,10 @@ class Pipeline:
 
     def run(self):
         names = self.opts.connectors or (None,)
-        hints = list(self.opts.hints) + [None] * (len(names) - len(self.opts.hints))
         multi = len(names) > 1
         self.opts.run_dir.mkdir(parents=True, exist_ok=True)
-        for i, (name, hint) in enumerate(zip(names, hints)):
-            res = self.run_one(self.opts.run_dir / ("%02d_%s" % (i + 1, name)) if multi else self.opts.run_dir, name, hint)
+        for i, name in enumerate(names):
+            res = self.run_one(self.opts.run_dir / ("%02d_%s" % (i + 1, name)) if multi else self.opts.run_dir, name)
             self.results.append(res)
             if res.stop:
                 break

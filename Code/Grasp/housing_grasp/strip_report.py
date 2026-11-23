@@ -15,11 +15,11 @@ def _corners(centre, ext, yaw):
     return centre + from_uv(s, yaw)
 
 
-def report_strip_fit(out, frames, strip, obs, fit, others, finger_w, finger_t):
+def report_strip_fit(out, frames, strip, obs, fit, finger_w, finger_t):
     out.mkdir(parents=True, exist_ok=True)
-    has_rect = "centre_mm" in fit
+    has_rect = True
     tiles = []
-    for i, (v, o) in enumerate(zip(frames[1:], obs)):
+    for i, (v, o) in enumerate(zip(frames, obs)):
         img = v["color"].copy()
         for P, col in ((o["pts"][::6], (0, 255, 0)),) + (((np.c_[_corners(fit["centre_mm"], fit["extent_mm"], fit["yaw_deg"]), np.full(5, fit["top_mm"])], (255, 0, 255)),) if has_rect else ()):
             uv, z = _project(P, v)
@@ -33,7 +33,7 @@ def report_strip_fit(out, frames, strip, obs, fit, others, finger_w, finger_t):
         uv, _ = _project(o["sticker"][::10], v)
         cu, cv_ = np.median(uv, 0).astype(int)
         crop = img[max(0, cv_ - 110):cv_ + 110, max(0, cu - 150):cu + 150]
-        cv2.putText(crop, "view %d: points green, rectangle pink" % i, (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1)
+        cv2.putText(crop, ("home" if i == 0 else "view %d" % i) + ": points green, rectangle pink", (6, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1)
         tiles.append(cv2.resize(crop, (600, 440), interpolation=cv2.INTER_NEAREST))
     cv2.imwrite(str(out / "01_strip_overlay_views.png"), np.hstack(tiles))
 
@@ -41,9 +41,7 @@ def report_strip_fit(out, frames, strip, obs, fit, others, finger_w, finger_t):
     if strip:
         ax.plot(*_corners(strip["centre"], np.array(strip["size"]), strip["yaw"]).T, "k-", lw=1.5, label="white strip (measured)")
     for k, o in enumerate(obs):
-        ax.scatter(o["pts"][::4, 0], o["pts"][::4, 1], s=3, label="plug points, view %d" % k)
-    if others:
-        ax.scatter(*np.array(others).T, marker="x", s=60, c="tab:red", label="other cables (stickers)")
+        ax.scatter(o["pts"][::4, 0], o["pts"][::4, 1], s=3, label="plug points, %s" % ("home" if k == 0 else "view %d" % k))
     if has_rect:
         ax.plot(*_corners(fit["centre_mm"], fit["extent_mm"], fit["yaw_deg"]).T, "m-", lw=2, label="rectangle at the strip's yaw")
         jaw = direction(fit["jaw_yaw_deg"])
@@ -53,7 +51,7 @@ def report_strip_fit(out, frames, strip, obs, fit, others, finger_w, finger_t):
     ax.set_aspect("equal")
     ax.set_xlabel("base x (mm)")
     ax.set_ylabel("base y (mm)")
-    ax.set_title("Strip mode, plan view: %s" % ("PASS" if fit["passed"] else "REJECTED: " + ", ".join(g["name"] for g in fit["gates"] if not g["ok"])[:80]), fontsize=10)
+    ax.set_title("Strip mode, plan view: rectangle %.1f x %.1f mm, top %.1f mm above the crib" % (*fit["extent_mm"], fit["top_mm"] - strip["top_z"]), fontsize=10)
     ax.legend(fontsize=8, loc="center left", bbox_to_anchor=(1.01, 0.5))
     fig.savefig(out / "02_strip_plan_view.png", dpi=110, bbox_inches="tight")
     plt.close(fig)

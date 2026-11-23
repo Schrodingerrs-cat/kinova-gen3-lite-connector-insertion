@@ -1,0 +1,31 @@
+{
+ "started": "2026-11-21T16:54:59",
+ "grasp_requested": true,
+ "mode": "cad",
+ "connector": "micro_jack",
+ "hint": null,
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 2.6,
+   "message": "at home (was 52 deg away)"
+  },
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (-0.000 rad)"
+  },
+  "cad_scan": {
+   "ok": true,
+   "seconds": 13.8,
+   "message": "micro_jack sticker seen from home at [0.246 0.028 0.018]; 3 close views in 13 s (azimuths [0, 90, 270] deg), frames in 20261121_165504"
+  },
+  "cad_grasp": {
+   "ok": false,
+   "seconds": 7.0,
+   "message": "CAD fit rejected, no grasp planned (run 20261121_165523): held-out view 0: p80 4.8 mm, 32% within 2 mm; held-out view 1: p80 10.2 mm, 0% within 2 mm; held-out view 2: p80 9.1 mm, 0% within 2 mm; plug sits 5.1 mm from where the panel plane says (model seat u 2.1, implied -3.0): bad panel plane or wrong connector; pose position differs 7.2 mm between leave-one-out fits (limit 3.0) | micro_jack fit: held-out within 2 mm [32, 0, 0] %, p80 9.1 mm, tilt 0.0 deg (seated on the panel), implied seat -3.0 mm (model 2.1), panel tilt 2.1 deg"
+  }
+ },
+ "outcome": "STOPPED_BEFORE_GRASP: CAD fit rejected, no grasp planned (run 20261121_165523): held-out view 0: p80 4.8 mm, 32% within 2 mm; held-out view 1: p80 10.2 mm, 0% within 2 mm; held-out view 2: p80 9.1 mm, 0% within 2 mm; plug sits 5.1 mm from where the panel plane says (model seat u 2.1, implied -3.0): bad panel plane or wrong connector; pose position differs 7.2 mm between leave-one-out fits (limit 3.0) | micro_jack fit: held-out within 2 mm [32, 0, 0] %, p80 9.1 mm, tilt 0.0 deg (seated on the panel), implied seat -3.0 mm (model 2.1), panel tilt 2.1 deg",
+ "seconds_total": 24.8
+}

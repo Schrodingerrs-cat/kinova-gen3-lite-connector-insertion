@@ -5,12 +5,15 @@ MoveIt only answers questions (/compute_ik, /compute_cartesian_path). The joint 
 Reason: the vendor MoveIt config names the controller gen3_lite_joint_trajectory_controller, the driver
 runs joint_trajectory_controller, so MoveIt execute never matched (and its timeout killed slow moves).
 """
+import os
+import sys
 import time
 
 import numpy as np
 from control_msgs.action import GripperCommand
 
-from housing_grasp.motion_profile import duration_for
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from housing_grasp.motion_profile import duration_for  # noqa: E402
 
 MAX_STEP_RAD = 0.1      # one 5 mm line step may not jump a joint more than this (singularity / flip)
 DT = 0.04               # gripper ramp period, s
@@ -56,13 +59,28 @@ class Arm:
                 best = (dev, q)
         return None if best is None else best[1]
 
+    def joint_limit_error(self, q_deg):
+        """None if every joint is inside its limit minus the margin, else a short text."""
+        q = (np.asarray(q_deg, float) + 180) % 360 - 180
+        lim = np.asarray(self.m["joint_limits_deg"], float) - self.m["joint_margin_deg"]
+        return "; ".join("joint %d at %.1f deg, usable limit %.1f" % (i + 1, q[i], lim[i]) for i in range(6) if abs(q[i]) > lim[i]) or None
+
     def go_joints(self, q_deg, duration=None):
-        """Joint move, straight interpolation from now to q_deg (what is checked is what runs)."""
+        """Joint move, straight interpolation from now to q_deg (what is checked is what runs). Refuses a faulted arm and out-of-limit targets, and checks it arrived."""
+        if self.r.fault:
+            raise RuntimeError("arm is in fault: clear it (web app, or /fault_controller/reset_fault), then restart the driver if it still refuses")
+        bad = self.joint_limit_error(q_deg)
+        if bad:
+            raise RuntimeError("joint target outside the limits, not moving: " + bad)
         dq = np.abs(np.asarray(q_deg) - self.q_deg()).max()
         if dq < 0.3:
             return
         m = self.m
         self.r.move_joints(q_deg, duration or duration_for(np.radians(dq), np.radians(m["joint_speed_deg_s"]), np.radians(m["max_joint_vel_deg_s"]), m["min_move_s"]))
+        time.sleep(0.3)
+        miss = np.abs((np.asarray(q_deg, float) - self.q_deg() + 180) % 360 - 180).max()   # a faulted arm ignores moves but the controller still says success
+        if self.r.fault or miss > m["reach_tol_deg"]:
+            raise RuntimeError("arm stopped short (fault=%s, largest joint error %.1f deg): not continuing" % (self.r.fault, miss))
 
     def go_pose(self, T_tool, max_dev_deg):
         q = self.ik_near(T_tool, self.q_deg(), max_dev_deg)

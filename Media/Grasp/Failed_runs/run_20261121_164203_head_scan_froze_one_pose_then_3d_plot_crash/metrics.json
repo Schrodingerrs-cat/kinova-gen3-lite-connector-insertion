@@ -1,0 +1,41 @@
+{
+ "started": "2026-11-21T16:42:48",
+ "grasp_requested": true,
+ "mode": "head",
+ "connector": null,
+ "hint": null,
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 2.2,
+   "message": "at home (was 48 deg away)"
+  },
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (0.001 rad)"
+  },
+  "scan": {
+   "ok": true,
+   "seconds": 55.5,
+   "message": "scan 20261121_164252: 7 views (skipped []), 1176326 fused points, 228 marker points; no ICP (views stacked as the kinematics place them)"
+  },
+  "color_target": {
+   "ok": true,
+   "seconds": 4.8,
+   "message": "merged scan 20261121_164252: table tilt 2.7 deg (105436 inliers), 76 above-table clusters, marker clusters [86, 45, 38, 22, 16]; target (marker centroid) [248.0, 21.0, 5.0] mm. Orientation of the merged patch is NOT used (registration smear)"
+  },
+  "view": {
+   "ok": true,
+   "seconds": 2.6,
+   "message": "camera over [0.248 0.021 0.005] at 180 mm"
+  },
+  "head_grasp": {
+   "ok": false,
+   "seconds": 1.2,
+   "message": "Unknown projection '3d'"
+  }
+ },
+ "outcome": "STOPPED_BEFORE_GRASP: Unknown projection '3d'",
+ "seconds_total": 68.6
+}

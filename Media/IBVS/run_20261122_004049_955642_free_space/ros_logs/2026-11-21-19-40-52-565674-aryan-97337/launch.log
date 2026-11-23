@@ -1,0 +1,105 @@
+1795308052.5663235 [INFO] [launch]: All log files can be found below /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261122_004049_955642_free_space/ros_logs/2026-11-21-19-40-52-565674-aryan-97337
+1795308052.5664155 [INFO] [launch]: Default logging verbosity is set to INFO
+1795308052.7127991 [INFO] [ros2_control_node-1]: process started with pid [97384]
+1795308052.7129269 [INFO] [robot_state_publisher-2]: process started with pid [97386]
+1795308052.7129772 [INFO] [spawner-3]: process started with pid [97388]
+1795308052.7130253 [INFO] [spawner-4]: process started with pid [97390]
+1795308052.7130682 [INFO] [spawner-5]: process started with pid [97392]
+1795308052.7131164 [INFO] [spawner-6]: process started with pid [97394]
+1795308052.7131643 [INFO] [spawner-7]: process started with pid [97396]
+1795308052.7194002 [ros2_control_node-1] 1795308052.719080 [0] ros2_contr: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.7218032 [robot_state_publisher-2] 1795308052.721376 [0] robot_stat: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.7250245 [ros2_control_node-1] [INFO] [1795308052.724852904] [controller_manager]: Subscribing to '~/robot_description' topic for robot description file.
+1795308052.7256160 [ros2_control_node-1] [INFO] [1795308052.725479696] [controller_manager]: update rate is 1000 Hz
+1795308052.7258327 [ros2_control_node-1] [INFO] [1795308052.725507203] [controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+1795308052.7259719 [ros2_control_node-1] [WARN] [1795308052.725595876] [controller_manager]: Could not enable FIFO RT scheduling policy: with error number <1>(Operation not permitted). See [https://control.ros.org/master/doc/ros2_control/controller_manager/doc/userdoc.html] for details on how to enable realtime scheduling.
+1795308052.7267966 [ros2_control_node-1] [INFO] [1795308052.726614678] [controller_manager]: Received robot description file.
+1795308052.7271349 [ros2_control_node-1] [INFO] [1795308052.726807047] [resource_manager]: Loading hardware 'KortexMultiInterfaceHardware' 
+1795308052.7274458 [robot_state_publisher-2] [INFO] [1795308052.727021769] [robot_state_publisher]: got segment arm_link
+1795308052.7275951 [robot_state_publisher-2] [INFO] [1795308052.727073243] [robot_state_publisher]: got segment base_link
+1795308052.7276881 [robot_state_publisher-2] [INFO] [1795308052.727079565] [robot_state_publisher]: got segment dummy_link
+1795308052.7277575 [robot_state_publisher-2] [INFO] [1795308052.727083185] [robot_state_publisher]: got segment end_effector_link
+1795308052.7278242 [robot_state_publisher-2] [INFO] [1795308052.727086628] [robot_state_publisher]: got segment forearm_link
+1795308052.7278848 [robot_state_publisher-2] [INFO] [1795308052.727090190] [robot_state_publisher]: got segment gripper_base_link
+1795308052.7279444 [robot_state_publisher-2] [INFO] [1795308052.727093419] [robot_state_publisher]: got segment left_finger_dist_link
+1795308052.7280030 [robot_state_publisher-2] [INFO] [1795308052.727096891] [robot_state_publisher]: got segment left_finger_prox_link
+1795308052.7280610 [robot_state_publisher-2] [INFO] [1795308052.727100158] [robot_state_publisher]: got segment lower_wrist_link
+1795308052.7281184 [robot_state_publisher-2] [INFO] [1795308052.727103417] [robot_state_publisher]: got segment right_finger_dist_link
+1795308052.7281749 [robot_state_publisher-2] [INFO] [1795308052.727106680] [robot_state_publisher]: got segment right_finger_prox_link
+1795308052.7282417 [robot_state_publisher-2] [INFO] [1795308052.727109805] [robot_state_publisher]: got segment shoulder_link
+1795308052.7283020 [robot_state_publisher-2] [INFO] [1795308052.727113084] [robot_state_publisher]: got segment tool_frame
+1795308052.7283597 [robot_state_publisher-2] [INFO] [1795308052.727116384] [robot_state_publisher]: got segment upper_wrist_link
+1795308052.7284153 [robot_state_publisher-2] [INFO] [1795308052.727119671] [robot_state_publisher]: got segment world
+1795308052.7313468 [ros2_control_node-1] [INFO] [1795308052.731187868] [KortexMultiInterfaceHardware]: Setting severity threshold to DEBUG
+1795308052.7314222 [ros2_control_node-1] [INFO] [1795308052.731227437] [resource_manager]: Initialize hardware 'KortexMultiInterfaceHardware' 
+1795308052.7314525 [ros2_control_node-1] [INFO] [1795308052.731234391] [KortexMultiInterfaceHardware]: Configuring Hardware Interface
+1795308052.7314754 [ros2_control_node-1] [INFO] [1795308052.731246298] [KortexMultiInterfaceHardware]: Robot ip is '192.168.1.10'
+1795308052.7314973 [ros2_control_node-1] [INFO] [1795308052.731248493] [KortexMultiInterfaceHardware]: Username is 'admin'
+1795308052.7315180 [ros2_control_node-1] [INFO] [1795308052.731251481] [KortexMultiInterfaceHardware]: Port used '10000'
+1795308052.7316418 [ros2_control_node-1] [INFO] [1795308052.731253611] [KortexMultiInterfaceHardware]: Realtime port used '10001'
+1795308052.7316830 [ros2_control_node-1] [INFO] [1795308052.731255864] [KortexMultiInterfaceHardware]: Session inactivity timeout is '60000'
+1795308052.7317126 [ros2_control_node-1] [INFO] [1795308052.731258006] [KortexMultiInterfaceHardware]: Connection inactivity timeout is '2000'
+1795308052.7317352 [ros2_control_node-1] [INFO] [1795308052.731259980] [KortexMultiInterfaceHardware]: Gripper joint name is 'right_finger_bottom_joint'
+1795308052.7317574 [ros2_control_node-1] [INFO] [1795308052.731270309] [KortexMultiInterfaceHardware]: Connecting to robot at 192.168.1.10
+1795308052.7318828 [ros2_control_node-1] [INFO] [1795308052.731763229] [KortexMultiInterfaceHardware]: Creating session for communication
+1795308052.7320411 [ros2_control_node-1] [ERROR] [1795308052.731884492] [controller_manager]: The published robot description file (urdf) seems not to be genuine. The following error was caught:not connected !!!
+1795308052.7321808 [ros2_control_node-1] [INFO] [1795308052.731984570] [controller_manager]: Received robot description file.
+1795308052.7322145 [ros2_control_node-1] [WARN] [1795308052.732010025] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+1795308052.7386541 [ros2_control_node-1] [INFO] [1795308052.738402595] [controller_manager]: Received robot description file.
+1795308052.7387965 [ros2_control_node-1] [WARN] [1795308052.738448431] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+1795308052.9173613 [spawner-5] 1795308052.916869 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.9457908 [spawner-6] 1795308052.945591 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.9484909 [spawner-4] 1795308052.948314 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.9623325 [spawner-7] 1795308052.962149 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.9715338 [spawner-3] 1795308052.970967 [0]    spawner: selected interface "lo" is not multicast-capable: disabling multicast
+1795308052.9734900 [spawner-5] [INFO] [1795308052.973344592] [spawner_twist_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308052.9983199 [spawner-6] [INFO] [1795308052.998071542] [spawner_fault_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308053.0034869 [spawner-4] [INFO] [1795308053.003323512] [spawner_joint_trajectory_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308053.0199530 [spawner-7] [INFO] [1795308053.019744160] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308053.0201738 [spawner-3] [INFO] [1795308053.019749054] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+1795308062.9935143 [spawner-5] [WARN] [1795308062.992975399] [spawner_twist_controller]: Could not contact service /controller_manager/list_controllers
+1795308062.9942920 [spawner-5] [INFO] [1795308062.993763441] [spawner_twist_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308063.0187845 [spawner-6] [WARN] [1795308063.018310875] [spawner_fault_controller]: Could not contact service /controller_manager/list_controllers
+1795308063.0194023 [spawner-6] [INFO] [1795308063.019063754] [spawner_fault_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308063.0235064 [spawner-4] [WARN] [1795308063.023072935] [spawner_joint_trajectory_controller]: Could not contact service /controller_manager/list_controllers
+1795308063.0240862 [spawner-4] [INFO] [1795308063.023632535] [spawner_joint_trajectory_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308063.0389433 [spawner-7] [WARN] [1795308063.038337203] [spawner_gen3_lite_2f_gripper_controller]: Could not contact service /controller_manager/list_controllers
+1795308063.0396349 [spawner-7] [INFO] [1795308063.039423235] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308063.0407767 [spawner-3] [WARN] [1795308063.040395569] [spawner_joint_state_broadcaster]: Could not contact service /controller_manager/list_controllers
+1795308063.0412967 [spawner-3] [INFO] [1795308063.040999544] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+1795308073.0110040 [spawner-5] [WARN] [1795308073.010305877] [spawner_twist_controller]: Could not contact service /controller_manager/list_controllers
+1795308073.0118365 [spawner-5] [INFO] [1795308073.011021407] [spawner_twist_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308073.0364158 [spawner-6] [WARN] [1795308073.036071981] [spawner_fault_controller]: Could not contact service /controller_manager/list_controllers
+1795308073.0368018 [spawner-6] [INFO] [1795308073.036518786] [spawner_fault_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308073.0447674 [spawner-4] [WARN] [1795308073.044405902] [spawner_joint_trajectory_controller]: Could not contact service /controller_manager/list_controllers
+1795308073.0451550 [spawner-4] [INFO] [1795308073.044861264] [spawner_joint_trajectory_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308073.0580783 [spawner-7] [WARN] [1795308073.057637657] [spawner_gen3_lite_2f_gripper_controller]: Could not contact service /controller_manager/list_controllers
+1795308073.0586381 [spawner-7] [INFO] [1795308073.058284643] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308073.0625813 [spawner-3] [WARN] [1795308073.062149660] [spawner_joint_state_broadcaster]: Could not contact service /controller_manager/list_controllers
+1795308073.0630515 [spawner-3] [INFO] [1795308073.062719437] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+1795308083.0309758 [spawner-5] [WARN] [1795308083.030398738] [spawner_twist_controller]: Could not contact service /controller_manager/list_controllers
+1795308083.0311046 [spawner-5] [INFO] [1795308083.030722412] [spawner_twist_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308083.0552669 [spawner-6] [WARN] [1795308083.055122501] [spawner_fault_controller]: Could not contact service /controller_manager/list_controllers
+1795308083.0554762 [spawner-6] [INFO] [1795308083.055383656] [spawner_fault_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308083.0642385 [spawner-4] [WARN] [1795308083.064126753] [spawner_joint_trajectory_controller]: Could not contact service /controller_manager/list_controllers
+1795308083.0645349 [spawner-4] [INFO] [1795308083.064480692] [spawner_joint_trajectory_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308083.0783038 [spawner-7] [WARN] [1795308083.074981758] [spawner_gen3_lite_2f_gripper_controller]: Could not contact service /controller_manager/list_controllers
+1795308083.0783777 [spawner-7] [INFO] [1795308083.075266315] [spawner_gen3_lite_2f_gripper_controller]: waiting for service /controller_manager/list_controllers to become available...
+1795308083.0817509 [spawner-3] [WARN] [1795308083.081348673] [spawner_joint_state_broadcaster]: Could not contact service /controller_manager/list_controllers
+1795308083.0818210 [spawner-3] [INFO] [1795308083.081631758] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+1795308085.9422979 [ros2_control_node-1] [INFO] [1795308085.942005517] [controller_manager]: Received robot description file.
+1795308085.9424694 [ros2_control_node-1] [WARN] [1795308085.942055730] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+1795308086.5769618 [spawner-6] [INFO] [1795308086.576513058] [spawner_fault_controller]: [94mLoaded [1mfault_controller[0m
+1795308086.6011934 [spawner-4] [INFO] [1795308086.600701634] [spawner_joint_trajectory_controller]: [94mLoaded [1mjoint_trajectory_controller[0m
+1795308086.6179810 [spawner-3] [INFO] [1795308086.617557857] [spawner_joint_state_broadcaster]: [94mLoaded [1mjoint_state_broadcaster[0m
+1795308086.6323361 [spawner-7] [INFO] [1795308086.631762663] [spawner_gen3_lite_2f_gripper_controller]: [94mLoaded [1mgen3_lite_2f_gripper_controller[0m
+1795308086.8532343 [spawner-6] [INFO] [1795308086.852350143] [spawner_fault_controller]: [92mConfigured and activated [1mfault_controller[0m
+1795308087.0816796 [spawner-4] [INFO] [1795308087.081109390] [spawner_joint_trajectory_controller]: [92mConfigured and activated [1mjoint_trajectory_controller[0m
+1795308087.0975654 [spawner-5] [FATAL] [1795308087.097070935] [spawner_twist_controller]: [91mFailed loading controller [1mtwist_controller[0m
+1795308087.0995648 [spawner-3] [INFO] [1795308087.098744256] [spawner_joint_state_broadcaster]: [92mConfigured and activated [1mjoint_state_broadcaster[0m
+1795308087.1359057 [INFO] [spawner-6]: process has finished cleanly [pid 97394]
+1795308087.3061302 [spawner-7] [INFO] [1795308087.305690228] [spawner_gen3_lite_2f_gripper_controller]: [92mConfigured and activated [1mgen3_lite_2f_gripper_controller[0m
+1795308087.3912117 [INFO] [spawner-4]: process has finished cleanly [pid 97390]
+1795308087.3984468 [ERROR] [spawner-5]: process has died [pid 97392, exit code 1, cmd '/opt/ros/humble/lib/controller_manager/spawner twist_controller --inactive -c /controller_manager --ros-args'].
+1795308087.4028630 [INFO] [spawner-3]: process has finished cleanly [pid 97388]
+1795308087.5815904 [INFO] [spawner-7]: process has finished cleanly [pid 97396]

@@ -138,3 +138,36 @@ def test_close_tilted_views_pin_down_the_tilt_far_better_than_near_vertical_ones
     close = evaluate(M, N, area, [cf.close_view_pose(tgt, az, 0.20, 35, Rh) for az in (0, 120, 240)], T)
     flat = evaluate(M, N, area, [cf.close_view_pose(tgt, az, 0.31, 8, Rh) for az in (0, 120, 240)], T)
     assert close["sigma_rx"] < 0.5 and flat["sigma_rx"] > 10 * close["sigma_rx"] and close["coverage_pct"] > 3 * flat["coverage_pct"]
+
+
+def _yaw(T):
+    return np.degrees(np.arctan2(T[1, 0], T[0, 0]))
+
+
+def _wrap(d):
+    return (d + 90) % 180 - 90        # usb_a is flip symmetric: yaw counts mod 180
+
+
+def test_yaw_prior_near_the_truth_recovers_the_pose():
+    cfg, spec, M, views, R, t = _synthetic("usb_a")
+    true = _yaw(np.pad(R, ((0, 1), (0, 1))))
+    rep = cf.fit_views(views, M, spec, PLANE, cfg, yaw_prior=np.radians(true + 3.0))
+    assert abs(_wrap(_yaw(rep["T_base_model_mm"]) - true)) < 5.0
+
+
+def test_yaw_prior_stops_the_fit_from_turning_a_quarter_turn_away():
+    cfg, spec, M, views, R, t = _synthetic("usb_a")
+    true = _yaw(np.pad(R, ((0, 1), (0, 1))))
+    prior = true + 90.0                                                      # a wrong prior: the data say otherwise, the fit may only move by crib_yaw_tol_deg
+    rep = cf.fit_views(views, M, spec, PLANE, cfg, yaw_prior=np.radians(prior))
+    assert abs(_wrap(_yaw(rep["T_base_model_mm"]) - prior)) <= cfg["fit"]["crib_yaw_tol_deg"] + 1.0
+
+
+def test_only_candidates_across_the_thin_axis_are_kept_for_the_usb():
+    cfg, spec = cf.load_config("usb_a")
+    T = np.eye(4)
+    T[:3, 3] = [250.0, 20.0, -spec["seat_u_mm"]]
+    cs, st = cp.place(T, cp.load_candidates(spec, cf.ROOT), spec, cfg["place"], PLANE, np.zeros((0, 3)), 0.0, 0.006, 0.0077, 0.012, 0.085)
+    assert cs and st["face"] > 0
+    assert all(abs(_wrap(c["yaw_deg"] - spec["jaw_model_yaw_deg"])) <= cfg["place"]["jaw_yaw_tol_deg"] for c in cs)
+    assert all(c["width_m"] < 0.0095 for c in cs)                           # 7.5-8.7 mm: the thin dimension, pads on the wide faces

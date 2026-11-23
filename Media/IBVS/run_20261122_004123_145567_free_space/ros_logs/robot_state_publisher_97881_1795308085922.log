@@ -1,0 +1,16 @@
+[INFO] [1795308085.933980066] [robot_state_publisher]: got segment arm_link
+[INFO] [1795308085.934046271] [robot_state_publisher]: got segment base_link
+[INFO] [1795308085.934056257] [robot_state_publisher]: got segment dummy_link
+[INFO] [1795308085.934062205] [robot_state_publisher]: got segment end_effector_link
+[INFO] [1795308085.934067673] [robot_state_publisher]: got segment forearm_link
+[INFO] [1795308085.934073074] [robot_state_publisher]: got segment gripper_base_link
+[INFO] [1795308085.934078341] [robot_state_publisher]: got segment left_finger_dist_link
+[INFO] [1795308085.934084394] [robot_state_publisher]: got segment left_finger_prox_link
+[INFO] [1795308085.934090284] [robot_state_publisher]: got segment lower_wrist_link
+[INFO] [1795308085.934096241] [robot_state_publisher]: got segment right_finger_dist_link
+[INFO] [1795308085.934102230] [robot_state_publisher]: got segment right_finger_prox_link
+[INFO] [1795308085.934107847] [robot_state_publisher]: got segment shoulder_link
+[INFO] [1795308085.934113167] [robot_state_publisher]: got segment tool_frame
+[INFO] [1795308085.934118411] [robot_state_publisher]: got segment upper_wrist_link
+[INFO] [1795308085.934123482] [robot_state_publisher]: got segment world
+[INFO] [1795321338.477841845] [rclcpp]: signal_handler(signum=15)

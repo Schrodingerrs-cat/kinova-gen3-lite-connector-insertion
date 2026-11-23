@@ -1,0 +1,40 @@
+{
+ "started": "2026-11-21T18:59:51",
+ "grasp_requested": true,
+ "mode": "cad",
+ "connector": "usb_a",
+ "stages": {
+  "home": {
+   "ok": true,
+   "seconds": 2.8,
+   "message": "at home (was 55 deg away)"
+  },
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (-0.001 rad)"
+  },
+  "cad_scan": {
+   "ok": true,
+   "seconds": 47.1,
+   "message": "usb_a sticker 7-pose scan at [ 0.259 -0.033 -0.004]; 3 close views in 13 s (azimuths [0, 90, 270] deg), frames in 20261121_190029"
+  },
+  "cad_grasp": {
+   "ok": true,
+   "seconds": 27.4,
+   "message": "usb_a fit: held-out within 2 mm [42, 0, 0] %, p80 11.6 mm, tilt 0.0 deg (seated on the panel), implied seat -18.7 mm (model 0.0), panel tilt 2.8 deg | GATE FAILED but not required: held-out view 0: p80 3.2 mm, 42% within 2 mm; held-out view 1: p80 13.6 mm, 0% within 2 mm; held-out view 2: p80 11.6 mm, 0% within 2 mm; plug sits 18.7 mm from where the panel plane says (model seat u 0.0, implied -18.7): bad panel plane or wrong connector; pose position differs 8.8 mm between leave-one-out fits (limit 3.0) | 60 candidates (of 200), best: jaw yaw 171 deg, tip 21.7 mm above the panel, gap 7.5 mm, opening 31.5 mm, TCP (261.7, -39.6, -7.0) mm (run 20261121_190108)"
+  },
+  "allow_grasp": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "grasp motion ENABLED (needs dry_run:=false too)"
+  },
+  "execute": {
+   "ok": true,
+   "seconds": 15.4,
+   "message": "held (finger check: no, wrist camera: yes); fingers stopped at ~0.4 mm; camera depth between the tips 0.136 m, table 0.247 m"
+  }
+ },
+ "outcome": "GRASP_REPORTED_HELD: held (finger check: no, wrist camera: yes); fingers stopped at ~0.4 mm; camera depth between the tips 0.136 m, table 0.247 m",
+ "seconds_total": 94.3
+}

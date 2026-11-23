@@ -2,7 +2,7 @@
 """Grasp pipeline end to end for one or several cables, with data collection into a Media/Grasp run folder. Needs the stack and the grasp node running.
 
 python3 ros2_iface/run_pipeline.py RUN_DIR [--grasp] [--skip-scan] [--mode head|cloud|model|cad|strip]
-                                   [--connector NAME [NAME ...]] [--hint X,Y [X,Y ...]] [--between pause|release|stop]
+                                   [--connector NAME [NAME ...]] [--between pause|release|stop]
 
 head / cloud / model: home -> 7-pose scan -> colour target -> close view -> grasp plan -> [--grasp] execute.
 cad: home -> find the sticker -> 3 close views -> fit the connector's STEP model -> grasp plan -> [--grasp] execute.

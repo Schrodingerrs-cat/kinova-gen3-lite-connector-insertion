@@ -1,0 +1,11 @@
+{
+  "file": "ibvs_correction.mp4",
+  "fps": 15.0,
+  "frames": 792,
+  "duration_s": 52.8,
+  "received_frames": 502,
+  "held_frames": 290,
+  "first_camera_stamp": 1795307847.5929978,
+  "last_camera_stamp": 1795307900.333896,
+  "source": "one continuous camera stream; no separate test runs combined"
+}

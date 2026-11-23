@@ -1,0 +1,19 @@
+[   0.1 s] ERROR: RuntimeError: could not set the grasp node parameters ['connector', 'hint']
+[   0.1 s] outcome: ERROR: RuntimeError: could not set the grasp node parameters ['connector', 'hint']
+[   0.1 s] ERROR: RuntimeError: could not set the grasp node parameters ['connector', 'hint']
+[   0.1 s] outcome: ERROR: RuntimeError: could not set the grasp node parameters ['connector', 'hint']
+[   3.5 s] home -> OK: at home (was 68 deg away)
+[   4.7 s] open_gripper -> OK: gripper already open (0.000 rad)
+[  18.7 s] cad_scan -> OK: usb_a sticker seen from home at [ 0.257  0.027 -0.007]; 3 close views in 13 s (azimuths [0, 90, 270] deg), frames in 20261121_165257
+[  34.1 s] cad_grasp -> FAILED: CAD fit rejected, no grasp planned (run 20261121_165325): held-out view 1: p80 3.7 mm, 55% within 2 mm; plug sits 24.7 mm from where the panel plane says (model seat u 0.0, implied -24.7): bad panel plane or wrong connector | usb_a fit: held-out within 2 mm [77, 55, 85] %, p80 2.2 mm, tilt 0.0 deg (seated on the panel), implied seat -24.7 mm (model 0.0), panel tilt 5.9 deg
+[  34.3 s] outcome: STOPPED_BEFORE_GRASP: CAD fit rejected, no grasp planned (run 20261121_165325): held-out view 1: p80 3.7 mm, 55% within 2 mm; plug sits 24.7 mm from where the panel plane says (model seat u 0.0, implied -24.7): bad panel plane or wrong connector | usb_a fit: held-out within 2 mm [77, 55, 85] %, p80 2.2 mm, tilt 0.0 deg (seated on the panel), implied seat -24.7 mm (model 0.0), panel tilt 5.9 deg
+[   2.7 s] home -> OK: at home (was 52 deg away)
+[   3.9 s] open_gripper -> OK: gripper already open (-0.000 rad)
+[  17.9 s] cad_scan -> OK: usb_a sticker seen from home at [ 0.257  0.027 -0.008]; 3 close views in 13 s (azimuths [0, 90, 270] deg), frames in 20261121_165429
+[  34.7 s] cad_grasp -> FAILED: CAD fit rejected, no grasp planned (run 20261121_165458): held-out view 1: p80 3.5 mm, 55% within 2 mm; held-out view 2: p80 2.6 mm, 62% within 2 mm; plug sits 5.2 mm from where the panel plane says (model seat u 0.0, implied -5.2): bad panel plane or wrong connector | usb_a fit: held-out within 2 mm [73, 55, 62] %, p80 2.6 mm, tilt 0.0 deg (seated on the panel), implied seat -5.2 mm (model 0.0), panel tilt 5.3 deg
+[  34.9 s] outcome: STOPPED_BEFORE_GRASP: CAD fit rejected, no grasp planned (run 20261121_165458): held-out view 1: p80 3.5 mm, 55% within 2 mm; held-out view 2: p80 2.6 mm, 62% within 2 mm; plug sits 5.2 mm from where the panel plane says (model seat u 0.0, implied -5.2): bad panel plane or wrong connector | usb_a fit: held-out within 2 mm [73, 55, 62] %, p80 2.6 mm, tilt 0.0 deg (seated on the panel), implied seat -5.2 mm (model 0.0), panel tilt 5.3 deg
+[   2.7 s] home -> OK: at home (was 50 deg away)
+[   3.9 s] open_gripper -> OK: gripper already open (-0.000 rad)
+[   4.5 s] strip_scan -> FAILED: white strip not seen complete from home (size 253 x 197 mm, expected [150, 51]): check the light, strip.white and that the whole strip is in view
+[   4.5 s] ERROR: RuntimeError: strip_scan failed
+[   4.5 s] outcome: ERROR: RuntimeError: strip_scan failed

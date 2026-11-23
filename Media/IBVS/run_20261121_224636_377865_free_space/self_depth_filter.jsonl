@@ -1,0 +1,1 @@
+{"phase": "POSITION_CHECK", "method": "labelled visible gripper and self-occluded depth", "template_pixels": 2019, "valid_template_pixels": 1879, "excluded_pixels": 1876, "support_fraction": 0.9984034060670569, "tolerance_m": 0.003, "source_template": "gripper_depth_closed_plug.npz"}

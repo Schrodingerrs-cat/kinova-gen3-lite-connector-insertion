@@ -3,7 +3,7 @@
 active: usb_a                   # default connector (run_pipeline.py --connector NAME [NAME ...] and the node param connector override it)
 #
 # Optional per connector: marker: {h: [lo, hi], s_min: .., v_min: ..}   its own sticker colour (OpenCV hue 0-179; lo > hi wraps, e.g. red [170, 10]);
-# without it the color_marker colour of grasp.yaml is used. Different colours per cable let one panel hold several cables without a --hint.
+# without it the color_marker colour of grasp.yaml is used. Each connector's sticker is found by its predefined spot at_mm.
 # The file is validated on every load (housing_grasp/connectors.py): a bad entry is refused with the key named, before anything moves.
 
 views:                          # 3 close tilted views around the sticker (replaces the 7-pose scan)
@@ -20,6 +20,7 @@ fit:
   train_per_view: 400
   min_points_view: 80
   yaw_step_deg: 15              # multi-start yaw (unused for axially symmetric connectors)
+  crib_yaw_tol_deg: 5           # a connector with yaw_rel_crib_deg: its model yaw is locked to the crib's yaw within this (the fit cannot turn 90 deg)
   trim: 0.7                     # fraction of the points kept (the cable and fingers are the rest)
   tilt_max_deg: 15              # free-tilt refinement bound; the seated fit (axis = panel normal) is tried first
   tilt_gain: 0.25               # the free-tilt fit is used only if its leave-one-view-out p95 is this much (fraction) better
@@ -30,7 +31,7 @@ fit:
     pos_spread_mm: 3.0          # leave-one-out fits vs the all-views fit
     axis_spread_deg: 5.0
     seat_tol_mm: 3.0            # where the fitted axis crosses the measured panel plane vs the connector's seat_u: catches a bad plane
-    require: true               # false = report the gate but do not stop (never silently)
+    require: false              # false = report the gate but do not stop (user decision 2026-11-21: no blocking gates); the message still lists what failed
 
 panel:                          # white panel around the connector gives the seat plane (constrains axis + height)
   ring_mm: [16, 40]
@@ -42,6 +43,7 @@ panel:                          # white panel around the connector gives the sea
 
 place:
   clearance_mm: 3.0             # fingertip stays this far above the measured panel plane
+  jaw_yaw_tol_deg: 25           # connectors with jaw_model_yaw_deg keep only candidates whose jaw is within this of it
   max_hits: 8                   # scene points allowed in a finger box (cable, neighbours)
   box_h_m: 0.012
   max_candidates: 60            # best N (both jaw flips each) go to the IK / path check
@@ -49,6 +51,9 @@ place:
 
 connectors:
   usb_a:
+    jaw_model_yaw_deg: 90       # jaws close along the model's thin y axis (7.5 mm): pads on the WIDE faces, never on the narrow sides
+    yaw_rel_crib_deg: 90        # yaw of the model x axis (the 15 mm wide face) from the crib's long axis: wide face parallel to the crib's SHORT edge (user, 2026-11-21)
+    at_mm: [252, -23]           # predefined base-frame spot of this plug's sticker (measured 2026-11-21); the sticker nearest it within 30 mm is the cable
     step: CAD_files/USB A Plug.step
     mesh: CAD_files/USB_A_Plug.glb
     candidates: CAD_files/USB_A_Plug_grasp_candidates_top200.json
@@ -60,6 +65,7 @@ connectors:
     roi_radius_mm: 15
     dark_v: 90
   micro_jack:
+    at_mm: [251, 24]            # measured 2026-11-21 on the jack with the small sticker; check it is the jack this STEP model describes
     step: CAD_files/Micro_Jack_3.5mm.STEP
     mesh: CAD_files/Micro_Jack_3.5mm.glb
     candidates: CAD_files/Micro_Jack_3.5mm_candidates.json

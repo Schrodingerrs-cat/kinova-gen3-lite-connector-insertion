@@ -1,0 +1,4 @@
+1795306821.2731769 [INFO] [launch]: All log files can be found below /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261122_002011_333379_free_space/ros_logs/2026-11-21-19-20-21-272508-aryan-81317
+1795306821.2733350 [INFO] [launch]: Default logging verbosity is set to INFO
+1795306821.3077881 [INFO] [launch.user]: 🚀 Launching as Normal ROS Node
+1795306821.3151276 [INFO] [realsense2_camera_node-1]: process started with pid [81341]

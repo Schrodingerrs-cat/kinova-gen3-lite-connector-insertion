@@ -1,0 +1,25 @@
+{
+ "started": "2026-11-21T18:51:58",
+ "grasp_requested": false,
+ "mode": "cad",
+ "connector": "usb_a",
+ "stages": {
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (-0.001 rad)"
+  },
+  "cad_scan": {
+   "ok": true,
+   "seconds": 48.3,
+   "message": "usb_a sticker 7-pose scan at [ 0.259 -0.033 -0.004]; 3 close views in 13 s (azimuths [0, 90, 270] deg), frames in 20261121_185233"
+  },
+  "cad_grasp": {
+   "ok": true,
+   "seconds": 26.2,
+   "message": "usb_a fit: held-out within 2 mm [31, 0, 0] %, p80 12.1 mm, tilt 0.0 deg (seated on the panel), implied seat -18.2 mm (model 0.0), panel tilt 5.9 deg | GATE FAILED but not required: held-out view 0: p80 4.3 mm, 31% within 2 mm; held-out view 1: p80 14.7 mm, 0% within 2 mm; held-out view 2: p80 12.1 mm, 0% within 2 mm; plug sits 18.2 mm from where the panel plane says (model seat u 0.0, implied -18.2): bad panel plane or wrong connector; pose position differs 9.8 mm between leave-one-out fits (limit 3.0) | 60 candidates (of 200), best: jaw yaw 169 deg, tip 21.2 mm above the panel, gap 7.5 mm, opening 31.5 mm, TCP (261.4, -37.8, -6.1) mm (run 20261121_185311)"
+  }
+ },
+ "outcome": "PERCEPTION_ONLY: grasp computed, not requested",
+ "seconds_total": 74.8
+}

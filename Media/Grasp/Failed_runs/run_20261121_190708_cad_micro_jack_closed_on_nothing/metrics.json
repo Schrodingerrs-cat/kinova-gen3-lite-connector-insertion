@@ -1,0 +1,35 @@
+{
+ "started": "2026-11-21T19:07:09",
+ "grasp_requested": true,
+ "mode": "cad",
+ "connector": "micro_jack",
+ "stages": {
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (-0.000 rad)"
+  },
+  "cad_scan": {
+   "ok": true,
+   "seconds": 16.4,
+   "message": "micro_jack sticker seen from home at [ 0.265  0.017 -0.007]; 3 close views in 16 s (azimuths [0, 90, 270] deg), frames in 20261121_190710"
+  },
+  "cad_grasp": {
+   "ok": true,
+   "seconds": 13.2,
+   "message": "micro_jack fit: held-out within 2 mm [1, 0, 0] %, p80 11.4 mm, tilt 0.0 deg (seated on the panel), implied seat -5.2 mm (model 2.1), panel tilt 4.9 deg | GATE FAILED but not required: held-out view 0: p80 5.6 mm, 1% within 2 mm; held-out view 1: p80 12.2 mm, 0% within 2 mm; held-out view 2: p80 11.4 mm, 0% within 2 mm; plug sits 7.3 mm from where the panel plane says (model seat u 2.1, implied -5.2): bad panel plane or wrong connector; pose position differs 10.4 mm between leave-one-out fits (limit 3.0) | 18 candidates (of 18), best: jaw yaw 85 deg, tip 11.2 mm above the panel, gap 6.5 mm, opening 30.5 mm, TCP (252.2, 20.0, -7.2) mm (run 20261121_190738)"
+  },
+  "allow_grasp": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "grasp motion ENABLED (needs dry_run:=false too)"
+  },
+  "execute": {
+   "ok": false,
+   "seconds": 17.2,
+   "message": "grasp NOT held: fingers closed on nothing and the wrist camera sees nothing between the tips"
+  }
+ },
+ "outcome": "GRASP_FAILED: grasp NOT held: fingers closed on nothing and the wrist camera sees nothing between the tips",
+ "seconds_total": 47.4
+}

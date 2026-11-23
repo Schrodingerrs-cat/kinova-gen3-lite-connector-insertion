@@ -1,0 +1,20 @@
+{
+ "started": "2026-11-21T19:04:10",
+ "grasp_requested": true,
+ "mode": "strip",
+ "connector": "usb_a",
+ "stages": {
+  "open_gripper": {
+   "ok": true,
+   "seconds": 0.2,
+   "message": "gripper already open (-0.000 rad)"
+  },
+  "strip_scan": {
+   "ok": false,
+   "seconds": 0.6,
+   "message": "no sticker seen from home"
+  }
+ },
+ "outcome": "ERROR: RuntimeError: strip_scan failed",
+ "seconds_total": 0.9
+}

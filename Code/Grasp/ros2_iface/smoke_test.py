@@ -23,4 +23,5 @@ print('IK service up:', r.ik_srv.wait_for_service(timeout_sec=3.0), '| cartesian
 if r.q is not None and r.ik_srv.service_is_ready():
     q = r.ik(r.tool_matrix())
     print('IK of the current pose ->', None if q is None else np.round(q, 1), '(should match the joints above)')
-rclpy.shutdown()
+sys.stdout.flush()
+os._exit(0)   # the background rclpy thread would abort the interpreter at exit

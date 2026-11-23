@@ -1,0 +1,11 @@
+{"event": "SEQUENCE_START", "timestamp_ns": 1795301798262886466, "process_id": 40537}
+{"event": "GRIPPER_CLOSED", "timestamp_ns": 1795301804039373948, "process_id": 40537, "position": 0.8462312965393067, "empty_closes_to": 0.81}
+{"event": "POSITIONING_SCENE_READY", "timestamp_ns": 1795301804262486660, "process_id": 40537, "minimum_depth_m": 0.18, "voxels": 6672}
+{"event": "HOME_START", "timestamp_ns": 1795301804262703064, "process_id": 40537}
+{"event": "HOME_REACHED", "timestamp_ns": 1795301809290629710, "process_id": 40537, "joints_deg": [2.92913818359375, -3.083404541015645, 93.76910400390625, -88.48190307617185, -87.52291870117189, -82.64688110351561]}
+{"event": "POST_GRASP_START", "timestamp_ns": 1795301809290750915, "process_id": 40537}
+{"event": "POST_GRASP_REACHED", "timestamp_ns": 1795301836052826497, "process_id": 40537, "joints_deg": [36.26695251464844, -82.05413818359374, 134.2071533203125, -49.19494628906251, 122.35556030273438, -66.79492187499997]}
+{"event": "MARKER_CHOSEN", "timestamp_ns": 1795301836706365390, "process_id": 40537, "marker_id": 11, "candidates": [10, 11, 12]}
+{"event": "IBVS_START", "timestamp_ns": 1795301836908037857, "process_id": 40537, "rms_px": 35.91564668983339, "max_corner_px": 36.59434672836806}
+{"event": "CONVERGED", "timestamp_ns": 1795301843595990764, "process_id": 40537, "center_error_px": 3.8424653703598257, "size_ratio": 0.9996749393162626, "rms_px": 3.873393537883616, "max_corner_px": 4.504892455114914, "orientation_error_deg": 0.4974222547088977, "fresh_observations": 5}
+{"event": "ADVANCE_START", "timestamp_ns": 1795301843757294814, "process_id": 40537, "requested_m": 0.15, "planned_m": 0.15, "clearance_m": 0.16542598034238387, "wall_tilt_deg": 2.0711414470773613, "wall_support_points": 43651, "margin_m": 0.015, "allow_contact": false, "trimmed": false, "executed_m": 0.0}

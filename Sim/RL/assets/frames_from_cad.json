@@ -1,0 +1,12 @@
+{
+  "source": "CAD_files/Moveable arm.STEP, bounding boxes of exported parts (mm, CAD frame, Y up, base at origin). NOT calibrated; socket/plug frames need CAD-face fitting.",
+  "wall": {"plane_z": -551.5, "thickness": 3, "x": [-125, 125], "y": [-53, 197]},
+  "insertion_axis": [0, 0, -1],
+  "socket_guide_centres_xy": {"usb_a": [75, 127], "micro_jack": [0, 127], "ac": [-75, 127]},
+  "plug_body_centre_x_in_cad_pose": {"usb_a": 62.5, "micro_jack": 0, "ac": -62.5},
+  "plug_tip_z_seated_in_cad_pose": {"usb_a": -565.3, "micro_jack": -569.1, "ac": -574.0},
+  "plug_far_end_z_in_cad_pose": {"usb_a": -242.5, "micro_jack": -247.5, "ac": -237.5},
+  "cradle_holder": {"x": [-90, 90], "y": [-53, -23], "z": [-283, -225]},
+  "gripper_in_cad_pose_centre": [61.7, 109.2, -457.6],
+  "note": "x of guide centre (75) differs from plug body centre (62.5) for USB and AC: check which is the true socket axis before use"
+}

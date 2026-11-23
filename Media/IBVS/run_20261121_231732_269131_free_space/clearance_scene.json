@@ -1,0 +1,12 @@
+{
+  "voxel_m": 0.01,
+  "collision_box_m": 0.02,
+  "min_snapshot_depth_m": 0.18,
+  "camera_to_tcp_m": [
+    0.007908584186174664,
+    0.05220906363942145,
+    0.12491012888575143
+  ],
+  "limitation": "Observed surfaces only; existing hand-eye estimate, no unseen geometry.",
+  "points": 1475
+}

@@ -9,12 +9,15 @@ def load_candidates(spec, root):
     return json.load(open(root / spec["candidates"]))
 
 
-def scene_points(views, centre_mm, T, M, radius_mm=60.0, voxel_mm=1.5):
-    """All depth points within radius of the connector from every view, minus the ones the posed model explains (2 mm): panel, cable, neighbours."""
+def scene_points(views, centre_mm, T, M, radius_mm=60.0, voxel_mm=1.5, aligns=None):
+    """All depth points within radius of the connector from every view, minus the ones the posed model explains (2 mm): panel, cable, neighbours.
+    aligns: per view, a function moving its xy into the frame the fit was made in (crib alignment), or None."""
     from .cad_fit import backproject
     pts = []
-    for v in views:
+    for i, v in enumerate(views):
         P = backproject(v["depth"], np.ones(v["depth"].shape, bool), v["K"], v["T_BC"], 0.004)
+        if aligns is not None and aligns[i] is not None:
+            P[:, :2] = aligns[i](P[:, :2])
         pts.append(P[np.linalg.norm(P[:, :2] - centre_mm[:2], axis=1) < radius_mm])
     P = np.vstack(pts)
     P = P[np.unique(np.floor(P / voxel_mm).astype(int), axis=0, return_index=True)[1]]
@@ -39,8 +42,12 @@ def place(T, cands, spec, pc, plane, scene, jaw_ref, finger_w, finger_t, margin,
         offs = pc["jaw_yaw_offsets_deg"]
         cands = [dict(c, yaw_deg=float(np.degrees(_base_yaw_to_model(R, jaw_ref + np.radians(o))))) for c in cands for o in offs]
     out, z_g = [], -R[:, 2]
+    want = spec.get("jaw_model_yaw_deg")   # jaws must close along this model direction (pads on the wide faces); other candidates are dropped
     for c in cands:
         st["considered"] += 1
+        if want is not None and abs((c["yaw_deg"] - want + 90) % 180 - 90) > pc["jaw_yaw_tol_deg"]:
+            st["face"] = st.get("face", 0) + 1
+            continue
         r = np.radians(c["yaw_deg"])
         b, a = np.array([np.cos(r), np.sin(r), 0.0]), np.array([-np.sin(r), np.cos(r), 0.0])
         ow = c["gap_mm"] * 1e-3 + 2 * margin

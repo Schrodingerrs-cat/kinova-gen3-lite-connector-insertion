@@ -48,7 +48,7 @@ class FakeIo(pl.Io):
         self.prompts.append(prompt)
 
 
-def make(tmp_path, mode="cad", connectors=(), hints=(), grasp=False, between="pause", skip_scan=False, **io_kw):
+def make(tmp_path, mode="cad", connectors=(), grasp=False, between="pause", skip_scan=False, **io_kw):
     work, code = tmp_path / "work", tmp_path / "code"
     for d in (work, code / "config", code / "logs"):
         d.mkdir(parents=True)
@@ -67,25 +67,24 @@ def make(tmp_path, mode="cad", connectors=(), hints=(), grasp=False, between="pa
         (d / "plots" / "a.png").write_bytes(b"p")
     io.effects.setdefault("cad_grasp", new_plan)
     io.effects.setdefault("head_grasp", new_plan)
-    opts = pl.Options(tmp_path / "run", grasp, skip_scan, mode, tuple(connectors), tuple(hints), between)
+    opts = pl.Options(tmp_path / "run", grasp, skip_scan, mode, tuple(connectors), between)
     pipe = pl.Pipeline(opts, io, HOME, work, code, sleep=lambda s: None)
     return pipe, io
 
 
 def test_arguments_are_validated():
-    for bad in (["r", "--connector", "usb_a"], ["r", "--mode", "cad", "--hint", "0.2,0.1"], ["r", "--mode", "cad", "--connector", "a", "a"],
-                ["r", "--mode", "cad", "--connector", "a", "--hint", "0.2;0.1"], ["r", "--mode", "cad", "--connector", "a", "--hint", "0.1,0.2", "0.3,0.4"]):
+    for bad in (["r", "--mode", "model", "--connector", "usb_a"], ["r", "--mode", "cad", "--hint", "0.2,0.1"], ["r", "--mode", "cad", "--connector", "a", "a"]):
         with pytest.raises(SystemExit):
             pl.parse_args(bad)
-    o = pl.parse_args(["r", "--mode", "cad", "--connector", "usb_a", "micro_jack", "--hint", "0.26,-0.02", "--grasp", "--between", "release"])
-    assert o.connectors == ("usb_a", "micro_jack") and o.hints == ("0.26,-0.02",) and o.grasp and o.between == "release"
+    o = pl.parse_args(["r", "--mode", "cad", "--connector", "usb_a", "micro_jack", "--grasp", "--between", "release"])
+    assert o.connectors == ("usb_a", "micro_jack") and o.grasp and o.between == "release"
     assert pl.parse_args(["r"]).mode == "head" and pl.parse_args(["r"]).connectors == ()
 
 
 def test_single_cable_perception_only_runs_the_stages_in_order_and_collects_only_new_files(tmp_path):
-    pipe, io = make(tmp_path, connectors=("micro_jack",), hints=("0.26,-0.02",))
+    pipe, io = make(tmp_path, connectors=("micro_jack",))
     (res,) = pipe.run()
-    assert io.log == ["open_gripper", "cad_scan", "cad_grasp"] and io.params == [dict(connector="micro_jack", hint="0.26,-0.02")]
+    assert io.log == ["open_gripper", "cad_scan", "cad_grasp"] and io.params == [dict(connector="micro_jack")]
     assert res.outcome.startswith("PERCEPTION_ONLY") and not res.picked and not res.stop
     run = tmp_path / "run"
     assert (run / "metrics.json").exists() and (run / "config_connectors.yaml").exists() and (run / "grasp_node.log").exists()
@@ -104,13 +103,13 @@ def test_arm_away_from_home_goes_home_first_and_a_failed_home_stops_the_run(tmp_
 
 
 def test_two_cables_with_a_pause_between_them(tmp_path):
-    pipe, io = make(tmp_path, connectors=("usb_a", "micro_jack"), hints=("0.26,-0.02",), grasp=True,
+    pipe, io = make(tmp_path, connectors=("usb_a", "micro_jack"), grasp=True,
                     results={"execute": [True]})
     res = pipe.run()
     assert [r.name for r in res] == ["usb_a", "micro_jack"] and all(r.picked for r in res)
     assert io.log == ["open_gripper", "cad_scan", "cad_grasp", "allow_grasp", "execute", "open_gripper", "open_gripper", "cad_scan", "cad_grasp", "allow_grasp", "execute"]
     assert len(io.prompts) == 1 and "usb_a" in io.prompts[0] and "micro_jack" in io.prompts[0]
-    assert io.params == [dict(connector="usb_a", hint="0.26,-0.02"), dict(connector="micro_jack", hint="")]
+    assert io.params == [dict(connector="usb_a"), dict(connector="micro_jack")]
     run = tmp_path / "run"
     assert (run / "01_usb_a" / "metrics.json").exists() and (run / "02_micro_jack" / "metrics.json").exists()
     summary = json.loads((run / "summary.json").read_text())
@@ -141,7 +140,7 @@ def test_a_failed_execute_stops_the_run(tmp_path):
 def test_other_modes_keep_their_stage_order(tmp_path):
     pipe, io = make(tmp_path, mode="head")
     pipe.run()
-    assert io.log == ["open_gripper", "scan", "color_target", "view", "head_grasp"] and io.params == []
+    assert io.log == ["open_gripper", "scan", "color_target", "view", "head_grasp"] and io.params == [dict(connector="")]   # no connector: clears a stale one
     pipe, io = make(tmp_path / "s", mode="head", skip_scan=True, grasp=True)
     pipe.run()
     assert io.log == ["open_gripper", "color_target", "view", "head_grasp", "allow_grasp", "execute"]
@@ -155,12 +154,12 @@ def test_an_exception_in_a_stage_is_recorded_and_the_recorder_is_stopped(tmp_pat
 
 
 def test_strip_mode_runs_find_fit_hover_then_grasp_and_collects_its_views(tmp_path):
-    pipe, io = make(tmp_path, mode="strip", connectors=("usb_a",), hints=("0.28,0.0",), grasp=True,
+    pipe, io = make(tmp_path, mode="strip", connectors=("usb_a",), grasp=True,
                     side_effects={"strip_scan": lambda i: (lambda d: (d.mkdir(parents=True, exist_ok=True), (d / "target.json").write_text("{}")))(i.work / "strip" / "20261120_000000"),
                                   "strip_grasp": lambda i: (lambda d: (d.mkdir(parents=True, exist_ok=True), (d / "plan.json").write_text("{}")))(i.work / "runs" / "20261120_000001")})
     (res,) = pipe.run()
     assert io.log == ["open_gripper", "strip_scan", "strip_grasp", "strip_refine", "allow_grasp", "execute"] and res.picked
-    assert io.params == [dict(connector="usb_a", hint="0.28,0.0")]
+    assert io.params == [dict(connector="usb_a")]
     run = tmp_path / "run"
     assert (run / "strip_views" / "20261120_000000" / "target.json").exists() and (run / "config_strip.yaml").exists() and not (run / "config_connectors.yaml").exists()
 
@@ -171,7 +170,10 @@ def test_a_refused_hover_refit_means_no_grasp(tmp_path):
     assert "execute" not in io.log and res.outcome.startswith("ERROR: RuntimeError: hover refit refused") and res.stop
 
 
-def test_connector_needs_cad_or_strip_mode():
+def test_connector_modes_and_head_mode_sets_the_node_connector(tmp_path):
     with pytest.raises(SystemExit):
-        pl.parse_args(["r", "--mode", "head", "--connector", "usb_a"])
+        pl.parse_args(["r", "--mode", "model", "--connector", "usb_a"])
+    pipe, io = make(tmp_path, mode="head", connectors=("usb_a",))
+    pipe.run()
+    assert io.params == [dict(connector="usb_a")]
     assert pl.parse_args(["r", "--mode", "strip", "--connector", "usb_a", "aux"]).connectors == ("usb_a", "aux")

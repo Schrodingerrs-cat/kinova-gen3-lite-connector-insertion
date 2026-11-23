@@ -1,0 +1,392 @@
+[INFO] [1795308085.929248559] [controller_manager]: Subscribing to '~/robot_description' topic for robot description file.
+[INFO] [1795308085.929922982] [controller_manager]: update rate is 1000 Hz
+[INFO] [1795308085.929956707] [controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+[WARN] [1795308085.930041388] [controller_manager]: Could not enable FIFO RT scheduling policy: with error number <1>(Operation not permitted). See [https://control.ros.org/master/doc/ros2_control/controller_manager/doc/userdoc.html] for details on how to enable realtime scheduling.
+[INFO] [1795308085.931708960] [controller_manager]: Received robot description file.
+[INFO] [1795308085.931913242] [resource_manager]: Loading hardware 'KortexMultiInterfaceHardware' 
+[INFO] [1795308085.937014323] [KortexMultiInterfaceHardware]: Setting severity threshold to DEBUG
+[INFO] [1795308085.937050051] [resource_manager]: Initialize hardware 'KortexMultiInterfaceHardware' 
+[INFO] [1795308085.937056665] [KortexMultiInterfaceHardware]: Configuring Hardware Interface
+[INFO] [1795308085.937069105] [KortexMultiInterfaceHardware]: Robot ip is '192.168.1.10'
+[INFO] [1795308085.937071485] [KortexMultiInterfaceHardware]: Username is 'admin'
+[INFO] [1795308085.937074850] [KortexMultiInterfaceHardware]: Port used '10000'
+[INFO] [1795308085.937077062] [KortexMultiInterfaceHardware]: Realtime port used '10001'
+[INFO] [1795308085.937079038] [KortexMultiInterfaceHardware]: Session inactivity timeout is '60000'
+[INFO] [1795308085.937081169] [KortexMultiInterfaceHardware]: Connection inactivity timeout is '2000'
+[INFO] [1795308085.937083322] [KortexMultiInterfaceHardware]: Gripper joint name is 'right_finger_bottom_joint'
+[INFO] [1795308085.937093075] [KortexMultiInterfaceHardware]: Connecting to robot at 192.168.1.10
+[INFO] [1795308085.937625612] [KortexMultiInterfaceHardware]: Creating session for communication
+[INFO] [1795308085.974241314] [KortexMultiInterfaceHardware]: Session created
+[INFO] [1795308086.553739288] [KortexMultiInterfaceHardware]: Actuator count reported by robot is '6'
+[INFO] [1795308086.553819267] [KortexMultiInterfaceHardware]: Using internal bus communication for gripper!
+[INFO] [1795308086.553827466] [KortexMultiInterfaceHardware]: Hardware Interface successfully configured
+[INFO] [1795308086.553862778] [resource_manager]: Successful initialization of hardware 'KortexMultiInterfaceHardware'
+[DEBUG] [1795308086.553877132] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_1
+[DEBUG] [1795308086.553884533] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_2
+[DEBUG] [1795308086.553890486] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_3
+[DEBUG] [1795308086.553896189] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_4
+[DEBUG] [1795308086.553901366] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_5
+[DEBUG] [1795308086.553906703] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: joint_6
+[DEBUG] [1795308086.553911914] [KortexMultiInterfaceHardware]: export_state_interfaces for joint: right_finger_bottom_joint
+[INFO] [1795308086.554104826] [resource_manager]: 'configure' hardware 'KortexMultiInterfaceHardware' 
+[INFO] [1795308086.554121274] [resource_manager]: Successful 'configure' of hardware 'KortexMultiInterfaceHardware'
+[INFO] [1795308086.554147521] [resource_manager]: 'activate' hardware 'KortexMultiInterfaceHardware' 
+[INFO] [1795308086.554154873] [KortexMultiInterfaceHardware]: Activating KortexMultiInterfaceHardware...
+[INFO] [1795308086.555265573] [KortexMultiInterfaceHardware]: Gripper initial position is '-0.012788'.
+[INFO] [1795308086.556239733] [KortexMultiInterfaceHardware]: KortexMultiInterfaceHardware successfully activated!
+[INFO] [1795308086.556281176] [resource_manager]: Successful 'activate' of hardware 'KortexMultiInterfaceHardware'
+[DEBUG] [1795308086.556692398] [KortexMultiInterfaceHardware]: Fault was not recognized on the robot but combination of Control Mode and Active State are not supported!
+[DEBUG] [1795308086.557442532] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.558054851] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.558540416] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.559108192] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.559499441] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.560093324] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.560500772] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.561021637] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.561411140] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.561797183] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.562290272] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.562692954] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.563096505] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.563540518] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.563963979] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.564178692] [controller_manager]: Received robot description file.
+[WARN] [1795308086.564295427] [controller_manager]: ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot description file.
+[DEBUG] [1795308086.564308412] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.564961815] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.565490369] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.565973853] [controller_manager]: Loading controller 'fault_controller'
+[DEBUG] [1795308086.566008696] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.566353040] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.566925203] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.567365828] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.568472991] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.569403762] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.569999567] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.570481384] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.570984082] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.571950769] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.572390955] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.573013456] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.573818457] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.574232549] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.574641050] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.575017170] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.575381471] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.575987377] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.576310967] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.577692636] [controller_manager]: Loading controller 'joint_trajectory_controller'
+[DEBUG] [1795308086.577720462] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.578259828] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.578673847] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.579001585] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.579332385] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.579674435] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.579986640] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.580299225] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.580664068] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.582044997] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.582620966] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.582985109] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.583453622] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.583995022] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.584357117] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.585047405] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.586396189] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.586998631] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.587389376] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.587963070] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.588390661] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.588967720] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.589412666] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.590005950] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.590488726] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.591109957] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.591564217] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.592018441] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.592369995] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.593024973] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.593419844] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.594045081] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.594527109] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.595006088] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.595407754] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.596017771] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.596393078] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.596958699] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.597342432] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.597721908] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[WARN] [1795308086.598029666] [joint_trajectory_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[DEBUG] [1795308086.598082628] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.598447109] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.598980278] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.599438540] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.599515480] [controller_manager]: Configuring controller 'fault_controller'
+[DEBUG] [1795308086.600034217] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.600463190] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.601064112] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.601466859] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.602656818] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.603099438] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.603563344] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.604052982] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.604171614] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[DEBUG] [1795308086.604454673] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.605029669] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.605438939] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.606828240] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.607370411] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.607779127] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.608212476] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.608633310] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.609152389] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.609570228] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.610131281] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.610874313] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.611266068] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.611684452] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.612069623] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.612514364] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.613016567] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.613391067] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.614098878] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.614510778] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.615299522] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.615646961] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.615961536] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.616283510] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.616666989] [controller_manager]: Loading controller 'gen3_lite_2f_gripper_controller'
+[DEBUG] [1795308086.616675669] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.617113904] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.617431847] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.617752731] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.619816576] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.620188733] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.620592932] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.621431971] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.622487577] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.623024228] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.623467646] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.624339035] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.624946808] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.625477847] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.626020015] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.626442253] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.626984707] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.627360977] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.627746991] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.628144960] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.629058635] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.629510954] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.629998457] [controller_manager]: Configuring controller 'joint_trajectory_controller'
+[DEBUG] [1795308086.630033924] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.630420820] [joint_trajectory_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1795308086.630483903] [joint_trajectory_controller]: Command interfaces are [position] and state interfaces are [position velocity].
+[DEBUG] [1795308086.630509309] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.630530929] [joint_trajectory_controller]: Using 'splines' interpolation method.
+[DEBUG] [1795308086.631009896] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.631299194] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.631566930] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.632023282] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.632537896] [joint_trajectory_controller]: Controller state will be published at 100.00 Hz.
+[DEBUG] [1795308086.632638668] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.633269401] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.633770073] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.634112350] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.634449494] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.635058379] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.635492822] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.636102798] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.636442928] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.636730014] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.637031829] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.637298823] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.637542319] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.637955024] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.637985995] [joint_trajectory_controller]: Action status changes will be monitored at 20.00 Hz.
+[DEBUG] [1795308086.638317258] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.639128746] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.639588929] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.640015974] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.640393935] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.640997184] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.641357076] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.642032901] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.642436485] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.643022501] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.643327217] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.643657689] [controller_manager]: Configuring controller 'joint_state_broadcaster'
+[DEBUG] [1795308086.643690073] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.643785883] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[DEBUG] [1795308086.644106691] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.644413466] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.644891927] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.645288281] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.645674566] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308086.645715285] [controller_manager]: Configuring controller 'gen3_lite_2f_gripper_controller'
+[INFO] [1795308086.645823771] [gen3_lite_2f_gripper_controller]: Action status changes will be monitored at 20.000000 Hz.
+[DEBUG] [1795308086.646023401] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.646428135] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.646772208] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.850203081] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.850848044] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.851441626] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.852065961] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.852511848] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.853193211] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.853852086] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.854382555] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[DEBUG] [1795308086.855109618] [KortexMultiInterfaceHardware]: No controller active in LOW_LEVEL_SERVOING mode !
+[INFO] [1795308087.082248842] [controller_manager]: Configuring controller 'gen3_lite_2f_gripper_controller'
+[INFO] [1795308087.082368385] [gen3_lite_2f_gripper_controller]: Action status changes will be monitored at 20.000000 Hz.
+[INFO] [1795308087.083535733] [controller_manager]: Configuring controller 'joint_state_broadcaster'
+[INFO] [1795308087.083645493] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[INFO] [1795308087.089004654] [controller_manager]: Loading controller 'twist_controller'
+[INFO] [1795308087.094885338] [controller_manager]: Loading controller 'twist_controller'
+[ERROR] [1795308087.095021398] [controller_manager]: A controller named 'twist_controller' was already loaded inside the controller manager
+[INFO] [1795308087.095459817] [controller_manager]: Configuring controller 'fault_controller'
+[ERROR] [1795308087.095546369] [controller_manager]: Controller 'fault_controller' can not be configured from 'active' state.
+[INFO] [1795308087.097503318] [controller_manager]: Configuring controller 'joint_trajectory_controller'
+[ERROR] [1795308087.097866447] [controller_manager]: Controller 'joint_trajectory_controller' can not be configured from 'active' state.
+[INFO] [1795308087.304489565] [controller_manager]: Configuring controller 'twist_controller'
+[INFO] [1795308087.305964022] [twist_controller]: configure successful
+[WARN] [1795308087.307552014] [controller_manager]: Controller with name 'gen3_lite_2f_gripper_controller' is not inactive so its following controllers do not have to be checked, because it cannot be activated.
+[WARN] [1795308087.307644108] [controller_manager]: Could not activate controller with name 'gen3_lite_2f_gripper_controller'. Check above warnings for more details. Check the state of the controllers and their required interfaces using `ros2 control list_controllers -v` CLI to get more information.
+[ERROR] [1795308087.307743116] [controller_manager]: Aborting, no controller is switched! (::STRICT switch)
+[WARN] [1795308087.308744139] [controller_manager]: Controller with name 'joint_state_broadcaster' is not inactive so its following controllers do not have to be checked, because it cannot be activated.
+[WARN] [1795308087.308807706] [controller_manager]: Could not activate controller with name 'joint_state_broadcaster'. Check above warnings for more details. Check the state of the controllers and their required interfaces using `ros2 control list_controllers -v` CLI to get more information.
+[ERROR] [1795308087.308829777] [controller_manager]: Aborting, no controller is switched! (::STRICT switch)
+[INFO] [1795308087.510913849] [gen3_lite_2f_gripper_controller]: Received & accepted new action goal
+[INFO] [1795308089.482012501] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308089.482060616] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308101.654209229] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308102.132525890] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308102.132601273] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308147.594204726] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308148.591051853] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308148.591093259] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308148.992218121] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308150.072927989] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308150.072965031] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308152.673208647] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308152.831842532] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308152.831868866] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308154.423223891] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308155.169040861] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308155.169071052] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308156.023214359] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308156.466798436] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308156.466830012] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308157.334176683] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308157.766832692] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308157.766889242] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308158.623205147] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308159.066447400] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308159.066499581] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308159.935209687] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308160.363375379] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308160.363408151] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308161.233204471] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308161.669256016] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308161.669292203] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308162.520207460] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308162.961206881] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308162.961241889] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308163.807173089] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308164.259077480] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308164.259130482] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308165.101205162] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308165.556331887] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308165.556377245] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308166.441204579] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308166.856667389] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308166.856702937] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308167.728207877] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308168.158864008] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308168.158914565] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308169.000206131] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308169.459402687] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308169.459440543] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308170.333217929] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308170.762967730] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308170.763006111] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308171.660235700] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308172.052129065] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308172.052162389] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308172.943208052] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308173.354666036] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308173.354698592] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308174.240170181] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308174.655241230] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308174.655280560] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308175.546209952] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308175.944194813] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308175.944247496] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308176.816213898] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308177.244579790] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308177.244613162] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308178.189211890] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308178.643629167] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308178.643665544] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308179.623209276] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308180.059799748] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308180.059832805] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308180.609220514] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308181.065173077] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308181.065231606] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308181.723168482] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308182.262771364] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308182.262821220] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308182.952168584] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308183.442062005] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308183.442103726] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308184.186211429] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308184.649319705] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308184.649352169] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308185.461205916] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308185.936311327] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308185.936348660] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308186.716178892] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308187.146935626] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308187.146966720] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308187.921206316] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308188.335377886] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308188.335415125] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308189.092207115] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308189.531833309] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308189.531877010] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308190.212253504] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308190.633307386] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308190.633341709] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308191.356258017] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308191.830796772] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308191.830830029] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308193.180175187] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308193.626653282] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308193.626696672] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308194.399204021] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308194.824045651] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308194.824099686] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308195.442214323] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308195.923323841] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308195.923358477] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308196.401169908] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308196.822394540] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308196.822425044] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308197.494203021] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308197.922806597] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308197.922840809] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308198.578206380] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308199.020601559] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308199.020639273] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308199.737242537] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308200.217195817] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308200.217238322] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308201.002208740] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308201.418358164] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308201.418394049] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [1795308202.282211383] [joint_trajectory_controller]: Goal reached, success!
+[INFO] [1795308202.716038125] [joint_trajectory_controller]: Received new action goal
+[INFO] [1795308202.716085386] [joint_trajectory_controller]: Accepted new action goal
+[INFO] [

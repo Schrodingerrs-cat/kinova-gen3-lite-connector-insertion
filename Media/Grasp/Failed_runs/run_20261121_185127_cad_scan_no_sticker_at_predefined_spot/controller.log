@@ -1,0 +1,4 @@
+[   0.5 s] open_gripper -> OK: gripper already open (-0.001 rad)
+[   1.3 s] cad_scan -> FAILED: no sticker within 30 mm of usb_a's spot [252, -23] mm; seen at [[309, -209], [305, -226], [253, 20]]
+[   1.3 s] ERROR: RuntimeError: cad_scan failed
+[   1.4 s] outcome: ERROR: RuntimeError: cad_scan failed

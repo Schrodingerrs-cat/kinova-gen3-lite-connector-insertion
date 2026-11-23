@@ -56,9 +56,11 @@ def main():
         img = np.frombuffer(m.data, np.uint8).reshape(m.height, m.step)[:, :m.width * 3].reshape(m.height, m.width, 3)
         bgr = np.ascontiguousarray(img[:, :, ::-1] if m.encoding == "rgb8" else img)
         cv2.imwrite(str(folder / "color.png"), bgr)
-        detector = cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg["feature_tracking"]["aruco_dict"])),
-                                           cv2.aruco.DetectorParameters())
-        corners, ids, _ = detector.detectMarkers(cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY))
+        dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, cfg["feature_tracking"]["aruco_dict"]))
+        if hasattr(cv2.aruco, "ArucoDetector"):
+            corners, ids, _ = cv2.aruco.ArucoDetector(dictionary, cv2.aruco.DetectorParameters()).detectMarkers(cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY))
+        else:                                           # OpenCV < 4.7
+            corners, ids, _ = cv2.aruco.detectMarkers(cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY), dictionary, parameters=cv2.aruco.DetectorParameters_create())
         info["markers_px"] = {} if ids is None else {int(i): dict(centre=np.round(c.reshape(4, 2).mean(0), 1).tolist(), side=round(float(np.linalg.norm(c.reshape(4, 2)[1] - c.reshape(4, 2)[0])), 1)) for i, c in zip(ids.ravel(), corners)}
     if "depth" in got:
         d = got["depth"]
