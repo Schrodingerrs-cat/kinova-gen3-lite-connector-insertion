@@ -4,6 +4,29 @@ Image-based visual servoing for the Kinova Gen3 Lite and the wrist-mounted RealS
 
 The current system tests free-space alignment with the gripper only (no insertion, no seating check yet). Grasping is handled separately in [`../Grasp`](../Grasp/README.md). Tilt of the tool against the wall is not controlled separately yet (the simple approach is tried first; see "Known limits").
 
+## Run this: insertion servo (current pipeline, smooth Cartesian, per wire)
+
+This is the pipeline to use. Everything under "Old pipeline" below (run_end_to_end.sh, run_aux.sh, run_joint2_priority.sh, run_alignment.sh) is the older joint step-and-observe servo: slow, one small joint step at a time, and it matches marker rotation (`align_orientation`), which the new one does not. After the grasp, from the post-grasp pose, it servos the wire's marker to the pre-insertion image, stops 1 s, then servos to the insertion image (plug at the socket entrance). The robot only translates (orientation held), no camera tilting. Marker per wire: aux = 11, usb = 12, power = 10. Reference pixels per wire: `config/insertion_refs.yaml` (`nudge_px: [x, y]` shifts the insertion target in the image to fine-tune).
+
+Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS/ros_env.sh`, one arm driver only):
+
+1. Terminal 1, the arm and MoveIt (the grasp stack's bringup, the same one the grasp pipeline uses; wait until the controllers are up).
+2. Terminal 2, the camera as the grasp stack starts it (`/camera/camera/...` with aligned depth; this script reads these topics).
+3. Terminal 3, put the arm at the post-grasp pose: `bash Code/IBVS/go_post_grasp.sh` (the grasp pipeline does this itself after a real grasp).
+4. Terminal 3, run the servo:
+
+| Mode | Command |
+| --- | --- |
+| Stop-and-observe (default): quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`) |
+| Continuous: re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux --continuous` |
+| Slower / faster (m/s, default 0.05) | `--speed 0.03` |
+| Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
+| Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
+
+If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (continuous: after 6 frames in a row). Do not edit files while it runs. Start with the default mode, then `--continuous`.
+
+Camera: `insert_servo.py` reads the grasp stack's `/camera/camera/...` topics (check with `ros2 topic list | grep image_raw`). The old scripts expect `/eih_cam/...`.
+
 ## Code overview
 
 | File or folder | Purpose |
@@ -23,7 +46,7 @@ The current system tests free-space alignment with the gripper only (no insertio
 
 Home/post-grasp poses and camera-to-tool calibration come from [`../Grasp/config/grasp.yaml`](../Grasp/config/grasp.yaml) (the hand-eye there is the old one: redo it after the camera change). `ros2_iface/ibvs_node.py` and the state-machine modules in `ibvs/` are the older ArUco design; the runners below do not use them.
 
-## Which script to run
+## Old pipeline: which script to run (slow, joint step-and-observe, kept for reference)
 
 Every command from the `insertion_task` folder. The arm driver, MoveIt and the camera (`eih_cam`) must be up first; the quickest way is any run script with `--bringup` (it starts what is missing; start one set only).
 
@@ -39,27 +62,6 @@ Every command from the `insertion_task` folder. The arm driver, MoveIt and the c
 | Offline tests | `python3 -m pytest Code/IBVS/tests -q` | no |
 
 Useful options on the run scripts: `--speed-scale 1..3`, `--advance-m 0.08`, `--no-checks`, `--allow-contact`, `--marker-id N`, `--all-markers`. Gripper by hand: `ros2 action send_goal /gen3_lite_2f_gripper_controller/gripper_cmd control_msgs/action/GripperCommand "{command: {position: 0.81, max_effort: 30.0}}"` (0.0 opens).
-
-## Insertion servo (new pipeline, live marker, per wire)
-
-Separate from the taught-goal AUX run below. After the grasp, from the post-grasp pose, it servos the wire's marker to the pre-insertion image, stops 1 s, then servos to the insertion image (plug at the socket entrance). The robot only translates (orientation held), no camera tilting. Marker per wire: aux = 11, usb = 12, power = 10. Reference pixels per wire: `config/insertion_refs.yaml` (`nudge_px: [x, y]` shifts the insertion target in the image to fine-tune).
-
-Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS/ros_env.sh`, one arm driver only):
-
-1. Terminal 1, the arm and MoveIt (the grasp stack's bringup, the same one the grasp pipeline uses; wait until the controllers are up).
-2. Terminal 2, the camera as the grasp stack starts it (`/camera/camera/...` with aligned depth; this script reads these topics).
-3. Terminal 3, put the arm at the post-grasp pose: `bash Code/IBVS/go_post_grasp.sh` (the grasp pipeline does this itself after a real grasp).
-4. Terminal 3, run the servo:
-
-| Mode | Command |
-| --- | --- |
-| Stop-and-observe (default): quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`) |
-| Continuous: re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux --continuous` |
-| Slower / faster (m/s, default 0.05) | `--speed 0.03` |
-| Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
-| Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
-
-If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (continuous: after 6 frames in a row). Do not edit files while it runs. Start with the default mode, then `--continuous`.
 
 ## Marker setup
 
@@ -99,7 +101,7 @@ The gripper and whatever it holds are not scene: everything nearer than 18 cm to
 
 Depth is the mean measured depth inside the marker (flat paper, one depth for all four corners). A missing marker or too little valid depth causes a tracking hold.
 
-## End to end from home
+## Old pipeline: end to end from home
 
 Stack up first (arm driver, MoveIt `allow_trajectory_execution:=false`, camera `eih_cam`), e-stop in reach. From the `insertion_task` folder:
 
