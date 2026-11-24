@@ -1,0 +1,34 @@
+{
+ "run": "/home/pinaka/kinova/work/grasp_runs/run_20261123_212231_orbit_aux_search",
+ "views": 5,
+ "connector": "aux",
+ "part": "NAUO53",
+ "yaw_cue": "none",
+ "yaw_deg": 91.6276501280294,
+ "yaw_note": "no yaw cue for this connector: jaws along the board strip direction",
+ "x": 0.25894370725852883,
+ "y": 0.01332820857130636,
+ "z0": -0.006524474515309561,
+ "z1": 0.027793786719353328,
+ "footprint_mm": [
+  12.559652894116487,
+  7.417317019849069
+ ],
+ "along_strip_mm": 0.7337144279204757,
+ "across_strip_mm": -1.5894029094566233,
+ "loo_mm": 1.5387717022163983,
+ "strip_dir": 91.6276501280294,
+ "gates": [
+  {
+   "name": "plug points and board in every view",
+   "ok": true,
+   "detail": "plug points per view [308, 602, 444, 404, 671] (>= 100), board outline [(151, 52), (151, 52), (150, 52)] mm (long and short side agree within 8 mm), board yaw spread 1.07 deg (<= 2)"
+  },
+  {
+   "name": "plug centre repeatable leaving a view out",
+   "ok": true,
+   "detail": "largest shift 1.5 mm (<= 3)"
+  }
+ ],
+ "passed": true
+}

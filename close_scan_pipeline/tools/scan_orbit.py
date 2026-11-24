@@ -21,6 +21,7 @@ import pathlib
 import sys
 import tempfile
 import time
+from types import SimpleNamespace
 
 import numpy as np
 import rclpy
@@ -29,18 +30,28 @@ from scipy.spatial.transform import Rotation
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import connector  # noqa: E402
-import plug_points as pp  # noqa: E402
+import vision  # noqa: E402
 import scan_grid  # noqa: E402  (puts method 2's robot_ros on the path)
 from example_interfaces.msg import Bool  # noqa: E402
 from robot_ros import Robot  # noqa: E402
 
 HOME_DIR = pathlib.Path.home()
 HOME_Q, STEP_LIMITS, M2, G = scan_grid.HOME_Q, scan_grid.STEP_LIMITS, scan_grid.M2, scan_grid.G
-BOARD_TOP, PLUG_TOP = -0.018, 0.025   # measured: board strip top face and plug top
+
+
+LINE_SPEED, JOINT_SPEED, RAMP_STEPS = 0.03, np.deg2rad(10), 15   # m/s along the line, rad/s of the fastest joint (method 2 limit), eased over the first and last 15 steps
 
 
 class PlanError(Exception):
     pass
+
+
+def leg_times(Q, step_m=0.002):
+    """Time per waypoint step: the slower of the line speed and the joint speed limit, with a gentle start and stop."""
+    dt = np.maximum(step_m / LINE_SPEED, np.max(np.abs(np.diff(Q, axis=0)), axis=1) / JOINT_SPEED)
+    n = len(dt)
+    ease = np.minimum(1.0, 0.25 + 0.75 * np.minimum(np.arange(1, n + 1), np.arange(n, 0, -1)) / RAMP_STEPS)
+    return np.maximum(dt / ease, 0.02)
 
 
 def tcp_matrix(cfg):
@@ -120,27 +131,96 @@ class Planner:
                 hit = self.r.path_collision(np.degrees(Q[k]), np.degrees(Q[k + 25]))
                 if hit:
                     raise PlanError("%s: %s" % (label, hit))
-            dt = np.maximum(0.25, 2 * np.max(np.abs(np.diff(Q, axis=0)), axis=1) / np.deg2rad(6))
+            dt = leg_times(Q)
             times = np.cumsum(dt)
             plans.append(dict(label=label, target=T, path=path, times=times.tolist(), seed=seed.copy(), peak=float(peaks.max()), low=float(low)))
             seed, leg_start = np.array(path[-1]), T
         return plans
 
 
+FALLBACKS = [("fallback 1: a bit forward, wrist tilted back down at the board", np.array([0.10, 0.0, -0.04])),
+             ("fallback 2: lower, same look", np.array([0.10, 0.0, -0.14]))]   # camera offsets from the home camera position, base frame
+
+
+def go(robot, plan, fault):
+    if np.max(np.abs(robot.q - plan["seed"])) > np.deg2rad(1):
+        raise RuntimeError("start state differs before %s" % plan["label"])
+    if fault["on"]:
+        raise RuntimeError("arm fault")
+    print("%s, %.1f s" % (plan["label"], plan["times"][-1]), flush=True)
+    robot.send_joint_path(plan["path"], plan["times"], velocities=np.zeros_like(plan["path"]).tolist(), timeout=plan["times"][-1] + 30)
+    m = robot.tool_matrix()
+    if np.linalg.norm(m[:3, 3] - plan["target"][:3, 3]) > 0.003 or Rotation.from_matrix(plan["target"][:3, :3].T @ m[:3, :3]).magnitude() > np.deg2rad(1):
+        raise RuntimeError("endpoint mismatch at %s" % plan["label"])
+
+
+def locate(robot, X, tcp, lim, spec, a, fault, tmp):
+    """Find the marker by colour: home view first; if it is not there, up to two search views (forward with the wrist tilted back, then lower). Returns the marker dict; the arm is left
+    where it found it (moves are screened like every other leg). Without --execute the search poses are only checked and None is returned."""
+    home_T, home_q = robot.tool_matrix(), robot.q.copy()
+    frame = scan_grid.fresh_frame(robot, X)
+    np.savez_compressed(tmp, **frame)
+    first = a.force_fallback
+    if first == 0:
+        try:
+            m = vision.find_marker(tmp, spec)
+            print("marker found in the home view", flush=True)
+            return m
+        except RuntimeError:
+            print("marker colour not visible from the home view: using the search views", flush=True)
+            first = 1
+    d, K, T = frame["depth"], frame["K"], frame["T_BC"]
+    h, w = d.shape
+    vv, uu = [g.ravel() for g in np.mgrid[h // 2 - 20:h // 2 + 21, w // 2 - 20:w // 2 + 21]]
+    ok = (d[vv, uu] > 0.08) & (d[vv, uu] < 0.8)
+    look = np.median(vision.to_base(d, K, T, vv[ok], uu[ok]), axis=0)    # the surface the home camera sees at the image centre
+    c_home = (home_T @ X)[:3, 3]
+    ps = SimpleNamespace(min_tcp_z=0.10, min_tcp_dist=0.10)
+    planner_s = Planner(robot, X, tcp, lim, ps)
+    steps, backs, seed, cur = [], [], home_q.copy(), home_T
+    try:
+        for k, (name, off) in enumerate(FALLBACKS, start=1):
+            T_tool, T_cam, q, roll = planner_s.pose(aimed_camera(c_home + off, look), look, seed)
+            plan = planner_s.legs(cur, seed, [T_tool], [name])[0]
+            print("  %s: camera xyz %s, tilt %.1f deg, roll %d, %.1f s" % (name, np.round(T_cam[:3, 3], 3), np.degrees(np.arctan2(np.hypot(*(T_cam[:2, 3] - look[:2])), T_cam[2, 3] - look[2])), roll, plan["times"][-1]), flush=True)
+            steps.append(plan)
+            backs.append(planner_s.legs(T_tool, np.array(plan["path"][-1]), [home_T], ["back to home from search view %d" % k])[0])
+            seed, cur = np.array(plan["path"][-1]), T_tool
+    except PlanError as e:
+        sys.exit("search view not reachable: %s. Nothing moved." % e)
+    if not a.execute:
+        print("plan only: the search views are feasible, nothing moved", flush=True)
+        return None
+    for k in range(first - 1, len(steps)):
+        go(robot, steps[k], fault)
+        robot.spin_until(lambda: False, 1.0)
+        np.savez_compressed(tmp, **scan_grid.fresh_frame(robot, X))
+        try:
+            m = vision.find_marker(tmp, spec)
+            print("marker found from %s; back to home, then the close scan from there" % steps[k]["label"], flush=True)
+            go(robot, backs[k], fault)
+            return m
+        except RuntimeError:
+            print("not visible from %s" % steps[k]["label"], flush=True)
+    print("marker not found from any search view: back to home", flush=True)
+    go(robot, backs[-1], fault)
+    sys.exit("marker colour not found")
+
+
 def sweep_poses(planner, target, seed_rad, a, offsets):
     out, seed = [], np.array(seed_rad, float)
     for s in offsets:
-        c = np.array([target[0], target[1] + s, BOARD_TOP + a.height])
+        c = np.array([target[0], target[1] + s, a.board_top + a.height])
         T_tool, T_cam, q, roll = planner.pose(aimed_camera(c, target), target, seed)
         tilt = np.degrees(np.arctan2(abs(s), c[2] - target[2]))
         tz = (T_tool @ planner.T_tcp)[2, 3]
-        print("  s %+5.0f mm: camera xyz %s, %3.0f mm above the board, tilt %4.1f deg, fingertip %3.0f mm above the board / %3.0f mm %s the plug top, roll %d" % (s * 1e3, np.round(T_cam[:3, 3], 3), (c[2] - BOARD_TOP) * 1e3, tilt, (tz - BOARD_TOP) * 1e3, abs(tz - PLUG_TOP) * 1e3, "above" if tz > PLUG_TOP else "BELOW", roll), flush=True)
+        print("  s %+5.0f mm: camera xyz %s, %3.0f mm above the board, tilt %4.1f deg, fingertip %3.0f mm above the board / %3.0f mm %s the plug top, roll %d" % (s * 1e3, np.round(T_cam[:3, 3], 3), (c[2] - a.board_top) * 1e3, tilt, (tz - a.board_top) * 1e3, abs(tz - a.plug_top) * 1e3, "above" if tz > a.plug_top else "BELOW", roll), flush=True)
         out.append((s, T_tool, T_cam))
         seed = np.radians(q)
     return out
 
 
-def main():
+def main(argv=None, robot=None, fault=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--connector", default="usb", help="profile in ~/kinova/work/connectors (usb, aux): scan settings and the plug prior")
     ap.add_argument("--n", type=int)
@@ -150,12 +230,14 @@ def main():
     ap.add_argument("--min-tcp-z", type=float)
     ap.add_argument("--min-tcp-dist", type=float)
     ap.add_argument("--execute", action="store_true")
+    ap.add_argument("--force-fallback", type=int, default=0, choices=(0, 1), help="test the search: skip the home view and go straight to search view 1")
     ap.add_argument("--name", default="test")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     prof = connector.load(a.connector)
     for k, key in (("n", "n"), ("height", "height_m"), ("lateral", "lateral_m"), ("aim_z", "aim_z_m"), ("min_tcp_z", "min_tcp_z_m")):
         if getattr(a, k) is None:
             setattr(a, k, prof["scan"][key])
+    a.aim_above = a.aim_z + 0.018   # profile aim heights were set on a board top of -0.018: kept relative to the measured board top
     if a.min_tcp_dist is None:
         a.min_tcp_dist = prof["scan"].get("min_tcp_dist_m", 0.09)
     if a.n not in (3, 5, 7):
@@ -167,10 +249,11 @@ def main():
     motion = yaml.safe_load(open(G / "config/grasp.yaml"))["motion"]
     lim = np.array(motion["joint_limits_deg"], float) - motion["joint_margin_deg"]
 
-    rclpy.init()
-    robot = Robot("scan_orbit", background=True)
-    fault = {"on": False}
-    robot.create_subscription(Bool, "/fault_controller/internal_fault", lambda m: fault.__setitem__("on", bool(m.data)), 10)
+    if robot is None:
+        rclpy.init()
+        robot = Robot("scan_orbit", background=True)
+        fault = {"on": False}
+        robot.create_subscription(Bool, "/fault_controller/internal_fault", lambda m: fault.__setitem__("on", bool(m.data)), 10)
     if not robot.wait_ready(10):
         sys.exit("no driver / controller")
     robot.spin_until(lambda: False, 1.0)
@@ -183,14 +266,16 @@ def main():
         sys.exit("arm is in fault")
     planner = Planner(robot, X, tcp_matrix(cfg), lim, a)
 
-    import find_plug_m3
     tmp = pathlib.Path(tempfile.mkdtemp()) / "home_view.npz"
-    np.savez_compressed(tmp, **scan_grid.fresh_frame(robot, X))
-    pr = pp.prior([tmp], prof["part"])
-    blob, px = find_plug_m3.seed(tmp, near=pr["plug_centre"][:2])
-    print("0. connector %s: predicted from the board x %.4f y %.4f" % (a.connector, *pr["plug_centre"][:2]), flush=True)
-    target = np.array([blob[0], blob[1], a.aim_z])
-    print("1. marker found from home: blob of %d px at x %.4f y %.4f (z %.3f); aim point %s" % (px, blob[0], blob[1], blob[2], np.round(target, 4)), flush=True)
+    spec = prof["marker"]
+    home_T0 = robot.tool_matrix()
+    m0 = locate(robot, X, tcp_matrix(cfg), lim, spec, a, fault, tmp)
+    if m0 is None:
+        m0 = vision.find_marker(tmp, spec)    # plan-only test of the search: carry on with the marker the home view saw
+    a.board_top, a.plug_top = m0["board_z"], m0["top"]
+    print("0. connector %s: looking for its marker colour anywhere in the reachable workspace (no CAD position)" % a.connector, flush=True)
+    target = np.array([m0["P"][0], m0["P"][1], a.board_top + a.aim_above])
+    print("1. marker found: blob of %d px at x %.4f y %.4f; board top around it %.4f, marker top %.4f; aim point %s" % (m0["px"], m0["P"][0], m0["P"][1], a.board_top, a.plug_top, np.round(target, 4)), flush=True)
 
     start, home_seed = robot.tool_matrix(), robot.q.copy()
     half = (a.n - 1) // 2
@@ -200,17 +285,16 @@ def main():
         print("2./3. poses (camera straight above the marker first, then left to right):", flush=True)
         poses = sweep_poses(planner, target, home_seed, a, offsets)
         labels = ["close pose over the marker"] + ["sweep s %+.0f mm" % (p[0] * 1e3) for p in poses[1:]] + ["return home"]
-        plans = planner.legs(start, home_seed, [p[1] for p in poses] + [start], labels)
-        abort = planner.legs(poses[0][1], np.array(plans[0]["path"][-1]), [start], ["abort to home"])
+        plans = planner.legs(start, home_seed, [p[1] for p in poses] + [home_T0], labels)
+        abort = planner.legs(poses[0][1], np.array(plans[0]["path"][-1]), [home_T0], ["abort to home"])
     except PlanError as e:
-        print("PLAN FAILED: %s. Nothing moved. Adjust --height / --lateral / --min-tcp-z." % e, flush=True)
-        os._exit(1)
+        raise SystemExit("PLAN FAILED: %s. Nothing moved. Adjust --height / --lateral / --min-tcp-z." % e)
     for p in plans:
         print("  leg %-28s max joint step %.1f deg, lowest fingertip %.3f m, %.1f s" % (p["label"], p["peak"], p["low"], p["times"][-1]), flush=True)
     print("PLAN OK: %d views, %d legs, about %.0f s with stops and captures." % (len(poses), len(plans), sum(p["times"][-1] for p in plans) + 4 * len(poses)), flush=True)
     if not a.execute:
         print("Nothing moved. Add --execute --name NAME to run it.", flush=True)
-        os._exit(0)
+        return None
 
     run = HOME_DIR / "kinova/work/grasp_runs" / ("run_%s_orbit_%s" % (time.strftime("%Y%m%d_%H%M%S"), a.name))
     scan = run / "method2_perception/scan"
@@ -245,17 +329,19 @@ def main():
     run_leg(plans[0], 0)
     first = capture(0)
     try:
-        refined, px2 = find_plug_m3.seed(first)
-        u, v = np.load(first)["K"][0, 2], np.load(first)["K"][1, 2]
+        m1 = vision.find_marker(first, spec, near=target[:2], radius=0.05)
+        refined, px2 = m1["P"], m1["px"]
         print("close view: marker blob of %d px re-detected at x %.4f y %.4f (home view said %.4f %.4f), moved %.1f mm" % (px2, refined[0], refined[1], target[0], target[1], np.hypot(*(refined[:2] - target[:2])) * 1e3), flush=True)
+        a.board_top, a.plug_top = m1["board_z"] if np.isfinite(m1["board_z"]) else a.board_top, m1["top"]
         meta["refined_marker"] = refined.tolist()
+        meta["board_top"], meta["plug_top"] = a.board_top, a.plug_top
         if np.hypot(*(refined[:2] - target[:2])) > 0.008:
-            target = np.array([refined[0], refined[1], a.aim_z])
+            target = np.array([refined[0], refined[1], a.board_top + a.aim_above])
             print("more than 8 mm from the planned marker: re-planning the sweep around the refined position", flush=True)
             q_now = robot.q.copy()
             poses2 = sweep_poses(planner, target, q_now, a, offsets[1:])
             labels2 = ["sweep s %+.0f mm" % (p[0] * 1e3) for p in poses2] + ["return home"]
-            plans = [plans[0]] + planner.legs(robot.tool_matrix(), q_now, [p[1] for p in poses2] + [start], labels2)
+            plans = [plans[0]] + planner.legs(robot.tool_matrix(), q_now, [p[1] for p in poses2] + [home_T0], labels2)
             meta["replanned"] = True
         for i, plan in enumerate(plans[1:], start=1):
             run_leg(plan, i)
@@ -266,13 +352,27 @@ def main():
         if plans and np.max(np.abs(robot.q - abort[0]["seed"])) < np.deg2rad(1):
             run_leg(abort[0], 0)
         (run / "orbit.json").write_text(json.dumps(meta, indent=1))
-        os._exit(1)
+        raise SystemExit("scan stopped, arm sent home")
     meta["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     meta["home_error_deg"] = float(np.max(np.abs(np.degrees(robot.q) - HOME_Q)))
     (run / "orbit.json").write_text(json.dumps(meta, indent=1))
     print("back home (max joint error %.2f deg), fault=%s. Saved to %s" % (meta["home_error_deg"], fault["on"], run), flush=True)
-    os._exit(0)
+    return run
+
+
+def cli():
+    code = 0
+    try:
+        main()
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, flush=True)
+            code = 1
+        else:
+            code = e.code or 0
+    sys.stdout.flush()
+    os._exit(code)
 
 
 if __name__ == "__main__":
-    main()
+    cli()

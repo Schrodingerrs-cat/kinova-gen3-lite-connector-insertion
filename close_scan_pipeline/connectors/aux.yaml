@@ -7,6 +7,11 @@ thickness_m: 0.0065
 yaw_cue: none
 min_points: 100
 scene_include_plugs: true   # keep the neighbouring plugs (USB 50 mm away) as hulls in the planning scene during the grasp
+marker:               # light pink sticker. Measured 2026-11-23 in 5 close views (935 px): H 155-173, S 42-98, V 139-199 (p5-p95). The board is H ~102, the table H ~17
+  hue: [[150, 180], [0, 6]]
+  sat: [30, 140]
+  val: [120, 255]
+  min_px: 12
 scan:
   height_m: 0.200         # closer than the USB scan (small, thin part)  (first try)
   lateral_m: 0.05         # smaller sweep: the USB plug stands 50 mm to the side  (first try)
@@ -15,12 +20,14 @@ scan:
   min_tcp_dist_m: 0.05     # closest fingertip to the aim point during the scan
   min_tcp_z_m: 0.05       # fingertips about 70 mm above the board; checked against the USB plug hull in the scene
 points:
-  radius_m: 0.015
+  radius_m: 0.012
+  top_tol_m: 0.020        # window above the pink marker top: the marker pixels give a poor height (flag partly on the board), the black barrel is above it
 grasp:
-  clear_m: 0.006          # fingertip above the board top. Measured on AUX1: barrel spans ~2-8 mm to ~24 mm above the board, the cable joins at 27-34 mm
+  clear_m: 0.008          # fingertip above the board top. Measured on AUX1: barrel spans ~2-8 mm to ~24 mm above the board, the cable joins at 27-34 mm
   band_m: 0.012
-  top_margin_m: 0.005     # band top to barrel top. Measured top 23.7 mm (per view spread 2.8 mm), cable joins at 27-34 mm, so the band (6-18 mm) stays 9 mm below the cable
-  standoff_m: 0.09
+  top_spread_m: 0.008     # loose pink tape reads thick or flat depending on the view: the median is used, outlier views are dropped
+  top_margin_m: -0.003     # band top to barrel top. Measured top 23.7 mm (per view spread 2.8 mm), cable joins at 27-34 mm, so the band (6-18 mm) stays 9 mm below the cable
+  standoff_m: 0.14 
   open_width_m: 0.0315    # same opening as the USB descent so the jaws never go down narrow (user)
   lift_test_m: 0.005
   lift_m: 0.08

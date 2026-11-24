@@ -9,6 +9,11 @@ yaw_cue: none             # lumpy body: jaws along the board strip direction
 min_points: 200
 loo_mm: 6.0               # leave-one-view-out tolerance: each view sees only its own side of the lump (centre spread across views is large); the opening has ~18 mm slack each side
 scene_include_plugs: true # USB and aux stand 50 mm to the right
+marker:               # dark blue sticker. Measured 2026-11-23 in 5 close views (5200 px): H 100-103, S 189-255, V 95-155 (p5-p95). Teal is H <= 96
+  hue: [[99, 110]]
+  sat: [150, 255]
+  val: [70, 255]
+  min_px: 60
 scan:
   height_m: 0.260
   lateral_m: 0.08
@@ -23,10 +28,10 @@ points:
 grasp:
   clear_m: 0.010          # fingertip above the board: pad band 10-22 mm, inside the teal body (7-30 mm), below the cable boot
   band_m: 0.012
-  top_margin_m: 0.005
+  top_margin_m: 0.002
   top_spread_m: 0.008     # per-view top heights were 26-32 mm
   min_exposed_m: 0.020
-  standoff_m: 0.12        # taller surroundings: pre-grasp higher
+  standoff_m: 0.16        # taller surroundings: pre-grasp higher
   open_width_m: 0.052     # user: leave space, the connector is big. 15 mm body + ~18 mm each side. Not wider: the aux stands 52 mm away and the -y finger would sit ~6 mm from it at 60 mm
   lift_test_m: 0.005
   lift_m: 0.08

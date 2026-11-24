@@ -4,6 +4,11 @@ part: NAUO49              # CAD part used as the plug prior: 15 x 7.5 x 50 mm, w
 thickness_m: 0.0075       # across the jaws (thin axis)
 yaw_cue: wide_faces       # yaw from the surface normals of the flat faces seen from the left and right
 min_points: 200           # plug points per view
+marker:               # teal sticker. Measured 2026-11-23 in 5 close views (2950 px): H 89-96, S 132-255, V 87-148 (p5-p95). OpenCV HSV on the BGR frame
+  hue: [[84, 98]]
+  sat: [110, 255]
+  val: [75, 170]
+  min_px: 60
 scan:
   height_m: 0.228         # camera above the board top
   lateral_m: 0.07         # sweep half width
@@ -16,8 +21,8 @@ points:
 grasp:
   clear_m: 0.012          # fingertip above the board top
   band_m: 0.012           # jaw band height above the fingertip
-  top_margin_m: 0.008     # plug top must stay this far above the band
-  standoff_m: 0.09        # pre-grasp above the grasp point
+  top_margin_m: 0.002     # plug top must stay this far above the band
+  standoff_m: 0.14        # pre-grasp above the grasp point
   open_width_m: 0.0315    # jaw opening during the descent (7.5 mm + 2 x 12 mm)
   lift_test_m: 0.005
   lift_m: 0.08

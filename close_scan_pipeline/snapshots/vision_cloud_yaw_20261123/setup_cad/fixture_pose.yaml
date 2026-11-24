@@ -1,0 +1,9 @@
+# Where the CAD fixture sits in the robot base frame. Edit and save: the publisher re-reads this file every 2 s, RViz updates by itself.
+# Nominal CAD placement: cradle plugs at x = 0.25 m (USB y = -0.05 m), socket board at x = 0.55 m. Initial offset = camera-measured USB plug (0.2707, -0.0150) minus the CAD plug (0.250, -0.050);
+# z offset puts the cradle bottom on the measured table height. Tune by eye against the live camera cloud, then keep the numbers.
+# Placed from the measured white board strip (12 views, test 2 + grid g1, 2026-11-19): strip centre x 0.2660 y 0.0230 m, yaw 94.30 deg (CAD strip long edge is 90 deg), top face z -0.018 m.
+# Check: with only that, the CAD plug lands 4.2 mm from the independently measured plug (x 0.2699, y -0.0265, top 0.025 m). Redo with tools/board_yaw.py if the board is moved.
+# The previous nominal placement (no offset, yaw 0) is in fixture_pose.yaml.nominal, the single-cloud ICP fit in fixture_pose.yaml.fitted.
+anchor_m: [0.25, -0.05, 0.0]
+offset_m: [0.0062, 0.0171, 0.0106]
+yaw_deg: 2.95

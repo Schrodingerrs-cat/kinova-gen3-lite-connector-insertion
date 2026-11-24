@@ -1,0 +1,152 @@
+{
+ "run": "run_20261123_220010_orbit_series2_1_usb",
+ "stage1": {
+  "run": "/home/pinaka/kinova/work/grasp_runs/run_20261123_220010_orbit_series2_1_usb",
+  "views": 5,
+  "connector": "usb",
+  "part": "NAUO49",
+  "yaw_cue": "wide_faces",
+  "core_footprint_mm": [
+   17.76132611051452,
+   11.927641427529794
+  ],
+  "nominal_normal": 91.26721954345703,
+  "face_ratio": 22.12121212121212,
+  "yaw_deg": 91.8219099849956,
+  "yaw_left": 87.94087381892534,
+  "yaw_right": 95.31761321856825,
+  "x": 0.2545533241756776,
+  "y": 0.07229136318518124,
+  "z0": -0.005429719509433556,
+  "z1": 0.02027069983183042,
+  "footprint_mm": [
+   17.76132611051452,
+   11.927641427529794
+  ],
+  "along_strip_mm": 49.998220170930175,
+  "across_strip_mm": -0.2902232786647753,
+  "loo_mm": 2.9129272367037027,
+  "strip_dir": 92.99500287874045,
+  "gates": [
+   {
+    "name": "plug points in every view",
+    "ok": true,
+    "detail": "plug points per view [345, 807, 598, 496, 756] (>= 200); board yaw spread 1.09 deg is reported only, the board orientation is not a condition"
+   },
+   {
+    "name": "plug centre repeatable leaving a view out",
+    "ok": true,
+    "detail": "largest shift 2.9 mm (<= 3)"
+   },
+   {
+    "name": "plug has a clearly wider side",
+    "ok": true,
+    "detail": "pixels facing the dominant direction 91 deg: 730, facing the perpendicular: 33, ratio 22.12 (>= 1.3, and >= 300 pixels)"
+   },
+   {
+    "name": "wide-face yaw: both opposite faces seen and agreeing",
+    "ok": true,
+    "detail": "face on one side 87.9 deg (365 px), face on the other side 95.3 deg (405 px), difference 7.4 (<= 12); mean 91.8 deg"
+   }
+  ],
+  "passed": true
+ },
+ "grasp": {
+  "started": "2026-11-23T22:00:49",
+  "connector": "usb",
+  "standoff_m": 0.14,
+  "board_top": -0.010811419153268054,
+  "plug_top": 0.02016565306822254,
+  "T_BG": [
+   [
+    0.9994944757691651,
+    0.03179296945744271,
+    0.0,
+    0.2545533241756776
+   ],
+   [
+    0.03179296945744271,
+    -0.9994944757691651,
+    0.0,
+    0.07229136318518124
+   ],
+   [
+    0.0,
+    -0.0,
+    -1.0,
+    0.0011885808467319466
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "open_width_m": 0.0315,
+  "stages": [
+   {
+    "name": "at pre-grasp",
+    "t": 1795489255.1,
+    "gripper": -0.0003531319409608841
+   },
+   {
+    "name": "jaws open",
+    "t": 1795489258.3,
+    "gripper": 0.6177916694641113,
+    "position": 0.6177916694641113
+   },
+   {
+    "name": "20 mm above the grasp point",
+    "t": 1795489262.3,
+    "gripper": 0.6168499282836915,
+    "tcp": [
+     0.2539,
+     0.0721,
+     0.0209
+    ]
+   },
+   {
+    "name": "at grasp pose",
+    "t": 1795489265.9,
+    "gripper": 0.616849001312256,
+    "tcp": [
+     0.2542,
+     0.0722,
+     0.001
+    ]
+   },
+   {
+    "name": "closed",
+    "t": 1795489267.7,
+    "gripper": 0.8129003700256348,
+    "position": 0.8129003700256348,
+    "contact": false,
+    "gap_mm": 0.4,
+    "note": "finger reading does not decide"
+   },
+   {
+    "name": "5 mm lift",
+    "t": 1795489270.9,
+    "gripper": 0.8102043045043946,
+    "finger_change": 0.0027
+   },
+   {
+    "name": "lifted 80 mm, camera check",
+    "t": 1795489277.0,
+    "gripper": 0.810203377532959,
+    "held": true,
+    "depth_between_tips": 0.113,
+    "table_depth": 0.256,
+    "position": 0.810203377532959
+   },
+   {
+    "name": "held for 5 s, then jaws opened where the arm is (no put-back)",
+    "t": 1795489285.9,
+    "gripper": -0.0005122767627239227
+   }
+  ],
+  "finished": "2026-11-23T22:01:25",
+  "note": "Physical hold is NOT verified by software: judge from the images and the operator."
+ }
+}

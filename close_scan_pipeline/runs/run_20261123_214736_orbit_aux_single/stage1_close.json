@@ -1,0 +1,40 @@
+{
+ "run": "/home/pinaka/kinova/work/grasp_runs/run_20261123_214736_orbit_aux_single",
+ "views": 5,
+ "connector": "aux",
+ "part": "NAUO53",
+ "yaw_cue": "none",
+ "core_footprint_mm": [
+  14.44398353131367,
+  8.052543026757712
+ ],
+ "elongation": 1.7937170262012763,
+ "nominal_normal": 48.0,
+ "yaw_deg": null,
+ "yaw_note": "footprint 14.4 x 8.1 mm: no flat-face cue, the jaw direction is chosen from the point cloud at grasp time",
+ "x": 0.25706612645006593,
+ "y": -0.032189011098814446,
+ "z0": -0.007128858604184622,
+ "z1": 0.02873894656226138,
+ "footprint_mm": [
+  14.44398353131367,
+  8.052543026757712
+ ],
+ "along_strip_mm": -49.19510065654203,
+ "across_strip_mm": -3.3657761008021003,
+ "loo_mm": 2.525643861391519,
+ "strip_dir": 92.98858318341158,
+ "gates": [
+  {
+   "name": "plug points in every view",
+   "ok": true,
+   "detail": "plug points per view [362, 466, 343, 573, 791] (>= 100); board yaw spread 0.89 deg is reported only, the board orientation is not a condition"
+  },
+  {
+   "name": "plug centre repeatable leaving a view out",
+   "ok": true,
+   "detail": "largest shift 2.5 mm (<= 3)"
+  }
+ ],
+ "passed": true
+}

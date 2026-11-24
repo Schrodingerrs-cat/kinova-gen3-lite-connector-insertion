@@ -1,0 +1,141 @@
+{
+ "run": "run_20261123_214736_orbit_aux_single",
+ "stage1": {
+  "run": "/home/pinaka/kinova/work/grasp_runs/run_20261123_214736_orbit_aux_single",
+  "views": 5,
+  "connector": "aux",
+  "part": "NAUO53",
+  "yaw_cue": "none",
+  "core_footprint_mm": [
+   14.44398353131367,
+   8.052543026757712
+  ],
+  "elongation": 1.7937170262012763,
+  "nominal_normal": 48.0,
+  "yaw_deg": null,
+  "yaw_note": "footprint 14.4 x 8.1 mm: no flat-face cue, the jaw direction is chosen from the point cloud at grasp time",
+  "x": 0.25706612645006593,
+  "y": -0.032189011098814446,
+  "z0": -0.007128858604184622,
+  "z1": 0.02873894656226138,
+  "footprint_mm": [
+   14.44398353131367,
+   8.052543026757712
+  ],
+  "along_strip_mm": -49.19510065654203,
+  "across_strip_mm": -3.3657761008021003,
+  "loo_mm": 2.525643861391519,
+  "strip_dir": 92.98858318341158,
+  "gates": [
+   {
+    "name": "plug points in every view",
+    "ok": true,
+    "detail": "plug points per view [362, 466, 343, 573, 791] (>= 100); board yaw spread 0.89 deg is reported only, the board orientation is not a condition"
+   },
+   {
+    "name": "plug centre repeatable leaving a view out",
+    "ok": true,
+    "detail": "largest shift 2.5 mm (<= 3)"
+   }
+  ],
+  "passed": true
+ },
+ "grasp": {
+  "started": "2026-11-23T21:48:57",
+  "connector": "aux",
+  "standoff_m": 0.14,
+  "board_top": -0.012703458891196548,
+  "plug_top": 0.010042957634872151,
+  "T_BG": [
+   [
+    0.9986399434462787,
+    0.052136967246027316,
+    0.0,
+    0.25706612645006593
+   ],
+   [
+    0.052136967246027316,
+    -0.9986399434462787,
+    0.0,
+    -0.032189011098814446
+   ],
+   [
+    0.0,
+    -0.0,
+    -1.0,
+    -0.004703458891196548
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "open_width_m": 0.0315,
+  "stages": [
+   {
+    "name": "at pre-grasp",
+    "t": 1795488542.8,
+    "gripper": -0.0002580217447131872
+   },
+   {
+    "name": "jaws open",
+    "t": 1795488546.0,
+    "gripper": 0.6176890228271484,
+    "position": 0.6176890228271484
+   },
+   {
+    "name": "20 mm above the grasp point",
+    "t": 1795488550.1,
+    "gripper": 0.616845231628418,
+    "tcp": [
+     0.2558,
+     -0.0323,
+     0.0149
+    ]
+   },
+   {
+    "name": "at grasp pose",
+    "t": 1795488553.7,
+    "gripper": 0.6168462203979493,
+    "tcp": [
+     0.2564,
+     -0.0323,
+     -0.005
+    ]
+   },
+   {
+    "name": "closed",
+    "t": 1795488555.4,
+    "gripper": 0.81261782913208,
+    "position": 0.81261782913208,
+    "contact": false,
+    "gap_mm": 0.4,
+    "note": "finger reading does not decide"
+   },
+   {
+    "name": "5 mm lift",
+    "t": 1795488558.6,
+    "gripper": 0.8100809555053712,
+    "finger_change": 0.0025
+   },
+   {
+    "name": "lifted 80 mm, camera check",
+    "t": 1795488564.7,
+    "gripper": 0.8100818824768067,
+    "held": true,
+    "depth_between_tips": 0.11,
+    "table_depth": 0.23,
+    "position": 0.8100818824768067
+   },
+   {
+    "name": "held for 5 s, then jaws opened where the arm is (no put-back)",
+    "t": 1795488573.7,
+    "gripper": -0.000490618008747697
+   }
+  ],
+  "finished": "2026-11-23T21:49:33",
+  "note": "Physical hold is NOT verified by software: judge from the images and the operator."
+ }
+}

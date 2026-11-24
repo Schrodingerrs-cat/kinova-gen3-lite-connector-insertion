@@ -4,6 +4,29 @@ Branch `sahil`. Kinova Gen3 Lite, wrist-mounted RealSense D405, ROS 2 Humble. Wo
 Goal: find a cable connector in its cradle with the wrist camera, then pick it. USB-A plug first, then the aux (6.35 mm) jack, then the power plug.
 This folder holds the tools, the per-connector settings, the run results and the reasons behind each design choice. The team's own grasp code was changed only for safety (first commit on this branch). Method 2's local edits are patch files in `method2_patches/`.
 
+## 2026-11-23 update: vision-only pipeline (working version, saved as `snapshots/vision_cloud_yaw_20261123/`)
+
+The CAD is no longer used to find or measure anything. Each run finds the plug itself:
+
+1. Home view: the plug's marker colour is searched over the whole reachable workspace (profiles in `connectors/*.yaml`, `marker:`; measured in close views: USB teal H 89-96, aux light pink H 155-173, power dark blue H 100-103, OpenCV HSV on the BGR frame). Not visible: search view 1 (10 cm forward, 4 cm down, wrist tilted back down at the board), then search view 2 (lower), each followed by a screened return home.
+2. Close pose straight above the marker (re-detected, sweep re-planned if it moved more than 8 mm), then a left-to-right sweep aimed at the plug (30 mm/s along the line, joints at most 10 deg/s, eased start and stop).
+3. Stage 1 from the run's own views: plug points by marker colour plus dark pixels, board top and outline measured from the white board around the marker, centre repeatability. The board's yaw is reported, not a pass/fail condition.
+4. Grasp: depth from the measured board top and the measured plug top (aux and power: median of the views where the marker tape stands up, a tape lying flat is ignored), jaws open 140 mm above the grasp point (160 for power, above the bent cable), then down in two stages. A finger-path check against the run's own point cloud refuses the grasp if 20 or more points sit in the swept fingers. The wrist-camera hold rule decides held or not. After 5 s the jaws open where the arm is.
+5. The CAD fixture stays in MoveIt for arm collision only (`fixture_from_board.py` places it on the measured board). Plugs and cables are never in the planning scene.
+
+Jaw direction in THIS saved version comes from the point cloud (USB: the direction most near-vertical surface faces, the wide faces; aux and power: the direction with the fewest cloud points in the finger path, ties to the measured board direction). It grasped from varying angles, which is not wanted for the IBVS stage, so the next change is a fixed-orientation variant in separate files (jaws along the measured board direction, flat faces left and right, as in the CAD). This saved version stays untouched as the cloud-yaw reference.
+
+Results with this version (one layout each, not a repeatability test): aux HELD 5 times (several positions along the board), USB HELD 1 of 2 (the first run failed the face-agreement gate, 11.4 deg, before the gate was changed), power HELD 1 of 2 (the first run failed the board-yaw spread gate at 2.08 deg, which is no longer a gate). One aux run was refused by 0.01 mm at the plug-top margin and re-run by hand: the code has no automatic retry. Run records are in `runs/run_20261123_2*`.
+
+Run it (one process per pick, in the order named, repeats allowed):
+```
+source ~/kinova/ins/repo/Code/Grasp/ros_env.sh
+tools/run_stack_method2.sh rviz:=false                # own terminal
+python3 tools/go_home.py --execute
+python3 tools/pick.py usb aux power                   # plan only, moves nothing
+python3 tools/pick.py usb aux power --execute         # real motion, e-stop in reach
+```
+
 ## Status (honest)
 
 | item | state |

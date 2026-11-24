@@ -30,6 +30,7 @@ sys.path.insert(0, str(HERE))
 import connector  # noqa: E402
 import scan_grid  # noqa: E402  (method 2 robot_ros on the path)
 import plug_points as pp  # noqa: E402
+import vision  # noqa: E402
 import stage1_close  # noqa: E402
 from example_interfaces.msg import Bool  # noqa: E402
 from robot_ros import Robot  # noqa: E402
@@ -65,15 +66,15 @@ def hold_check(robot, h):
     return bool(tips < h["tip_max_m"] and table - tips > h["margin_m"]), tips, table
 
 
-def sticker_top(views, res, board, spread=0.006):
-    """Barrel top: per view the 90th percentile height of the bright sticker blob nearest the plug centre, median over views."""
+def sticker_top(views, res, board, spec, spread=0.006):
+    """Plug top: per view the 90th percentile height of the marker-colour blob nearest the plug centre, median over views."""
     tops = []
     for v in views:
         f = np.load(v)
         d, c, K, T = f["depth"].astype(np.float32), f["color"], f["K"], f["T_BC"]
         ok = (d > 0.08) & (d < 0.8) & (np.abs(d - cv2.medianBlur(d, 5)) < 0.004)
         hsv = cv2.cvtColor(c, cv2.COLOR_BGR2HSV)
-        m = ((hsv[..., 0] >= 75) & (hsv[..., 0] <= 105) & (hsv[..., 1] >= 100) & (hsv[..., 2] >= 80)).astype(np.uint8)
+        m = vision.marker_mask(hsv, spec).astype(np.uint8)
         m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n, lab, st, cen = cv2.connectedComponentsWithStats(m)
         cam = np.linalg.inv(T) @ np.r_[res["x"], res["y"], board + 0.01, 1]
@@ -85,52 +86,55 @@ def sticker_top(views, res, board, spread=0.006):
         vv, uu = np.nonzero((lab == i) & ok)
         z = d[vv, uu]
         P = np.c_[(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z] @ T[:3, :3].T + T[:3, 3]
-        if len(P) >= 25:
+        far = float(np.hypot(*(np.median(P[:, :2], axis=0) - [res["x"], res["y"]]))) if len(P) else 9.9
+        if len(P) >= 25 and far <= 0.015:     # the blob must be the plug's own marker, not a reflection elsewhere
             tops.append(float(np.percentile(P[:, 2], 90)))
-    print("barrel top per view above the board (mm): %s" % [round((t - board) * 1e3, 1) for t in tops])
-    if len(tops) < 3 or np.ptp(tops) > spread:
-        raise SystemExit("barrel top not consistent between views: no grasp")
+        else:
+            print("  view %s: blob with %d points %.0f mm from the plug centre skipped" % (v.stem, len(P), far * 1e3))
+    print("plug top per view above the board (mm): %s" % [round((t - board) * 1e3, 1) for t in tops])
+    raised = [t for t in tops if t - board >= 0.015]     # a tape lying flat reads board level: it says nothing about the plug top, so it is ignored
+    if len(raised) < len(tops):
+        print("  ignored %d view(s) where the marker reads under 15 mm above the board (tape lying flat)" % (len(tops) - len(raised)))
+    tops = raised
+    if len(tops) < 2:
+        raise SystemExit("plug top not measured: fewer than 2 views show the marker raised: no grasp")
+    med = float(np.median(tops))
+    kept = [t for t in tops if abs(t - med) <= 0.006]
+    if len(kept) < len(tops):
+        print("  dropped %d view(s) more than 6 mm from the median %.1f mm (marker tape lying flat or hidden in that view)" % (len(tops) - len(kept), (med - board) * 1e3))
+    if len(kept) < 2 or np.ptp(kept) > spread:
+        raise SystemExit("plug top not consistent between views: no grasp")
+    tops = kept
     return float(np.median(tops)), len(tops)
 
 
 def measure(run, prof):
     gr = prof["grasp"]
     views = sorted((run / "method2_perception/scan").glob("view_*.npz"))
-    pr = pp.prior(views, prof["part"])
-    data = pp.points(views, pr, prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
+    pr = pp.prior(views, prof["marker"])
+    data = pp.points(views, pr, prof["marker"], prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
     res = json.loads((run / "stage1_close.json").read_text())
     if prof["grasp"]["top_rule"] == "sticker_p90":
-        top, n = sticker_top(views, res, pr["board_top"], gr.get("top_spread_m", 0.006))
+        top, n = sticker_top(views, res, pr["board_top"], prof["marker"], gr.get("top_spread_m", 0.006))
         return pr["board_top"], top, n, res
     core = np.vstack([d["pts"] for d in data])
     core = core[np.hypot(core[:, 0] - res["x"], core[:, 1] - res["y"]) <= 0.006]
     return pr["board_top"], float(np.percentile(core[:, 2], 90)), len(core), res
 
 
-def main():
+def main(argv=None, robot=None, fault=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", type=pathlib.Path)
-    ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--execute", action="store_true")
     ap.add_argument("--name", default="grasp")
     ap.add_argument("--connector", default="usb", help="profile in ~/kinova/work/connectors")
     ap.add_argument("--hold-then-open", type=float, default=0.0, help="after the camera says HELD, wait this many s (operator looks), then just open the jaws where the arm is. 0 = keep holding")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     prof = connector.load(a.connector)
     gr = prof["grasp"]
     CLEAR, BAND, TOP_MARGIN, STANDOFF, LIFT_TEST, LIFT = gr["clear_m"], gr["band_m"], gr["top_margin_m"], gr["standoff_m"], gr["lift_test_m"], gr["lift_m"]
-    if a.fresh and not a.execute:
-        sys.exit("--fresh moves the arm: add --execute")
-    if a.fresh:
-        cmd = [sys.executable, "-u", str(HERE / "scan_orbit.py"), "--connector", a.connector, "--execute", "--name", a.name]
-        out = subprocess.run(cmd, capture_output=True, text=True).stdout
-        print(out)
-        m = re.search(r"Saved to (\S+)", out)
-        if not m:
-            sys.exit("scan did not finish, no grasp")
-        a.run = pathlib.Path(m.group(1))
     if not a.run:
-        sys.exit("give --run RUN_DIR or --fresh")
+        sys.exit("give --run RUN_DIR (pick.py does scan and grasp in one go)")
     run = a.run.resolve()
     res = stage1_close.evaluate(run, None, a.connector)
     (run / "stage1_close.json").write_text(json.dumps(res, indent=1))
@@ -145,10 +149,10 @@ def main():
     print("       fingertip z %.4f (%.0f mm above the board), jaw band to %.4f, plug top %.0f mm above the band" % (z_tcp, CLEAR * 1e3, z_tcp + BAND, (top - z_tcp - BAND) * 1e3))
     if gr.get("min_exposed_m") and exposed < gr["min_exposed_m"]:
         sys.exit("measured stand-off %.0f mm is below the plausible minimum %.0f mm: no grasp" % (exposed * 1e3, gr["min_exposed_m"] * 1e3))
-    if ncore < 3 or top - (z_tcp + BAND) < TOP_MARGIN:
+    if ncore < 2 or top - (z_tcp + BAND) < TOP_MARGIN:
         sys.exit("plug top not measured well enough or too low for this jaw band: no grasp")
-    def chain(flip):
-        T = pose(res["x"], res["y"], z_tcp, res["yaw_deg"], flip)
+    def chain(flip, yaw):
+        T = pose(res["x"], res["y"], z_tcp, yaw, flip)
         zg = T[:3, 2]
         pre, l5, lift = T.copy(), T.copy(), T.copy()
         pre[:3, 3] -= zg * STANDOFF
@@ -162,27 +166,40 @@ def main():
     width = gr["open_width_m"]
     open_pos = float(np.interp(width, tab[::-1, 1], tab[::-1, 0]))
     to_tool = np.linalg.inv(scan_grid_tcp(gp))
-    rclpy.init()
-    robot = Robot("grasp_plug", background=True)
-    fault = {"on": False}
-    robot.create_subscription(Bool, "/fault_controller/internal_fault", lambda m: fault.__setitem__("on", bool(m.data)), 10)
+    if robot is None:
+        rclpy.init()
+        robot = Robot("grasp_plug", background=True)
+        fault = {"on": False}
+        robot.create_subscription(Bool, "/fault_controller/internal_fault", lambda m: fault.__setitem__("on", bool(m.data)), 10)
     if not robot.wait_ready(10):
         sys.exit("no driver / controller")
     robot.spin_until(lambda: False, 1.0)
     arm = Arm(robot, mo, scan_grid_tcp(gp), cfg["scan"]["table_z_m"] - 0.005, gp["close_cmd"])
     if np.max(np.abs(np.degrees(robot.q) - HOME_Q)) > 2 or fault["on"] or robot.grip_pos_msr is None or robot.grip_pos_msr > 0.05:
         sys.exit("arm must be at project home, no fault, gripper open")
+    views = sorted((run / "method2_perception/scan").glob("view_*.npz"))
+    cloud = vision.run_cloud(views)
+    centre = np.array([res["x"], res["y"]])
+    yaws = [res["yaw_deg"]] if res.get("yaw_deg") is not None else list(range(0, 180, 15))
+    options = sorted((len(vision.finger_hits(cloud, centre, [np.cos(np.radians(y)), np.sin(np.radians(y)), 0], width, z_tcp)), abs((y - res.get("strip_dir", 90.0) + 90) % 180 - 90), y) for y in yaws)   # ties: closest to the measured board direction (the plugs sit in holes aligned with the board)
+    if res.get("yaw_deg") is None:
+        print("jaw direction chosen from the cloud (fewest points in the finger path, then nearest to the measured board direction): %s" % [(int(y), int(n)) for n, _, y in options[:5]])
     best = None
-    for flip in (1, -1):
-        T_BG, T_pre, T_lift5, T_lift = chain(flip)
-        plan, why = arm.plan_chain(T_pre @ to_tool, T_BG @ to_tool, T_lift @ to_tool, cfg["grasp"]["max_joint_dev_deg"])
-        print("jaw axis %s: %s" % ("+y side" if flip > 0 else "-y side", why if plan is None else "ok, largest joint change from home %.0f deg" % np.abs((plan["q_pre"] - np.degrees(robot.q) + 180) % 360 - 180).max()))
-        if plan is not None:
-            dev = np.abs((plan["q_pre"] - np.degrees(robot.q) + 180) % 360 - 180).max()
-            if best is None or dev < best[0]:
-                best = (dev, plan, (T_BG, T_pre, T_lift5, T_lift))
+    for nhit, _, yaw in options:
+        if nhit >= 20:
+            continue
+        for flip in (1, -1):
+            T_BG, T_pre, T_lift5, T_lift = chain(flip, yaw)
+            plan, why = arm.plan_chain(T_pre @ to_tool, T_BG @ to_tool, T_lift @ to_tool, cfg["grasp"]["max_joint_dev_deg"])
+            print("jaw axis yaw %.0f deg, %s side: %s" % (yaw, "+" if flip > 0 else "-", why if plan is None else "ok, largest joint change from home %.0f deg" % np.abs((plan["q_pre"] - np.degrees(robot.q) + 180) % 360 - 180).max()))
+            if plan is not None:
+                dev = np.abs((plan["q_pre"] - np.degrees(robot.q) + 180) % 360 - 180).max()
+                if best is None or dev < best[0]:
+                    best = (dev, plan, (T_BG, T_pre, T_lift5, T_lift))
+        if best is not None:
+            break
     if best is None:
-        sys.exit("motion plan failed for both jaw directions")
+        sys.exit("no jaw direction is both clear of cloud points in the finger path and reachable: no grasp")
     _, plan, (T_BG, T_pre, T_lift5, T_lift) = best
     print("grasp: tcp x %.4f y %.4f z %.4f, jaw axis yaw %.1f deg, approach straight down, pre-grasp %.0f mm above" % (*T_BG[:3, 3], np.degrees(np.arctan2(T_BG[1, 1], T_BG[0, 1])) % 360, STANDOFF * 1e3))
     lim = np.array(yaml_limits()) - 3
@@ -190,9 +207,13 @@ def main():
     if np.any(np.abs((np.degrees(allq) + 180) % 360 - 180) > lim):
         sys.exit("a waypoint is outside the joint limits minus margin")
     print("plan ok: pre-grasp joints %s deg, descent %.1f s, lift %.1f s, jaws open to %.1f mm (gripper %.3f)" % (np.round(plan["q_pre"], 1), plan["down"][1], plan["lift"][1], width * 1e3, open_pos))
+    hits = vision.finger_hits(cloud, T_BG[:2, 3], T_BG[:3, 1], width, T_BG[2, 3])
+    print("finger check on the run's own point cloud: %d of %d points inside the swept finger boxes%s" % (len(hits), len(cloud), "" if len(hits) == 0 else ", nearest at %.1f mm from the grasp centre" % (np.min(np.hypot(hits[:, 0] - T_BG[0, 3], hits[:, 1] - T_BG[1, 3])) * 1e3)))
+    if len(hits) >= 20:
+        sys.exit("something (cable or another plug) stands in the finger path: %d cloud points, no grasp" % len(hits))
     if not a.execute:
         print("Nothing moved. Add --execute to grasp.")
-        os._exit(0)
+        return None
 
     out = run / "grasp"
     out.mkdir(exist_ok=True)
@@ -214,11 +235,11 @@ def main():
             if np.linalg.norm(m[:3, 3] - goal[:3, 3]) > 0.003 or Rotation.from_matrix(goal[:3, :3].T @ m[:3, :3]).magnitude() > np.deg2rad(1.5):
                 raise RuntimeError("not at the %s pose" % name)
 
-    if not prof.get("scene_include_plugs"):
-        subprocess.run([sys.executable, str(HERE / "add_fixture_to_scene.py"), "--remove", "--include-plugs"], capture_output=True)
-        subprocess.run([sys.executable, str(HERE / "add_fixture_to_scene.py")], capture_output=True)
-    else:
-        subprocess.run([sys.executable, str(HERE / "add_fixture_to_scene.py"), "--include-plugs"], capture_output=True)
+    import fixture_from_board
+    fixture_from_board.place(run, a.connector)
+    # planning scene: the CAD fixture for the arm only; plugs and cables are never in it (they come from the camera, see cloud_clear)
+    subprocess.run([sys.executable, str(HERE / "add_fixture_to_scene.py"), "--remove", "--include-plugs"], capture_output=True)
+    subprocess.run([sys.executable, str(HERE / "add_fixture_to_scene.py")], capture_output=True)
     print("REAL MOTION. Grasp. E-stop in reach.", flush=True)
     try:
         arm.go_joints(plan["q_pre"])
@@ -274,7 +295,7 @@ def main():
         report_run.main(run)
     except Exception as e:
         print("report failed: %s" % e, flush=True)
-    os._exit(0)
+    return log
 
 
 def scan_grid_tcp(gp):
@@ -289,5 +310,19 @@ def yaml_limits():
     return yaml.safe_load(open(scan_grid.G / "config/grasp.yaml"))["motion"]["joint_limits_deg"]
 
 
+def cli():
+    code = 0
+    try:
+        main()
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, flush=True)
+            code = 1
+        else:
+            code = e.code or 0
+    sys.stdout.flush()
+    os._exit(code)
+
+
 if __name__ == "__main__":
-    main()
+    cli()

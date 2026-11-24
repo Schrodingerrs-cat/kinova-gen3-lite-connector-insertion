@@ -3,11 +3,11 @@
 
   python3 ~/kinova/work/tools/stage1_close.py RUN_DIR [--placement P1 --cable A] [--ref X Y] [--no-log]
 
-Plug points: sticker-teal or dark pixels near the board-predicted plug, below the plug top + 6 mm, cable excluded (tools/plug_points.py). Gates, all must hold:
-  1 plug points in every view (>= 200 each) and the board strip found in every view (150 x 51 mm +-15 %) with its yaw agreeing between views within 2 deg
-  2 wide-face yaw: the plug's flat (+-y) faces seen from the left (normal +y) and from the right (normal -y), each with >= 150 pixels, agree within 5 deg and the mean is within 10 deg of the board strip direction
-    (the CAD relation: the wide faces are parallel to the strip)
-  3 plug centre repeatable: leaving each view out in turn moves the box centre by <= 3 mm (largest pairwise)
+Plug points: marker-colour or dark pixels near the marker found by colour in the views, below the measured marker top + tolerance, cable excluded (tools/plug_points.py). Gates, all must hold:
+  1 plug points in every view (the board outline and its yaw are reported, not a condition: the board may sit at any angle)
+  2 plug centre repeatable: leaving each view out in turn moves the box centre by <= 3 mm (largest pairwise; per-connector loo_mm)
+  3 USB only (yaw_cue wide_faces): the direction its near-vertical faces mostly face (the wide faces carry more pixels than the narrow ones, from the run's depth) must dominate the perpendicular direction
+    (ratio >= 1.3); the opposite faces along it must each have >= 150 pixels and agree within 12 deg. No board or strip direction is used. The other plugs: the jaw direction is chosen from the point cloud at grasp time
   4 (only with --ref X Y) the plug centre is within 8 mm of the hand-measured position
 Reported: yaw of the wide faces (deg), plug centre in the base frame and in the board frame (along the strip / across it, relative to the strip centre), footprint, height range.
 """
@@ -33,44 +33,49 @@ def evaluate(run, ref=None, name="usb"):
     views = sorted((run / "method2_perception/scan").glob("view_*.npz"))
     prof = connector.load(name)
     gates, out = [], dict(run=str(run), views=len(views), connector=name, part=prof["part"], yaw_cue=prof["yaw_cue"])
-    B = [by.board(v) for v in views]
-    pr = pp.prior(views, prof["part"])
-    data = pp.points(views, pr, prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
+    pr = pp.prior(views, prof["marker"])
+    data = pp.points(views, pr, prof["marker"], prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
     npts = [len(d["pts"]) for d in data]
+    B = [by.board(v, pr["plug_centre"][:2]) for v in views]
     byaw = (np.array([b["yaw"] for b in B]) + 90) % 180 - 90
-    bspread = float(np.ptp(byaw))
-    bok = all(130 <= b["size"][0] <= 170 and 40 <= b["size"][1] <= 62 for b in B)
-    gates.append(("plug points and board in every view", min(npts) >= prof["min_points"] and bok and bspread <= 2.0, "plug points per view %s (>= %d), board %s mm, board yaw spread %.2f deg (<= 2)" % (npts, prof["min_points"], [tuple(int(round(s)) for s in b["size"]) for b in B][:3], bspread)))
+    gates.append(("plug points in every view", min(npts) >= prof["min_points"], "plug points per view %s (>= %d); board yaw spread %.2f deg is reported only, the board orientation is not a condition" % (npts, prof["min_points"], float(np.ptp(byaw)))))
     strip = pr["board_yaw"]
-    if prof["yaw_cue"] == "wide_faces":
-        wf = pp.wide_face_yaw(views, data, strip)
-        side = {}
-        for s in ("+y", "-y"):
-            items = [w for w in wf if w["side"] == s and w["pixels"] > 0]
-            px = sum(w["pixels"] for w in items)
-            if items and px:
-                z = sum(w["pixels"] * np.exp(2j * np.radians(w["yaw"])) for w in items)
-                side[s] = (float(np.degrees(np.angle(z)) / 2 % 180), px)
-        if len(side) == 2 and min(p for _, p in side.values()) >= 150:
-            d_lr = abs((side["+y"][0] - side["-y"][0] + 90) % 180 - 90)
-            z = sum(p * np.exp(2j * np.radians(a)) for a, p in side.values())
-            yaw = float(np.degrees(np.angle(z)) / 2 % 180)
-            d_strip = (yaw - strip + 90) % 180 - 90
-            gates.append(("wide-face yaw agrees left vs right and with the strip", d_lr <= 5 and abs(d_strip) <= 10, "left face %.1f deg (%d px), right face %.1f deg (%d px), difference %.1f (<= 5); mean %.1f deg, %+.1f from the strip (<= 10)" % (side["+y"][0], side["+y"][1], side["-y"][0], side["-y"][1], d_lr, yaw, d_strip)))
-            out.update(yaw_deg=yaw, yaw_left=side["+y"][0], yaw_right=side["-y"][0], yaw_vs_strip=float(d_strip))
-        else:
-            gates.append(("wide-face yaw agrees left vs right and with the strip", False, "needs >= 150 wide-face pixels from both the left and the right side, got %s" % {k: v[1] for k, v in side.items()}))
-    else:
-        out.update(yaw_deg=float(strip % 180), yaw_note="no yaw cue for this connector: jaws along the board strip direction")
     rng = np.random.default_rng(1)
 
     def merged(ix):
         return np.vstack([d["pts"][rng.choice(len(d["pts"]), min(600, len(d["pts"])), replace=False)] for i, d in enumerate(data) if i in ix])
-    full = pp.fit_box(merged(set(range(len(data)))))
-    cen = np.array([pp.fit_box(merged(set(range(len(data))) - {k}))["centre"] for k in range(len(data))])
+    allix = set(range(len(data)))
+    full = pp.fit_box(merged(allix))
+    cen = np.array([pp.fit_box(merged(allix - {k}))["centre"] for k in range(len(data))])
     loo = float(max(np.linalg.norm(a - b) for a in cen for b in cen) * 1e3)
     loo_tol = prof.get("loo_mm", 3.0)
     gates.append(("plug centre repeatable leaving a view out", loo <= loo_tol, "largest shift %.1f mm (<= %g)" % (loo, loo_tol)))
+    # the plug's own orientation: the direction its near-vertical faces mostly face (the wide faces carry more pixels than the narrow ones)
+    cbox = full
+    out.update(core_footprint_mm=[cbox["long"] * 1e3, cbox["short"] * 1e3])
+    if prof["yaw_cue"] == "wide_faces":
+        normal_dir, ratio, n_peak, n_perp = pp.dominant_face_dir(views, data)
+        out.update(nominal_normal=normal_dir, face_ratio=float(ratio))
+        gates.append(("plug has a clearly wider side", normal_dir is not None and ratio >= 1.3 and n_peak >= 300, "pixels facing the dominant direction %s deg: %d, facing the perpendicular: %d, ratio %.2f (>= 1.3, and >= 300 pixels)" % ("-" if normal_dir is None else "%.0f" % normal_dir, n_peak, n_perp, ratio)))
+        if normal_dir is not None and gates[-1][1]:
+            wf = pp.wide_face_yaw(views, data, normal_dir, tol=20)
+            side = {}
+            for sd in ("+y", "-y"):
+                items = [w for w in wf if w["side"] == sd and w["pixels"] > 0]
+                px = sum(w["pixels"] for w in items)
+                if items and px:
+                    z = sum(w["pixels"] * np.exp(2j * np.radians(w["yaw"])) for w in items)
+                    side[sd] = (float(np.degrees(np.angle(z)) / 2 % 180), px)
+            if len(side) == 2 and min(p for _, p in side.values()) >= 150:
+                d_lr = abs((side["+y"][0] - side["-y"][0] + 90) % 180 - 90)
+                z = sum(p * np.exp(2j * np.radians(a)) for a, p in side.values())
+                yaw = float(np.degrees(np.angle(z)) / 2 % 180)
+                gates.append(("wide-face yaw: both opposite faces seen and agreeing", d_lr <= 12, "face on one side %.1f deg (%d px), face on the other side %.1f deg (%d px), difference %.1f (<= 12); mean %.1f deg" % (side["+y"][0], side["+y"][1], side["-y"][0], side["-y"][1], d_lr, yaw)))
+                out.update(yaw_deg=yaw, yaw_left=side["+y"][0], yaw_right=side["-y"][0])
+            else:
+                gates.append(("wide-face yaw: both opposite faces seen and agreeing", False, "needs >= 150 wide-face pixels from both opposite sides, got %s" % {k: v[1] for k, v in side.items()}))
+    else:
+        out.update(yaw_deg=None, yaw_note="footprint %.1f x %.1f mm: no flat-face cue, the jaw direction is chosen from the point cloud at grasp time" % (cbox["long"] * 1e3, cbox["short"] * 1e3))
     yb = np.radians(strip - 90)
     u, v = np.array([-np.sin(yb), np.cos(yb)]), np.array([np.cos(yb), np.sin(yb)])
     rel = full["centre"] - pr["board_centre"]
@@ -97,7 +102,7 @@ def main():
     print("Stage 1 (close scan) check of %s" % a.run.name)
     for g in res["gates"]:
         print("  [%s] %s: %s" % ("ok " if g["ok"] else "FAIL", g["name"], g["detail"]))
-    print("  plug: wide-face yaw %s, centre x %.4f y %.4f m, in the board frame %+.1f mm along the strip / %+.1f mm across it (relative to the strip centre), footprint %.1f x %.1f mm" % (("%.1f deg" % res["yaw_deg"]) if "yaw_deg" in res else "not accepted", res["x"], res["y"], res["along_strip_mm"], res["across_strip_mm"], *res["footprint_mm"]))
+    print("  plug: yaw %s, centre x %.4f y %.4f m, in the board frame %+.1f mm along the strip / %+.1f mm across it (relative to the strip centre), footprint %.1f x %.1f mm" % (("%.1f deg" % res["yaw_deg"]) if res.get("yaw_deg") is not None else ("chosen at grasp time" if "yaw_deg" in res else "not accepted"), res["x"], res["y"], res["along_strip_mm"], res["across_strip_mm"], *res["footprint_mm"]))
     print("  RESULT: %s" % ("PASS" if res["passed"] else "FAIL"))
     (a.run / "stage1_close.json").write_text(json.dumps(res, indent=1))
     if not a.no_log:

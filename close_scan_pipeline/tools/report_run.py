@@ -40,10 +40,10 @@ def build(run):
         s1["yaw_cue"] = "wide_faces" if "yaw_left" in s1 else "none"
     part = s1.get("part", "NAUO49")
     prof = connector.load(s1.get("connector", "usb"))
-    pr = pp.prior(views, part)
-    data = pp.points(views, pr, prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
-    boards = [by.board(v) for v in views]
-    wf = pp.wide_face_yaw(views, data, pr["board_yaw"])
+    pr = pp.prior(views, prof["marker"])
+    data = pp.points(views, pr, prof["marker"], prof["points"]["radius_m"], top_tol=prof["points"].get("top_tol_m", 0.006), open_mm=prof["points"].get("open_mm"), mode=prof["points"].get("mode", "teal_or_dark"))
+    boards = [by.board(v, pr["plug_centre"][:2]) for v in views]
+    wf = pp.wide_face_yaw(views, data, s1.get("nominal_normal", pr["board_yaw"]))
     offs = json.loads((run / "orbit.json").read_text())["offsets_m"] if (run / "orbit.json").exists() else [0] * len(views)
     return views, s1, pr, data, boards, wf, offs
 
@@ -106,7 +106,7 @@ def plot_top(run, data, s1, pr):
     fig, ax = plt.subplots(figsize=(6.2, 5.2))
     for k, d in enumerate(data):
         ax.scatter(d["pts"][:, 1] * 1e3, d["pts"][:, 0] * 1e3, s=3, color=COL[k % len(COL)], alpha=0.5, label="view %d" % k)
-    if s1.get("yaw_cue") == "wide_faces":
+    if s1.get("yaw_cue") == "wide_faces" and s1.get("yaw_deg") is not None:
         a_ = np.radians(s1["yaw_deg"] - 90)
         ex, ey = np.array([np.cos(a_), np.sin(a_)]) * 7.5e-3, np.array([-np.sin(a_), np.cos(a_)]) * 3.75e-3
         c = np.array([s1["x"], s1["y"]])
@@ -181,7 +181,7 @@ def main(run, note=None):
     plot_board(run, boards)
     made = ["01_views_plug_overlay", "02_board_yaw_per_view"]
     if s1.get("yaw_cue") == "wide_faces":
-        plot_faces(run, wf, pr["board_yaw"])
+        plot_faces(run, wf, s1.get("nominal_normal", pr["board_yaw"]))
         made.append("03_plug_wide_face_yaw")
     plot_top(run, data, s1, pr)
     made.append("04_plug_points_top_view")

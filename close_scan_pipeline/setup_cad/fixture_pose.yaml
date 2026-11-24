@@ -5,5 +5,5 @@
 # Check: with only that, the CAD plug lands 4.2 mm from the independently measured plug (x 0.2699, y -0.0265, top 0.025 m). Redo with tools/board_yaw.py if the board is moved.
 # The previous nominal placement (no offset, yaw 0) is in fixture_pose.yaml.nominal, the single-cloud ICP fit in fixture_pose.yaml.fitted.
 anchor_m: [0.25, -0.05, 0.0]
-offset_m: [0.0157, 0.0228, 0.0050]
-yaw_deg: 4.30
+offset_m: [0.0062, 0.0171, 0.0106]
+yaw_deg: 2.95

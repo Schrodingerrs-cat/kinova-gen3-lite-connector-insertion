@@ -1,17 +1,15 @@
-"""Shared by plug_box.py: the board-derived prior and the plug-only points per view (same selection as fit_plug_local.py)."""
+"""Plug-only points per view, selected by the connector marker colour and the measured prior from vision.py (no CAD)."""
 import pathlib
 import sys
 
 import cv2
 import numpy as np
-import trimesh
-import yaml
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import board_yaw as by  # noqa: E402
+import vision  # noqa: E402
 
-D = pathlib.Path.home() / "kinova/work/setup_cad"
+prior = vision.prior
 
 
 def rz(deg):
@@ -19,25 +17,7 @@ def rz(deg):
     return np.array([[np.cos(t), -np.sin(t), 0], [np.sin(t), np.cos(t), 0], [0, 0, 1.0]])
 
 
-def prior(views, part="NAUO49"):
-    B = [by.board(v) for v in views]
-    yaw_b = float(np.degrees(np.angle(np.exp(2j * np.radians(np.array([b["yaw"] for b in B]))).mean())) / 2 % 180)
-    cen_b = np.mean([b["centre"] for b in B], axis=0)
-    zb = float(np.mean([b["z"] for b in B]))
-    parts = yaml.safe_load(open(D / "parts_index.yaml"))
-    strip = [p for p in parts if p["id"] == "NAUO43"][0]
-    pp = [p for p in parts if p["id"] == part][0]
-    strip_top = trimesh.load(D / "parts" / strip["file"]).bounds[1][2]
-    c0 = np.array([0.25, -0.05])
-    R0 = rz(yaw_b - 90)
-    t_xy = cen_b - (R0[:2, :2] @ (np.array(strip["centre_m"][:2]) - c0) + c0)
-    t = np.array([t_xy[0], t_xy[1], zb - strip_top])
-    mesh = trimesh.load(D / "parts" / pp["file"])
-    mp = trimesh.Trimesh((mesh.vertices - np.r_[c0, 0]) @ R0.T + np.r_[c0, 0] + t, mesh.faces)
-    return dict(board_yaw=yaw_b, board_centre=cen_b, board_top=zb, plug_centre=np.r_[mp.bounds.mean(axis=0)[:2], 0.0], plug_top=float(mp.bounds[1][2]))
-
-
-def points(views, pr, radius=0.020, max_pts=1500, top_tol=0.006, open_mm=None, mode="teal_or_dark"):
+def points(views, pr, spec, radius=0.020, max_pts=1500, top_tol=0.006, open_mm=None, mode="teal_or_dark"):
     out = []
     for v in views:
         f = np.load(v)
@@ -45,12 +25,11 @@ def points(views, pr, radius=0.020, max_pts=1500, top_tol=0.006, open_mm=None, m
         med = cv2.medianBlur(d, 5)
         ok = (d > 0.08) & (d < 0.8) & (np.abs(d - med) < 0.004)
         hsv = cv2.cvtColor(c, cv2.COLOR_BGR2HSV)
-        teal = (hsv[..., 0] >= 80) & (hsv[..., 0] <= 105) & (hsv[..., 1] >= 70) & (hsv[..., 2] >= 35) & (hsv[..., 2] <= 140)
+        mark = vision.marker_mask(hsv, spec)
         if mode == "sticker":
-            bright = ((hsv[..., 0] >= 75) & (hsv[..., 0] <= 105) & (hsv[..., 1] >= 100) & (hsv[..., 2] >= 80)).astype(np.uint8)
-            cand = (cv2.morphologyEx(bright, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) > 0) & ok
+            cand = (cv2.morphologyEx(mark.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) > 0) & ok
         else:
-            cand = (teal | (hsv[..., 2] < 90)) & ok
+            cand = (mark | (hsv[..., 2] < 90)) & ok
         vv, uu = np.nonzero(cand)
         z = d[vv, uu]
         P = np.c_[(uu - K[0, 2]) * z / K[0, 0], (vv - K[1, 2]) * z / K[1, 1], z] @ T[:3, :3].T + T[:3, 3]
@@ -89,10 +68,8 @@ def fit_box(P, lo_pct=5, hi_pct=95):
                 z0=float(np.percentile(P[:, 2], 5)), z1=float(np.percentile(P[:, 2], 95)), th=th, ext=ext)
 
 
-def wide_face_yaw(views, data, strip_dir, tol=30):
-    """Yaw of the plug's wide (+-y) faces from the surface normals of the plug pixels. Returns a list of dict(view, side, pixels, yaw): the normal direction (deg, mod 180) of near-vertical faces
-    whose normal lies within tol deg of the board strip direction; side is '+y' or '-y' by the mean normal direction (left or right face)."""
-    out = []
+def _vertical_normals(views, data):
+    """Per view the surface normals (azimuth deg, unit vectors) of the plug pixels that lie on near-vertical faces, from the depth of the run. Yields (view name, azimuth array, normal array)."""
     for v, d in zip(views, data):
         f = np.load(v)
         dep, K, T = f["depth"].astype(np.float32), f["K"], f["T_BC"]
@@ -112,11 +89,33 @@ def wide_face_yaw(views, data, strip_dir, tol=30):
         g = np.isfinite(n) & (n > 0) & (np.abs(A).max(1) < 0.006) & (np.abs(B).max(1) < 0.006)
         N, P = N[g] / n[g, None], Pm[vv[g], uu[g]]
         N[(N * (T[:3, 3] - P)).sum(1) < 0] *= -1
-        ang = np.degrees(np.arctan2(N[:, 1], N[:, 0]))
-        wide = (np.abs(N[:, 2]) < 0.35) & (np.abs((ang - strip_dir + 90) % 180 - 90) < tol)
+        vert = np.abs(N[:, 2]) < 0.35
+        yield d["name"], np.degrees(np.arctan2(N[vert][:, 1], N[vert][:, 0])), N[vert]
+
+
+def dominant_face_dir(views, data, half=15):
+    """Direction (deg, mod 180) in which most near-vertical plug surface faces, and how much it dominates the perpendicular direction. The plug's wide faces carry more pixels than its narrow ones,
+    so the peak is the wide-face normal (the jaws close along it) and ratio = pixels near the peak / pixels near the perpendicular. Returns (direction, ratio, pixels at peak, pixels at perpendicular)."""
+    ang = np.concatenate([a for _, a, _ in _vertical_normals(views, data)])
+    if len(ang) < 50:
+        return None, 0.0, 0, 0
+    best = max(range(0, 180, 2), key=lambda t: np.sum(np.abs((ang - t + 90) % 180 - 90) < half))
+    peak = int(np.sum(np.abs((ang - best + 90) % 180 - 90) < half))
+    perp = int(np.sum(np.abs((ang - best) % 180 - 90) < half))
+    z = np.exp(2j * np.radians(ang[np.abs((ang - best + 90) % 180 - 90) < half]))
+    return float(np.degrees(np.angle(z.mean())) / 2 % 180), peak / max(perp, 1), peak, perp
+
+
+def wide_face_yaw(views, data, strip_dir, tol=30):
+    """Yaw of the plug's wide faces: the normal direction (deg, mod 180) of near-vertical faces whose normal lies within tol deg of strip_dir (the dominant face direction from dominant_face_dir).
+    Returns a list of dict(view, side, pixels, yaw); side is '+y' or '-y' by the sign of the mean normal along strip_dir (the two opposite faces)."""
+    out = []
+    d0 = np.array([np.cos(np.radians(strip_dir)), np.sin(np.radians(strip_dir)), 0])
+    for name, ang, N in _vertical_normals(views, data):
+        wide = np.abs((ang - strip_dir + 90) % 180 - 90) < tol
         if wide.sum() == 0:
-            out.append(dict(view=d["name"], side="none", pixels=0, yaw=None))
+            out.append(dict(view=name, side="none", pixels=0, yaw=None))
             continue
         a = ang[wide]
-        out.append(dict(view=d["name"], side="+y" if np.mean(N[wide][:, 1]) > 0 else "-y", pixels=int(wide.sum()), yaw=float(np.degrees(np.angle(np.exp(2j * np.radians(a)).mean())) / 2 % 180)))
+        out.append(dict(view=name, side="+y" if np.mean(N[wide] @ d0) > 0 else "-y", pixels=int(wide.sum()), yaw=float(np.degrees(np.angle(np.exp(2j * np.radians(a)).mean())) / 2 % 180)))
     return out

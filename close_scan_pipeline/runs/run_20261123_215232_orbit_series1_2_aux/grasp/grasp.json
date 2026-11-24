@@ -1,0 +1,98 @@
+{
+ "started": "2026-11-23T21:53:15",
+ "connector": "aux",
+ "standoff_m": 0.14,
+ "board_top": -0.01217262880852965,
+ "plug_top": 0.011092051374946994,
+ "T_BG": [
+  [
+   0.9984445635520199,
+   0.05575350673649581,
+   0.0,
+   0.25674307613158187
+  ],
+  [
+   0.05575350673649581,
+   -0.9984445635520199,
+   0.0,
+   -0.03196724316623252
+  ],
+  [
+   0.0,
+   -0.0,
+   -1.0,
+   -0.004172628808529651
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "open_width_m": 0.0315,
+ "stages": [
+  {
+   "name": "at pre-grasp",
+   "t": 1795488800.0,
+   "gripper": -0.0002815638922154904
+  },
+  {
+   "name": "jaws open",
+   "t": 1795488803.2,
+   "gripper": 0.6177831413269044,
+   "position": 0.6177831413269044
+  },
+  {
+   "name": "20 mm above the grasp point",
+   "t": 1795488807.3,
+   "gripper": 0.6168772430419922,
+   "tcp": [
+    0.2562,
+    -0.0319,
+    0.0156
+   ]
+  },
+  {
+   "name": "at grasp pose",
+   "t": 1795488810.9,
+   "gripper": 0.6168763160705567,
+   "tcp": [
+    0.2563,
+    -0.0319,
+    -0.0045
+   ]
+  },
+  {
+   "name": "closed",
+   "t": 1795488812.7,
+   "gripper": 0.8125368736267091,
+   "position": 0.8125368736267091,
+   "contact": false,
+   "gap_mm": 0.4,
+   "note": "finger reading does not decide"
+  },
+  {
+   "name": "5 mm lift",
+   "t": 1795488815.9,
+   "gripper": 0.8098181900024415,
+   "finger_change": 0.0027
+  },
+  {
+   "name": "lifted 80 mm, camera check",
+   "t": 1795488821.9,
+   "gripper": 0.8098163360595704,
+   "held": true,
+   "depth_between_tips": 0.111,
+   "table_depth": 0.253,
+   "position": 0.8098163360595704
+  },
+  {
+   "name": "held for 5 s, then jaws opened where the arm is (no put-back)",
+   "t": 1795488830.9,
+   "gripper": -0.0004915596753358841
+  }
+ ],
+ "finished": "2026-11-23T21:53:50",
+ "note": "Physical hold is NOT verified by software: judge from the images and the operator."
+}

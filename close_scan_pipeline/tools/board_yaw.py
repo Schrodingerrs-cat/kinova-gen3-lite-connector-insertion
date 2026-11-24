@@ -16,7 +16,8 @@ import numpy as np
 TABLE = -0.041
 
 
-def board(view):
+def board(view, centre=None):
+    """Board strip from one view. centre=(x, y) of the marker (measured) puts the search window around it and the table height is taken from the view; without it the old fixed window is used."""
     f = np.load(view)
     d, c, K, T = [f[k] for k in ("depth", "color", "K", "T_BC")]
     hsv = cv2.cvtColor(c, cv2.COLOR_BGR2HSV)
@@ -26,19 +27,31 @@ def board(view):
     P = np.c_[(u[ok] - K[0, 2]) * z / K[0, 0], (v[ok] - K[1, 2]) * z / K[1, 1], z] @ T[:3, :3].T + T[:3, 3]
     H, S, V = [hsv[..., i][ok].astype(int) for i in range(3)]
     white = (S < 110) & (V > 150) & (H >= 85) & (H <= 125)
-    box = (P[:, 0] > 0.2) & (P[:, 0] < 0.4) & (P[:, 1] > -0.15) & (P[:, 1] < 0.25) & (P[:, 2] > TABLE + 0.012)
+    x0, y0, table = 0.2, -0.15, TABLE
+    if centre is None:
+        box = (P[:, 0] > 0.2) & (P[:, 0] < 0.4) & (P[:, 1] > -0.15) & (P[:, 1] < 0.25) & (P[:, 2] > TABLE + 0.012)
+    else:
+        x0, y0 = centre[0] - 0.15, centre[1] - 0.20
+        win = (np.abs(P[:, 0] - centre[0]) < 0.15) & (np.abs(P[:, 1] - centre[1]) < 0.20)
+        hz, ez = np.histogram(P[win, 2], bins=np.arange(-0.15, 0.15, 0.002))
+        table = float(ez[np.argmax(hz)] + 0.001)   # the table is the dominant plane in the window
+        box = win & (P[:, 2] > table + 0.012)
     Q = P[white & box]
-    hist, edges = np.histogram(Q[:, 2], bins=np.arange(TABLE, 0.12, 0.003))
+    hist, edges = np.histogram(Q[:, 2], bins=np.arange(table, table + 0.16, 0.003))
     zc = edges[np.argmax(hist)] + 0.0015
     Q = Q[np.abs(Q[:, 2] - zc) < 0.006]
     g = np.zeros((400, 300), np.uint8)
-    gx = ((Q[:, 0] - 0.2) * 1000).astype(int)
-    gy = ((Q[:, 1] + 0.15) * 1000).astype(int)
+    gx = ((Q[:, 0] - x0) * 1000).astype(int)
+    gy = ((Q[:, 1] - y0) * 1000).astype(int)
     keep = (gx >= 0) & (gx < 300) & (gy >= 0) & (gy < 400)
     g[gy[keep], gx[keep]] = 1
     g = cv2.morphologyEx(g, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
     n, lab, st, _ = cv2.connectedComponentsWithStats(g)
     i = 1 + int(np.argmax(st[1:, 4]))
+    if centre is not None:   # the white component closest to the marker, not just the largest (a white sheet may lie elsewhere)
+        py, px = (centre[1] - y0) * 1000, (centre[0] - x0) * 1000
+        cand = [j for j in range(1, n) if st[j, 4] >= 500]
+        i = min(cand or [i], key=lambda j: np.min(np.hypot(*(np.argwhere(lab == j) - [py, px]).T)))
     ys, xs = np.nonzero(lab == i)
     hull = cv2.convexHull(np.c_[xs, ys].astype(np.float32))
     (cx, cy), (w, h), _ = cv2.minAreaRect(hull)
@@ -46,7 +59,7 @@ def board(view):
     e = [corners[(k + 1) % 4] - corners[k] for k in range(4)]
     long_edge = max(e, key=lambda a: np.hypot(*a))
     yaw = np.degrees(np.arctan2(long_edge[1], long_edge[0])) % 180
-    return dict(yaw=yaw, size=sorted([w, h], reverse=True), centre=(0.2 + cx / 1000, -0.15 + cy / 1000), z=zc, pts=len(Q), grid=lab == i, corners=corners)
+    return dict(yaw=yaw, size=sorted([w, h], reverse=True), centre=(x0 + cx / 1000, y0 + cy / 1000), z=zc, table=table, pts=len(Q), grid=lab == i, corners=corners)
 
 
 def main():

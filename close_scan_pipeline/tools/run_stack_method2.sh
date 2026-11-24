@@ -17,7 +17,7 @@ ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true pointcloud.e
 wait_for camera "Open profile" 30 || exit 1
 ros2 launch kinova_gen3_lite_moveit_config robot.launch.py robot_ip:=192.168.1.10 launch_rviz:=false > logs/humble/moveit.log 2>&1 &
 wait_for moveit "You can start planning" 40 || exit 1
-python3 "$HOME/kinova/work/tools/add_fixture_to_scene.py" > logs/humble/scene.log 2>&1 && echo ">> CAD fixture and table are in the MoveIt planning scene" || echo "!! fixture not added to the planning scene, see logs/humble/scene.log"
+python3 "$HOME/kinova/work/tools/add_fixture_to_scene.py" > logs/humble/scene.log 2>&1 && echo ">> CAD fixture and table are in the MoveIt planning scene (arm collision only, no plugs)" || echo "!! fixture not added to the planning scene (see logs/humble/scene.log)"
 echo ">> arm, camera and MoveIt are up; starting method 2's grasp node (dry_run default true)"
 # our saved RViz scene (arm + CAD fixture + camera image) replaces the grasp node's own RViz windows; pass rviz:=false to start none
 OURS=1; for a in "$@"; do [ "$a" = "rviz:=false" ] && OURS=0; done
