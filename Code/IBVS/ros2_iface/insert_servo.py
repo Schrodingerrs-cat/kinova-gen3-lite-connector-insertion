@@ -4,7 +4,7 @@
 Each cycle: detect the wire's marker, turn its pixel centre + side length into a 3-D offset of the camera from where it must be
 (centre/side from the reference images in config/insertion_refs.yaml), and run a quintic Cartesian line of the tool by that offset
 (MoveIt path, same smooth profile as the grasp pipeline). Stage 1 -> pre-insertion image, brief stop, stage 2 -> insertion image."""
-import argparse, pathlib, subprocess, sys, time
+import argparse, datetime, pathlib, subprocess, sys, time
 import cv2, numpy as np, yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -14,6 +14,14 @@ from robot_ros import Robot, matrix, JOINTS  # noqa: E402
 from builtin_interfaces.msg import Duration  # noqa: E402
 from control_msgs.action import FollowJointTrajectory  # noqa: E402
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint  # noqa: E402
+from run_record import Recorder, git_state  # noqa: E402
+
+REC = None                                              # run recorder, set in main
+
+
+def record(r, stage, color, c, goal, d, side, cmd=None):
+    if REC is not None:
+        REC.step(stage, color, c, goal, d, side, cmd, r.tool_matrix()[:3, 3] * 1e3, np.degrees(r.q))
 
 
 class NoPath(Exception):
@@ -42,7 +50,7 @@ def observe(r, marker_id, tries=30):
         corners, ids, _ = detect_markers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
         if ids is not None and marker_id in ids.ravel():
             c = corners[list(ids.ravel()).index(marker_id)].reshape(4, 2)
-            return c, np.asarray(K, float)
+            return c, np.asarray(K, float), color
     raise RuntimeError("marker %d not seen: stopping" % marker_id)
 
 
@@ -86,15 +94,18 @@ def recover(r, T_goal, speed):
 def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol_m, name):
     """Stop-and-observe: quintic chunks of at most step_m, each ending at rest."""
     while True:
-        c, K = observe(r, marker_id)
+        c, K, color = observe(r, marker_id)
         d, side = offset(c, K, goal, L)
         n = float(np.linalg.norm(d))
         print("%s: marker %.0f px, still %.1f mm to go (x %+.1f y %+.1f z %+.1f)" % (name, side, n * 1e3, *(d * 1e3)), flush=True)
         if n < tol_m:
+            record(r, name, color, c, goal, d, side)
             return
         step = d * min(1.0, step_m / n)
         T_goal = goal_pose(r, T_EC, hold_R, step)
-        print("  step in base frame (mm): %s, tool height %.0f mm" % (np.round((T_goal[:3, 3] - r.tool_matrix()[:3, 3]) * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True)
+        cmd = T_goal[:3, 3] - r.tool_matrix()[:3, 3]
+        print("  step in base frame (mm): %s, tool height %.0f mm" % (np.round(cmd * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True)
+        record(r, name, color, c, goal, d, side, cmd)
         try:
             r.send_line(line(r, T_goal), max(0.6, float(np.linalg.norm(step)) / speed))
         except NoPath as e:
@@ -138,12 +149,15 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, ho
         if time.time() - last > 0.5:
             print("%s: marker %.0f px, still %.1f mm to go, camera-frame offset (mm) %s, tool height %.0f mm" % (name, side, n * 1e3, np.round(d * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True); last = time.time()
         if n < tol_m:
+            record(r, name, color, c, goal, d, side)
             r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
             return
         v = min(speed, max(0.01, 2.0 * n))
         h = min(n, v * horizon)
         try:
-            stream(r, line(r, goal_pose(r, T_EC, hold_R, d * (h / n))), h / v)
+            T_goal = goal_pose(r, T_EC, hold_R, d * (h / n))
+            record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
+            stream(r, line(r, T_goal), h / v)
         except NoPath as e:
             recover(r, e.T_goal, speed)
 
@@ -155,6 +169,7 @@ def main():
     ap.add_argument("--step-m", type=float, default=0.04, help="re-observe the marker after at most this much travel")
     ap.add_argument("--tol-mm", type=float, default=2.0)
     ap.add_argument("--continuous", action="store_true", help="re-plan on every frame while moving instead of stopping to look")
+    ap.add_argument("--out", type=pathlib.Path, help="run folder (default: Media/IBVS/run_<time>_insert_<wire>)")
     ap.add_argument("--pause", type=float, default=1.0, help="stop at the pre-insertion pose, s")
     a = ap.parse_args()
     refs = yaml.safe_load((ROOT / "config" / "insertion_refs.yaml").read_text())
@@ -167,6 +182,16 @@ def main():
         sys.exit("arm / MoveIt not ready")
     hold_R = r.tool_matrix()[:3, :3].copy()
     ins = dict(c=np.add(w["insert"]["c"], w["nudge_px"]), side=w["insert"]["side"])
+    global REC
+    folder = a.out or ROOT.parents[1] / "Media" / "IBVS" / ("run_%s_insert_%s" % (datetime.datetime.now().strftime("%Y%m%d_%H%M%S"), a.wire))
+    REC = Recorder(folder, dict(
+        started=datetime.datetime.now().isoformat(timespec="seconds"), command=sys.argv, wire=a.wire,
+        args={k: str(v) if isinstance(v, pathlib.Path) else v for k, v in vars(a).items()},
+        marker_id=w["marker_id"], marker_side_m=L, pre_goal=w["pre"], insertion_goal=dict(c=list(map(float, ins["c"])), side=ins["side"]),
+        nudge_px=w["nudge_px"], references=w, hand_eye=grasp["camera"], post_grasp_joints_deg=grasp["post_grasp"]["joint_waypoints_deg"][-1],
+        start_joints_deg=np.degrees(r.q).round(2).tolist(), held_tool_rotation=hold_R.round(4).tolist(), git=git_state(ROOT),
+        insertion_refs_file=(ROOT / "config" / "insertion_refs.yaml").read_text()))
+    print("recording to", folder, flush=True)
     try:
         for name, goal in (("pre-insertion", w["pre"]), ("insertion", ins)):
             if a.continuous:
@@ -176,8 +201,14 @@ def main():
             if name == "pre-insertion":
                 time.sleep(a.pause)
         print("at the socket entrance (%s)" % a.wire, flush=True)
+        REC.close("COMPLETED_AT_ENTRANCE")
     except BaseException as e:
-        r.stop(); print("STOPPED: %s" % e, flush=True); raise SystemExit(1)
+        try:
+            r.stop()
+        except Exception:
+            pass
+        print("STOPPED: %s" % e, flush=True)
+        REC.close("STOPPED", str(e) or type(e).__name__); raise SystemExit(1)
 
 
 if __name__ == "__main__":

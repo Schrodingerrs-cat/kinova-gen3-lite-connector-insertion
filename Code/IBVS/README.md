@@ -22,6 +22,8 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 | Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
 | Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
 
+Every run is recorded in `Media/IBVS/run_<time>_insert_<wire>/` (layout of `Media/RULES.md`): `config.json` (exactly what was run: command, arguments, wire references and nudge, hand-eye, start joints, git commit), `controller.log` (console), `trajectory.csv` (every observation: marker pixels, offsets, commanded step, tool pose, joints), `metrics.json`, `screenshots/`, `videos/servo.mp4` (green marker, red goal) and `plots/` (offset to goal, distance to go, marker size, marker path in the image, tool position, joints, commanded step). Redraw the plots: `python3 Code/IBVS/ros2_iface/run_record.py <run folder>`. If a run fails, add `failure_analysis.md` and move the folder to `Media/IBVS/Failed_runs/`.
+
 If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (continuous: after 6 frames in a row). Do not edit files while it runs. Start with the default mode, then `--continuous`.
 
 Camera: `insert_servo.py` reads the grasp stack's `/camera/camera/...` topics (check with `ros2 topic list | grep image_raw`). The old scripts expect `/eih_cam/...`.
