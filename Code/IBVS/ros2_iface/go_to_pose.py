@@ -123,6 +123,8 @@ def main():
     print("result:", result.result().result.error_string or "ok", "| final joints deg:", np.round(np.degrees(end), 2).tolist(),
           "| max error to target %.2f deg" % np.degrees(np.abs(end - target).max()))
     rclpy.shutdown()
+    if np.degrees(np.abs(end - target).max()) > 5:      # a faulted arm ignores moves but the controller still says success: stop the chain
+        sys.exit("ARM DID NOT MOVE TO THE TARGET (fault or e-stop?). Reset the fault: ros2 service call /fault_controller/reset_fault std_srvs/srv/Trigger")
 
 
 if __name__ == "__main__":
