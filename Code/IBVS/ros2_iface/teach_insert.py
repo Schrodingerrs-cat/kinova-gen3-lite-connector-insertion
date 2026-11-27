@@ -2,7 +2,7 @@
 """Teach one wire's goal from the real arm, no motion. Put the arm by hand where it should be (plug at the socket entrance for `insert`,
 the standoff for `pre`), then run this: it looks at the wire's marker for ~1 s and writes its centre and size into config/insertion_refs.yaml.
   python3 ros2_iface/teach_insert.py --wire usb --stage insert"""
-import argparse, datetime, json, pathlib, re, time
+import argparse, datetime, json, pathlib, re, sys, time
 import cv2, numpy as np, yaml
 import rclpy
 from rclpy.node import Node
@@ -10,6 +10,8 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image, JointState
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from ibvs.plug import finger_pair_x  # noqa: E402
 JOINTS = [f"joint_{i}" for i in range(1, 7)]
 DICTIONARY = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 if hasattr(cv2.aruco, "ArucoDetector"):
@@ -32,7 +34,7 @@ def main():
     rclpy.init(); node = Node("teach_insert"); got = {}
     node.create_subscription(Image, "/camera/camera/color/image_raw", lambda m: got.__setitem__("color", m), qos_profile_sensor_data)
     node.create_subscription(JointState, "/joint_states", lambda m: got.__setitem__("joints", dict(zip(m.name, m.position))), 10)
-    seen, last, t0 = [], None, time.time()
+    seen, plug, last, t0 = [], [], None, time.time()
     while len(seen) < a.frames and time.time() - t0 < 15:
         rclpy.spin_once(node, timeout_sec=0.1)
         m = got.pop("color", None)
@@ -43,6 +45,9 @@ def main():
         corners, ids, _ = detect(cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY))
         if ids is not None and wire["marker_id"] in ids.ravel():
             seen.append(corners[list(ids.ravel()).index(wire["marker_id"])].reshape(4, 2)); last = bgr
+            x = finger_pair_x(bgr)
+            if x is not None:
+                plug.append(x)
     if len(seen) < a.frames:
         raise SystemExit("marker %d seen in only %d of %d frames: nothing written" % (wire["marker_id"], len(seen), a.frames))
     c = np.median(np.array(seen), axis=0)
@@ -52,10 +57,13 @@ def main():
     wire[a.stage] = dict(c=[round(float(centre[0]), 1), round(float(centre[1]), 1)], side=round(side, 1))
     if a.stage == "insert":
         wire["nudge_px"] = [0, 0]                       # a taught goal needs no hand nudge
+        if len(plug) >= a.frames // 2:
+            wire["plug_x"] = round(float(np.median(plug)), 1)      # where the plug sat in the grasp when this goal was taught
 
     # only this wire's line changes, the comments of the file stay
-    line = "  %s: {marker_id: %d, pre: {c: %s, side: %s}, insert: {c: %s, side: %s}, nudge_px: %s}" % (
-        a.wire, wire["marker_id"], wire["pre"]["c"], wire["pre"]["side"], wire["insert"]["c"], wire["insert"]["side"], wire["nudge_px"])
+    line = "  %s: {marker_id: %d, pre: {c: %s, side: %s}, insert: {c: %s, side: %s}, nudge_px: %s%s}" % (
+        a.wire, wire["marker_id"], wire["pre"]["c"], wire["pre"]["side"], wire["insert"]["c"], wire["insert"]["side"], wire["nudge_px"],
+        ", plug_x: %s" % wire["plug_x"] if "plug_x" in wire else "")
     text = path.read_text()
     new, n = re.subn(r"^  %s:.*$" % a.wire, line.replace("\\", "\\\\"), text, flags=re.M)
     assert n == 1, "wire line not found in insertion_refs.yaml"

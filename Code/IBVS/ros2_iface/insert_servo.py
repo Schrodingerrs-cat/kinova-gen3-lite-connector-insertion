@@ -8,7 +8,7 @@ import argparse, datetime, pathlib, subprocess, sys, time
 import cv2, numpy as np, yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT.parent / "Grasp")); sys.path.insert(0, str(ROOT.parent / "Grasp" / "ros2_iface"))
+sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT.parent / "Grasp")); sys.path.insert(0, str(ROOT.parent / "Grasp" / "ros2_iface"))
 import rclpy  # noqa: E402
 from robot_ros import Robot, matrix, JOINTS  # noqa: E402
 from builtin_interfaces.msg import Duration  # noqa: E402
@@ -17,6 +17,7 @@ from rclpy.qos import qos_profile_sensor_data  # noqa: E402
 from sensor_msgs.msg import CameraInfo, Image, JointState  # noqa: E402
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint  # noqa: E402
 from run_record import Recorder, git_state  # noqa: E402
+from ibvs.plug import finger_pair_x  # noqa: E402
 
 REC = None                                              # run recorder, set in main
 
@@ -59,6 +60,13 @@ def grab_color(r, timeout=2.0):
     m = r._color
     img = np.frombuffer(m.data, np.uint8).reshape(m.height, m.step)[:, :m.width * 3].reshape(m.height, m.width, 3)
     return np.ascontiguousarray(img[:, :, ::-1] if m.encoding == "rgb8" else img), np.array(r._info.k).reshape(3, 3)
+
+
+def _finger_x(r):
+    try:
+        return finger_pair_x(grab_color(r)[0])
+    except RuntimeError:
+        return None
 
 
 def observe(r, marker_id, tries=30):
@@ -291,6 +299,7 @@ def main():
     ap.add_argument("--step-m", type=float, default=0.04, help="re-observe the marker after at most this much travel")
     ap.add_argument("--tol-px", type=float, default=9.0, help="done when the marker centre is within this many pixels of the goal, in x and in y")
     ap.add_argument("--tol-side-px", type=float, default=4.0, help="... and its side length within this many pixels of the goal's")
+    ap.add_argument("--plug-gain", type=float, default=1.0, help="move the insertion goal by this times how far the plug sits from where it sat when the goal was taught (0 = off)")
     ap.add_argument("--align-mm", type=float, default=15.0, help="insertion approach: forward motion starts only once the sideways error is below this (0 = no gate)")
     ap.add_argument("--back-off-m", type=float, default=0.15, help="after reaching the socket entrance, back straight out this far before anything else (0 = stay)")
     ap.add_argument("--stepwise", action="store_true", help="stop after every chunk to look again (default: continuous, re-plans on every frame while moving)")
@@ -315,14 +324,22 @@ def main():
             r.qd = np.array([d[j] for j in JOINTS])
     r.create_subscription(JointState, "/joint_states", joint_speeds, 10)
     hold_R = r.tool_matrix()[:3, :3].copy()
-    ins = dict(c=np.add(w["insert"]["c"], w["nudge_px"]), side=w["insert"]["side"])
+    plug_now, plug_shift = None, 0.0                        # the plug sits differently in the grasp every time: shift the goal by how much
+    if a.plug_gain > 0 and "plug_x" in w:
+        xs = [x for x in (_finger_x(r) for _ in range(15)) if x is not None]
+        if len(xs) >= 8:
+            plug_now = float(np.median(xs)); plug_shift = (plug_now - w["plug_x"]) * a.plug_gain
+            print("plug between the fingers at x = %.1f px (goal taught at %.1f): insertion goal moved %+.1f px sideways" % (plug_now, w["plug_x"], plug_shift), flush=True)
+        else:
+            print("WARNING: fingertips not found (%d of 15 frames): insertion goal not adjusted for the plug position" % len(xs), flush=True)
+    ins = dict(c=np.add(w["insert"]["c"], w["nudge_px"]) + np.array([plug_shift, 0.0]), side=w["insert"]["side"])
     global REC
     folder = a.out or ROOT.parents[1] / "Media" / "IBVS" / ("run_%s_insert_%s" % (datetime.datetime.now().strftime("%Y%m%d_%H%M%S"), a.wire))
     REC = Recorder(folder, dict(
         started=datetime.datetime.now().isoformat(timespec="seconds"), command=sys.argv, wire=a.wire,
         args={k: str(v) if isinstance(v, pathlib.Path) else v for k, v in vars(a).items()},
         marker_id=w["marker_id"], marker_side_m=L, pre_goal=w["pre"], insertion_goal=dict(c=list(map(float, ins["c"])), side=ins["side"]),
-        nudge_px=w["nudge_px"], references=w, hand_eye=grasp["camera"], post_grasp_joints_deg=grasp["post_grasp"]["joint_waypoints_deg"][-1],
+        nudge_px=w["nudge_px"], plug_x_taught=w.get("plug_x"), plug_x_now=plug_now, plug_shift_px=plug_shift, references=w, hand_eye=grasp["camera"], post_grasp_joints_deg=grasp["post_grasp"]["joint_waypoints_deg"][-1],
         start_joints_deg=np.degrees(r.q).round(2).tolist(), held_tool_rotation=hold_R.round(4).tolist(), git=git_state(ROOT),
         insertion_refs_file=(ROOT / "config" / "insertion_refs.yaml").read_text()))
     print("recording to", folder, flush=True)
