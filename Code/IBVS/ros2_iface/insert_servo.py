@@ -129,17 +129,18 @@ def gate(d, align_m):
 def send_smooth(r, pts, L, v, rest):
     """Send the joint waypoints of a line of Cartesian length L (without waiting). Time law: quintic in path position, so position, speed and
     acceleration are continuous; it starts at the speed the arm has now (no jerk when it replaces the running trajectory) and ends at
-    cruise speed v, or at rest. Returns the duration, and the Cartesian length still ahead."""
+    cruise speed v, or at rest. Returns the duration, the Cartesian length still ahead, and progress(t): how far along it should be t seconds after sending."""
     P = np.array(pts)
     full = np.linalg.norm(np.diff(P, axis=0), axis=1).sum()
     q_now = r.q.copy()
     ahead = P[int(np.argmin(np.linalg.norm(P - q_now, axis=1))) + 1:]       # the arm is already past the first points
+    none = (0.0, 0.0, lambda t: 0.0)
     if len(ahead) == 0:
-        return 0.0, 0.0
+        return none
     P = np.vstack([q_now, ahead])
     P = P[np.r_[True, np.linalg.norm(np.diff(P, axis=0), axis=1) > 1e-6]]
     if len(P) < 2:
-        return 0.0, 0.0
+        return none
     arc = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
     Lr = L * arc[-1] / max(full, 1e-9)
     u = arc / arc[-1]
@@ -168,23 +169,25 @@ def send_smooth(r, pts, L, v, rest):
         pt.time_from_start = Duration(sec=int(ti + 0.02), nanosec=int(((ti + 0.02) % 1) * 1e9)); traj.points.append(pt)
     goal = FollowJointTrajectory.Goal(); goal.trajectory = traj
     r.arm.send_goal_async(goal).add_done_callback(lambda f: setattr(r, "_goal", f.result()))
-    return T, Lr
+    return T, Lr, lambda tt: Lr * float(np.interp(tt, t, s))
 
 
 def go(r, T_EC, hold_R, step, v, rest):
     """Plan the straight line by `step` (camera frame) and send it. Returns what was sent, for the blocked check."""
     T_goal = goal_pose(r, T_EC, hold_R, step)
     start = r.tool_matrix()[:3, 3].copy()
-    T, Lr = send_smooth(r, line(r, T_goal), float(np.linalg.norm(step)), v, rest)
-    return dict(T=T, Lr=Lr, start=start, cmd=T_goal[:3, 3] - start)
+    T, Lr, prog = send_smooth(r, line(r, T_goal), float(np.linalg.norm(step)), v, rest)
+    return dict(T=T, Lr=Lr, prog=prog, t=time.time(), start=start, cmd=T_goal[:3, 3] - start)
 
 
 def check_moved(r, sent, fraction):
-    """No force sensor: contact shows as the arm not following the command. Stop if it moved less than `fraction` of what was sent."""
+    """No force sensor: contact shows as the arm not following the command. Stop if it moved less than `fraction` of what the plan says it should
+    have moved by now (0.2 s of tracking lag allowed; a plan without a time law counts as finished)."""
     moved = float(np.linalg.norm(r.tool_matrix()[:3, 3] - sent["start"]))
-    if sent["Lr"] > 0.004 and moved < fraction * sent["Lr"]:
+    expected = sent["Lr"] if "prog" not in sent else sent["prog"](max(0.0, time.time() - sent["t"] - 0.2))
+    if expected > 0.004 and moved < fraction * expected:
         r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
-        raise Blocked("arm blocked: moved %.1f mm of %.1f mm commanded (wall or plug contact?): stopped" % (moved * 1e3, sent["Lr"] * 1e3))
+        raise Blocked("arm blocked: moved %.1f mm where %.1f mm was expected (wall or plug contact?): stopped" % (moved * 1e3, expected * 1e3))
 
 
 def back_off(r, T_EC, hold_R, distance, speed):
@@ -251,7 +254,7 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, al
             record(r, name, color, c, goal, d, side)
             continue
         if sent is not None:
-            check_moved(r, sent, 0.5 if final else 0.12)                # was the last command followed?
+            check_moved(r, sent, 0.5 if final else 0.3)                # was the last command followed?
         if n < tol_m:
             record(r, name, color, c, goal, d, side)
             r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
