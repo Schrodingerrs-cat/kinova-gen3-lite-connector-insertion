@@ -1,0 +1,7 @@
+{
+  "outcome": "STOPPED",
+  "message": "arm blocked: moved 1.7 mm where 4.0 mm was expected (wall or plug contact?): stopped",
+  "duration_s": 34.3,
+  "observations": 389,
+  "final_distance_to_go_mm": 4.0
+}

@@ -1,0 +1,4 @@
+1795820415.421612 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+no /joint_states within 10 s: the arm driver is not running or has lost the arm
+restarting the arm driver (the old one is stopped first; nothing moves)
+!! Arm USB interface not found: micro-B cable, arm powered?
