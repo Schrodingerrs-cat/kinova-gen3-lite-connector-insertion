@@ -381,11 +381,26 @@ def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol, name, align_m
         check_moved(r, dict(start=start, Lr=float(np.linalg.norm(cmd))), 0.5)
 
 
+def check_wall(r, T_EC, history, K, side, L, window=1.5):
+    """The camera moves with the plug, so the marker must get closer as fast as the tool advances. If the tool advances 8 mm or more over the last
+    `window` s but the marker-measured distance shrank by less than 40% of it, the plug is pushing the board or sliding along it: stop."""
+    now = time.time()
+    z_hat = (r.tool_matrix() @ T_EC)[:3, 2]
+    history.append((now, r.tool_matrix()[:3, 3].copy(), K[0, 0] * L / side))
+    while history and now - history[0][0] > window:
+        history.pop(0)
+    t0, p0, z0 = history[0]
+    advance = float((history[-1][1] - p0) @ z_hat)
+    if advance > 0.008 and (z0 - history[-1][2]) < 0.4 * advance:
+        r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
+        raise Blocked("wall giving way: the tool advanced %.1f mm but the marker only got %.1f mm closer (plug pushing the board or sliding on it)" % (advance * 1e3, (z0 - history[-1][2]) * 1e3))
+
+
 def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol, name, align_m=None, horizon=1.2, final_m=0.015):
     """Keep looking while the arm moves. Every camera frame is recorded, but a new trajectory is sent only every ~half horizon
     (replacing it on every frame never lets the arm get going). Far away: cruise toward the goal, each piece ends at speed and the next
     one starts at the speed the arm has. Within final_m: one smooth move that ends at rest on the goal."""
-    lost, last, next_send, sent, final, why = 0, 0.0, 0.0, None, False, ""
+    lost, last, next_send, sent, final, why, history = 0, 0.0, 0.0, None, False, "", []
     while True:
         try:
             r.spin_until(lambda: False, 0.02)
@@ -402,6 +417,8 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol, name, alig
         lost = 0
         d, side = offset(c, K, goal, L)
         n = float(np.linalg.norm(d))
+        if name == "insertion":
+            check_wall(r, T_EC, history, K, side, L)
         if time.time() - last > 0.5:
             print("%s: marker %.0f px, still %.1f mm to go, camera-frame offset (mm) %s, tool height %.0f mm" % (name, side, n * 1e3, np.round(d * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True); last = time.time()
         if time.time() < next_send:
@@ -446,6 +463,7 @@ def main():
     ap.add_argument("--search-mm", type=float, default=4.0, help="if the push stops early, try sideways offsets up to this radius (0 = no search)")
     ap.add_argument("--teach-seated", action="store_true", help="at the entrance, wait for commands from a person (more/back/left/right/up/down/seated/stop) and record the seated pose")
     ap.add_argument("--command-file", type=pathlib.Path, default=pathlib.Path("/tmp/insert_command"), help="where --teach-seated reads its commands")
+    ap.add_argument("--back-out-only", action="store_true", help="only back straight out by --back-off-m from where the arm is (after a run that ended at the wall)")
     ap.add_argument("--no-release", action="store_true", help="after a successful push keep holding the plug (the back-off would pull it out again)")
     ap.add_argument("--back-off-m", type=float, default=0.15, help="after reaching the socket entrance, back straight out this far before anything else (0 = stay)")
     ap.add_argument("--stepwise", action="store_true", help="stop after every chunk to look again (default: continuous, re-plans on every frame while moving)")
@@ -470,6 +488,10 @@ def main():
             r.qd = np.array([d[j] for j in JOINTS])
     r.create_subscription(JointState, "/joint_states", joint_speeds, 10)
     hold_R = r.tool_matrix()[:3, :3].copy()
+    if a.back_out_only:
+        back_off(r, T_EC, hold_R, a.back_off_m, 0.01)
+        return
+    reached_insertion = [False]
     plug_now, plug_shift = None, 0.0                        # the plug sits differently in the grasp every time: shift the goal by how much
     if a.plug_gain > 0 and "plug_x" in w:
         xs = [x for x in (_finger_x(r) for _ in range(15)) if x is not None]
@@ -495,6 +517,7 @@ def main():
     try:
         for name, goal in (("pre-insertion", w["pre"]), ("insertion", ins)):
             align = a.align_mm / 1e3 if name == "insertion" and a.align_mm > 0 else None      # align sideways first, then go toward the wall
+            reached_insertion[0] = reached_insertion[0] or name == "insertion"
             try:
                 if a.continuous:
                     stage_continuous(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, (a.tol_px, a.tol_side_px), name, align)
@@ -548,7 +571,7 @@ def main():
         except Exception:
             pass
         print("STOPPED: %s" % e, flush=True)
-        if isinstance(e, Blocked) and a.back_off_m > 0:             # pressing on the plate: get out of contact before anything else moves
+        if (isinstance(e, Blocked) or reached_insertion[0]) and a.back_off_m > 0:      # at the wall: get out of contact before anything else moves
             try:
                 back_off(r, T_EC, hold_R, a.back_off_m, a.speed)
             except Exception as err:

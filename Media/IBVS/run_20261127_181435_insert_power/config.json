@@ -1,0 +1,131 @@
+{
+  "started": "2026-11-27T18:16:07",
+  "command": [
+    "ros2_iface/insert_servo.py",
+    "--wire",
+    "power",
+    "--out",
+    "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_181435_insert_power",
+    "--speed",
+    "0.03",
+    "--teach-seated",
+    "--command-file",
+    "/tmp/claude-1000/-home-aryans-cat-Documents-GitHub-VBRM-insertion/a0e1d410-83d7-49d7-a49e-25ade124febc/scratchpad/seat_cmd"
+  ],
+  "wire": "power",
+  "args": {
+    "wire": "power",
+    "speed": 0.03,
+    "step_m": 0.04,
+    "tol_px": 9.0,
+    "tol_side_px": 4.0,
+    "plug_gain": 1.0,
+    "align_mm": 15.0,
+    "push_mm": null,
+    "search_mm": 4.0,
+    "teach_seated": true,
+    "command_file": "/tmp/claude-1000/-home-aryans-cat-Documents-GitHub-VBRM-insertion/a0e1d410-83d7-49d7-a49e-25ade124febc/scratchpad/seat_cmd",
+    "no_release": false,
+    "back_off_m": 0.15,
+    "stepwise": false,
+    "out": "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_181435_insert_power",
+    "pause": 1.0,
+    "continuous": true
+  },
+  "marker_id": 10,
+  "marker_side_m": 0.03,
+  "pre_goal": {
+    "c": [
+      409,
+      225
+    ],
+    "side": 38
+  },
+  "insertion_goal": {
+    "c": [
+      466.3262560440616,
+      253.0
+    ],
+    "side": 95.3
+  },
+  "nudge_px": [
+    0,
+    0
+  ],
+  "plug_x_taught": 465.3,
+  "plug_x_now": 478.8262560440616,
+  "plug_shift_px": 13.526256044061597,
+  "references": {
+    "marker_id": 10,
+    "pre": {
+      "c": [
+        409,
+        225
+      ],
+      "side": 38
+    },
+    "insert": {
+      "c": [
+        452.8,
+        253.0
+      ],
+      "side": 95.3
+    },
+    "nudge_px": [
+      0,
+      0
+    ],
+    "plug_x": 465.3
+  },
+  "hand_eye": {
+    "hand_eye_xyz_m": [
+      -0.0080293,
+      -0.0495603,
+      -0.0909769
+    ],
+    "hand_eye_quat_xyzw": [
+      0.0097493,
+      -0.0046708,
+      -0.0127007,
+      0.9998609
+    ]
+  },
+  "post_grasp_joints_deg": [
+    36.1993,
+    -81.9997,
+    134.2784,
+    -49.1608,
+    122.4039,
+    -66.7142
+  ],
+  "start_joints_deg": [
+    36.19,
+    -82.08,
+    134.18,
+    -49.22,
+    122.31,
+    -66.69
+  ],
+  "held_tool_rotation": [
+    [
+      0.0465,
+      0.052,
+      0.9976
+    ],
+    [
+      -0.9989,
+      0.012,
+      0.0459
+    ],
+    [
+      -0.0096,
+      -0.9986,
+      0.0525
+    ]
+  ],
+  "git": {
+    "commit": "2130bc6",
+    "uncommitted_files_in_IBVS": []
+  },
+  "insertion_refs_file": "# Per-wire marker references read off Media/IBVS/poses/ (848x480 camera pixels; centre x, y and side length of the marker).\n# pre = marker as seen at the pre-insertion pose, insert = marker as seen with the plug at the socket entrance.\n# plug_x = where the middle of the two fingertips is in the image when the goal was recorded (the plug sits a little differently in the grasp every time; the servo moves the insertion goal by the difference)\n# nudge_px moves the insertion target in the image (x right, y down) to fine-tune where the gripper ends up; marker_side_m is the printed size.\nmarker_side_m: 0.030\nwires:\n  aux: {marker_id: 11, pre: {c: [395, 203], side: 42}, insert: {c: [457, 252], side: 103}, nudge_px: [0, 20], plug_x: 467, seated: {c: [478.8, 269.8], side: 104.0}}\n  usb: {marker_id: 12, pre: {c: [384, 207], side: 43}, insert: {c: [474.0, 292.0], side: 98.0}, nudge_px: [0, 0], plug_x: 471.9, seated: {c: [458.8, 272.5], side: 102.3}}\n  power: {marker_id: 10, pre: {c: [409, 225], side: 38}, insert: {c: [452.8, 253.0], side: 95.3}, nudge_px: [0, 0], plug_x: 465.3}\n"
+}

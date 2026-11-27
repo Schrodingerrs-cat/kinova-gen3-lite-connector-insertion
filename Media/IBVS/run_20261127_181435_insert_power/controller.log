@@ -1,0 +1,49 @@
+1795821275.796692 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [-0.2, -74.6, 140.2, -93.7, 127.7, -91.6] 
+target home deg: [3.0, -3.1, 93.4, -88.5, -87.7, -82.6]
+route: lowest point 115 mm, farthest reach 528 mm, 345 samples, collision-free: True
+duration 42.9 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [3.06, -3.16, 93.52, -88.5, -87.61, -82.5] | max error to target 0.13 deg
+1795821320.213705 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [3.1, -3.2, 93.5, -88.5, -87.6, -82.7] 
+target post_grasp deg: [36.2, -82.0, 134.3, -49.2, 122.4, -66.7]
+route: lowest point 96 mm, farthest reach 467 mm, 366 samples, collision-free: True
+duration 45.4 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [36.19, -82.18, 134.19, -49.22, 122.3, -66.69] | max error to target 0.18 deg
+1795821367.282862 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+plug between the fingers at x = 478.8 px (goal taught at 465.3): insertion goal moved +13.5 px sideways
+recording to /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_181435_insert_power
+pre-insertion: marker 44 px, still 64.9 mm to go, camera-frame offset (mm) [-44.6   5.3 -46.8], tool height 119 mm
+pre-insertion: marker 44 px, still 67.0 mm to go, camera-frame offset (mm) [-44.2   4.9 -50.1], tool height 118 mm
+pre-insertion: marker 44 px, still 63.9 mm to go, camera-frame offset (mm) [-41.4   4.  -48.5], tool height 117 mm
+pre-insertion: marker 43 px, still 54.6 mm to go, camera-frame offset (mm) [-37.1   1.9 -39.9], tool height 116 mm
+pre-insertion: marker 42 px, still 44.6 mm to go, camera-frame offset (mm) [-28.2   0.3 -34.5], tool height 114 mm
+pre-insertion: marker 40 px, still 29.3 mm to go, camera-frame offset (mm) [-20.3  -0.8 -21.2], tool height 112 mm
+pre-insertion: marker 38 px, still 1.3 mm to go, camera-frame offset (mm) [ 1.2 -0.4 -0.1], tool height 111 mm
+insertion: marker 38 px, still 210.8 mm to go, camera-frame offset (mm) [-25.5 -17.1 208.5], tool height 111 mm
+insertion: marker 38 px, still 210.9 mm to go, camera-frame offset (mm) [-26.1 -17.7 208.5], tool height 111 mm
+insertion: marker 38 px, still 206.2 mm to go, camera-frame offset (mm) [  1.3   0.3 206.2], tool height 126 mm
+insertion: marker 38 px, still 206.3 mm to go, camera-frame offset (mm) [  2.4  -0.5 206.2], tool height 126 mm
+insertion: marker 38 px, still 203.9 mm to go, camera-frame offset (mm) [  1.8   0.3 203.9], tool height 126 mm
+insertion: marker 39 px, still 199.5 mm to go, camera-frame offset (mm) [  2.   -2.5 199.5], tool height 126 mm
+insertion: marker 40 px, still 187.1 mm to go, camera-frame offset (mm) [  2.4  -2.  187.1], tool height 126 mm
+insertion: marker 42 px, still 173.6 mm to go, camera-frame offset (mm) [  2.4  -2.3 173.6], tool height 126 mm
+insertion: marker 44 px, still 159.5 mm to go, camera-frame offset (mm) [  2.4  -1.  159.5], tool height 127 mm
+insertion: marker 47 px, still 141.9 mm to go, camera-frame offset (mm) [  2.2  -1.1 141.9], tool height 128 mm
+insertion: marker 51 px, still 120.1 mm to go, camera-frame offset (mm) [  1.3  -1.4 120. ], tool height 128 mm
+insertion: marker 53 px, still 108.0 mm to go, camera-frame offset (mm) [  1.  -1. 108.], tool height 128 mm
+insertion: marker 57 px, still 94.0 mm to go, camera-frame offset (mm) [-0.1 -1.3 93.9], tool height 129 mm
+insertion: marker 60 px, still 82.3 mm to go, camera-frame offset (mm) [ 0.7 -2.1 82.3], tool height 129 mm
+insertion: marker 62 px, still 74.3 mm to go, camera-frame offset (mm) [ 0.9 -2.1 74.3], tool height 129 mm
+insertion: marker 65 px, still 63.8 mm to go, camera-frame offset (mm) [ 0.4 -2.7 63.8], tool height 129 mm
+insertion: marker 69 px, still 53.6 mm to go, camera-frame offset (mm) [-1.5 -2.2 53.5], tool height 129 mm
+insertion: marker 72 px, still 45.0 mm to go, camera-frame offset (mm) [-2.8 -2.7 44.8], tool height 130 mm
+insertion: marker 76 px, still 36.1 mm to go, camera-frame offset (mm) [-2.  -3.9 35.9], tool height 129 mm
+insertion: marker 89 px, still 9.8 mm to go, camera-frame offset (mm) [-1.4  0.5  9.7], tool height 133 mm
+insertion: marker 89 px, still 9.8 mm to go, camera-frame offset (mm) [-1.4 -0.9  9.7], tool height 132 mm
+insertion: marker 89 px, still 10.5 mm to go, camera-frame offset (mm) [-3.  -0.7 10.1], tool height 134 mm
+insertion: marker 91 px, still 7.2 mm to go, camera-frame offset (mm) [-3.1 -0.9  6.4], tool height 134 mm
+insertion: marker 90 px, still 8.1 mm to go, camera-frame offset (mm) [-2.4 -1.7  7.6], tool height 135 mm
+insertion: marker 89 px, still 11.3 mm to go, camera-frame offset (mm) [-3.6  3.8 10. ], tool height 139 mm
+insertion: marker 88 px, still 13.8 mm to go, camera-frame offset (mm) [-3.1  6.1 12. ], tool height 149 mm
+STOPPED: marker 10 lost: frames arrive but marker 10 is not in them (seen ids: [])
