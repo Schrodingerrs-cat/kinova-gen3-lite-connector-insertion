@@ -1,0 +1,29 @@
+1795818347.661507 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [3.0, -3.2, 93.9, -88.4, -87.7, -82.6] 
+target home deg: [3.0, -3.1, 93.4, -88.5, -87.7, -82.6]
+route: lowest point 222 mm, farthest reach 301 mm, 5 samples, collision-free: True
+duration 0.3 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [3.04, -3.21, 93.55, -88.45, -87.67, -82.62] | max error to target 0.14 deg
+1795818349.265490 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [3.0, -3.2, 93.5, -88.5, -87.7, -82.6] 
+target post_grasp deg: [36.2, -82.0, 134.3, -49.2, 122.4, -66.7]
+route: lowest point 96 mm, farthest reach 467 mm, 366 samples, collision-free: True
+duration 45.5 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [36.22, -82.19, 134.23, -49.2, 122.36, -66.73] | max error to target 0.19 deg
+1795818396.507489 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+recording to /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_172546_insert_aux
+pre-insertion: marker 45 px, still 48.0 mm to go, camera-frame offset (mm) [ 39.5  20.8 -17.5], tool height 119 mm
+pre-insertion: marker 44 px, still 47.2 mm to go, camera-frame offset (mm) [ 39.6  20.3 -15.8], tool height 118 mm
+pre-insertion: marker 44 px, still 43.7 mm to go, camera-frame offset (mm) [ 36.2  18.6 -15.8], tool height 116 mm
+pre-insertion: marker 44 px, still 38.1 mm to go, camera-frame offset (mm) [ 31.9  15.3 -14.2], tool height 113 mm
+pre-insertion: marker 44 px, still 29.2 mm to go, camera-frame offset (mm) [ 23.5  10.  -14.2], tool height 109 mm
+pre-insertion: marker 42 px, still 1.4 mm to go, camera-frame offset (mm) [-1.4  0.   0. ], tool height 98 mm
+insertion: marker 42 px, still 190.2 mm to go, camera-frame offset (mm) [-32.8 -35.7 183.9], tool height 97 mm
+insertion: marker 42 px, still 190.3 mm to go, camera-frame offset (mm) [-33.  -36.2 183.9], tool height 97 mm
+insertion: marker 42 px, still 189.2 mm to go, camera-frame offset (mm) [-30.1 -33.  183.9], tool height 100 mm
+insertion: marker 42 px, still 189.8 mm to go, camera-frame offset (mm) [-26.1 -29.6 185.7], tool height 104 mm
+insertion: marker 42 px, still 184.4 mm to go, camera-frame offset (mm) [-19.9 -22.6 182. ], tool height 111 mm
+insertion: marker 42 px, still 183.9 mm to go, camera-frame offset (mm) [  0.7  -1.4 183.9], tool height 131 mm
+insertion: marker 42 px, still 183.9 mm to go, camera-frame offset (mm) [  1.5  -2.1 183.9], tool height 131 mm
+insertion: marker 42 px, still 183.9 mm to go, camera-frame offset (mm) [  2.2  -2.1 183.9], tool height 131 mm
+STOPPED: marker 11 lost: frames arrive but marker 11 is not in them (seen ids: [10])

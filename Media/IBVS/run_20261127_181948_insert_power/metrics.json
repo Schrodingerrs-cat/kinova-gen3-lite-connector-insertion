@@ -1,0 +1,7 @@
+{
+  "outcome": "STOPPED",
+  "message": "ExternalShutdownException",
+  "duration_s": 225.3,
+  "observations": 273,
+  "final_distance_to_go_mm": 2.0
+}

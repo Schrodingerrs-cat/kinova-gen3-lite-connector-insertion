@@ -59,6 +59,30 @@ If MoveIt has no straight path for a step, the arm goes home by the safe route a
 
 Camera: `insert_servo.py` reads the grasp stack's `/camera/camera/...` topics (check with `ros2 topic list | grep image_raw`). The old scripts expect `/eih_cam/...`.
 
+## State of the insertion servo (2026-11-27)
+
+Taught goals in `config/insertion_refs.yaml` (marker pixels in the 848 x 480 image):
+
+| Wire (marker) | Entrance goal | Seated (taught with a person in the loop) | Plug position in the grasp (`plug_x`) |
+| --- | --- | --- | --- |
+| aux (11) | (457, 252) 103 px, nudge +20 px down | 104.0 px at (478.8, 269.8), 5.0 mm past the entrance | 467 |
+| usb (12) | (474, 292) 98 px, taught | 102.3 px at (458.8, 272.5), 5.5 mm past the entrance | 471.9 |
+| power (10) | (452.8, 253) 95.3 px, taught with a wide-body grasp | not taught yet (next run) | 465.3 |
+
+What works on the real arm: home, post-grasp, pre-insertion, sideways alignment first, continuous approach, arrival at the entrance within a few mm for aux and usb (repeatedly), recording of every run. What is untested: the push-in stage after the entrance (taught depth, search, release, back-off) and power.
+
+Learned today:
+- Done is a pixel tolerance (marker centre within 9 px, size within 4 px), not 2 mm: chasing the last mm made the arm rub the plate.
+- Replacing the trajectory on every camera frame freezes the arm; a new one every half horizon, started at the arm's own speed, runs smoothly.
+- The plug sits differently in the grasp every time. The fingertip pair in the image measures part of it (left-right); shifts over 25 px are ignored. In and out is handled by contact and the taught seated size, up and down and the rest by the search.
+- No force sensor: contact shows as the arm not following a command, or as the tool advancing while the marker does not get closer (the board gives way). Both stop the arm; a stop within 15 mm of the goal counts as arriving at the entrance.
+- Marker size is a coarse depth (1 px is about 1.4 mm at the wall) and drops when the board yields: use the tool travel. **The board must be clamped.**
+- Insertion depth is taught, never typed: `run_insert.sh <wire> --teach-seated` goes to the entrance, then takes commands (`more|back|left|right|up|down [mm]`, at most 3 mm each, then `seated`) from the command file; on `seated` it records the marker, opens the gripper and backs off.
+- The power plug was grasped by its pins this time, so it sticks out about 6 mm further than at the taught goal. Re-teach power with the grip that will be used.
+- The arm driver crashes now and then (`BaseCyclicClient::RefreshFeedback` timeout, arm link): `bash Code/IBVS/kill_all.sh`, then `./run_ros.sh`. After a stop at the wall, `insert_servo.py --wire <wire> --back-out-only --back-off-m 0.10` backs out.
+
+Next: teach power seated (small steps), then run `run_insert.sh <wire> --speed 0.03` for aux and usb with the taught depth (it pushes, opens the gripper and backs off), then power.
+
 ## Code overview
 
 | File or folder | Purpose |

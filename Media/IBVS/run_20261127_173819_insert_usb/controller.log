@@ -1,0 +1,42 @@
+1795819100.067537 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [32.4, -77.5, 134.5, -55.1, 120.3, -71.8] 
+target home deg: [3.0, -3.1, 93.4, -88.5, -87.7, -82.6]
+route: lowest point 105 mm, farthest reach 483 mm, 356 samples, collision-free: True
+duration 44.2 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [2.96, -3.16, 93.53, -88.5, -87.67, -82.64] | max error to target 0.12 deg
+1795819145.767529 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [3.0, -3.2, 93.5, -88.5, -87.7, -82.6] 
+target post_grasp deg: [36.2, -82.0, 134.3, -49.2, 122.4, -66.7]
+route: lowest point 96 mm, farthest reach 467 mm, 366 samples, collision-free: True
+duration 45.5 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [36.21, -82.21, 134.22, -49.2, 122.35, -66.73] | max error to target 0.21 deg
+1795819192.833677 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+plug between the fingers at x = 461.9 px (goal taught at 471.9): insertion goal moved -10.0 px sideways
+recording to /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_173819_insert_usb
+pre-insertion: marker 44 px, still 125.4 mm to go, camera-frame offset (mm) [123.9  17.4  -8.6], tool height 119 mm
+pre-insertion: marker 44 px, still 124.9 mm to go, camera-frame offset (mm) [123.5  16.   -8.6], tool height 118 mm
+pre-insertion: marker 44 px, still 118.6 mm to go, camera-frame offset (mm) [117.   16.6 -10.2], tool height 118 mm
+pre-insertion: marker 45 px, still 106.3 mm to go, camera-frame offset (mm) [104.8  14.2 -10.3], tool height 116 mm
+pre-insertion: marker 44 px, still 94.5 mm to go, camera-frame offset (mm) [93.4 12.8 -6.9], tool height 114 mm
+pre-insertion: marker 44 px, still 74.6 mm to go, camera-frame offset (mm) [73.4 10.3 -8.6], tool height 111 mm
+pre-insertion: marker 44 px, still 56.9 mm to go, camera-frame offset (mm) [55.9  8.  -6.9], tool height 108 mm
+pre-insertion: marker 44 px, still 37.9 mm to go, camera-frame offset (mm) [37.1  7.  -3.5], tool height 106 mm
+pre-insertion: marker 43 px, still 16.4 mm to go, camera-frame offset (mm) [15.8  4.1 -1.8], tool height 102 mm
+pre-insertion: marker 43 px, still 1.8 mm to go, camera-frame offset (mm) [1.7 0.3 0. ], tool height 97 mm
+insertion: marker 43 px, still 180.5 mm to go, camera-frame offset (mm) [-39.5 -38.2 172. ], tool height 97 mm
+insertion: marker 43 px, still 178.5 mm to go, camera-frame offset (mm) [-37.6 -38.9 170.1], tool height 97 mm
+insertion: marker 43 px, still 175.8 mm to go, camera-frame offset (mm) [-30.3 -31.6 170.2], tool height 104 mm
+insertion: marker 43 px, still 172.9 mm to go, camera-frame offset (mm) [-20.  -23.4 170.1], tool height 114 mm
+insertion: marker 42 px, still 173.8 mm to go, camera-frame offset (mm) [ -0.9   1.7 173.8], tool height 138 mm
+insertion: marker 43 px, still 170.2 mm to go, camera-frame offset (mm) [ -1.   -0.9 170.2], tool height 137 mm
+insertion: marker 44 px, still 166.7 mm to go, camera-frame offset (mm) [ -1.5   1.  166.7], tool height 138 mm
+insertion: marker 45 px, still 156.7 mm to go, camera-frame offset (mm) [ -1.5  -0.3 156.7], tool height 138 mm
+insertion: marker 48 px, still 138.6 mm to go, camera-frame offset (mm) [ -0.5  -0.7 138.6], tool height 137 mm
+insertion: marker 52 px, still 117.7 mm to go, camera-frame offset (mm) [  0.9  -1.  117.7], tool height 139 mm
+insertion: marker 58 px, still 93.7 mm to go, camera-frame offset (mm) [ 1.  -0.9 93.7], tool height 140 mm
+insertion: marker 63 px, still 73.1 mm to go, camera-frame offset (mm) [ 0.1 -1.7 73.1], tool height 140 mm
+insertion: marker 69 px, still 55.3 mm to go, camera-frame offset (mm) [-0.6 -2.2 55.2], tool height 140 mm
+insertion: marker 80 px, still 29.6 mm to go, camera-frame offset (mm) [-0.3 -2.8 29.4], tool height 141 mm
+insertion: marker 94 px, still 5.4 mm to go, camera-frame offset (mm) [-1.   0.9  5.3], tool height 145 mm
+at the socket entrance (usb)
+backing off 150 mm

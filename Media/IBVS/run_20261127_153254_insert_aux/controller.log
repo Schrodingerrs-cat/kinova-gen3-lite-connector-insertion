@@ -1,0 +1,98 @@
+1795811575.427387 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [23.7, -92.7, 133.7, -59.8, 134.5, -67.3] 
+target home deg: [3.0, -3.1, 93.4, -88.5, -87.7, -82.6]
+route: lowest point 71 mm, farthest reach 511 mm, 376 samples, collision-free: True
+duration 46.7 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [2.98, -3.18, 93.52, -88.47, -87.64, -82.69] | max error to target 0.12 deg
+1795811623.533211 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [2.9, -3.2, 93.5, -88.5, -87.6, -82.7] 
+target post_grasp deg: [36.2, -82.0, 134.3, -49.2, 122.4, -66.7]
+route: lowest point 96 mm, farthest reach 467 mm, 366 samples, collision-free: True
+duration 45.5 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [36.19, -82.2, 134.19, -49.21, 122.31, -66.69] | max error to target 0.20 deg
+1795811670.491752 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+recording to /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_153254_insert_aux
+pre-insertion: marker 45 px, still 48.8 mm to go, camera-frame offset (mm) [ 41.2  19.4 -17.5], tool height 119 mm
+pre-insertion: marker 44 px, still 38.5 mm to go, camera-frame offset (mm) [ 32.2  14.2 -15.8], tool height 113 mm
+pre-insertion: marker 44 px, still 22.4 mm to go, camera-frame offset (mm) [ 17.8   8.3 -10.7], tool height 107 mm
+pre-insertion: marker 42 px, still 1.8 mm to go, camera-frame offset (mm) [ 0.2 -0.3  1.8], tool height 98 mm
+insertion: marker 42 px, still 191.6 mm to go, camera-frame offset (mm) [-31.3 -35.5 185.7], tool height 98 mm
+insertion: marker 44 px, still 178.6 mm to go, camera-frame offset (mm) [-27.5 -34.1 173.1], tool height 101 mm
+insertion: marker 46 px, still 163.4 mm to go, camera-frame offset (mm) [-25.1 -31.  158.4], tool height 103 mm
+insertion: marker 48 px, still 150.9 mm to go, camera-frame offset (mm) [-21.9 -29.1 146.5], tool height 106 mm
+insertion: marker 51 px, still 132.8 mm to go, camera-frame offset (mm) [-18.3 -25.3 129.1], tool height 109 mm
+insertion: marker 54 px, still 119.2 mm to go, camera-frame offset (mm) [-16.  -22.2 116. ], tool height 112 mm
+insertion: marker 56 px, still 107.1 mm to go, camera-frame offset (mm) [-13.9 -20.3 104.2], tool height 116 mm
+insertion: marker 61 px, still 91.2 mm to go, camera-frame offset (mm) [-10.7 -17.3  88.9], tool height 118 mm
+insertion: marker 64 px, still 77.6 mm to go, camera-frame offset (mm) [ -9.1 -15.3  75.6], tool height 121 mm
+insertion: marker 70 px, still 61.5 mm to go, camera-frame offset (mm) [ -6.9 -13.   59.7], tool height 123 mm
+insertion: marker 76 px, still 46.0 mm to go, camera-frame offset (mm) [ -5.3 -10.6  44.4], tool height 126 mm
+insertion: marker 82 px, still 33.6 mm to go, camera-frame offset (mm) [-2.9 -8.2 32.4], tool height 129 mm
+insertion: marker 89 px, still 20.4 mm to go, camera-frame offset (mm) [-2.6 -5.5 19.5], tool height 131 mm
+insertion: marker 93 px, still 16.2 mm to go, camera-frame offset (mm) [-2.4 -7.  14.4], tool height 130 mm
+insertion: marker 93 px, still 18.3 mm to go, camera-frame offset (mm) [ -2.6 -11.   14.4], tool height 126 mm
+insertion: marker 94 px, still 17.7 mm to go, camera-frame offset (mm) [ -1.3 -12.9  12.1], tool height 124 mm
+insertion: marker 95 px, still 18.1 mm to go, camera-frame offset (mm) [ -1.3 -14.   11.4], tool height 123 mm
+insertion: marker 95 px, still 19.0 mm to go, camera-frame offset (mm) [ -0.8 -15.9  10.3], tool height 121 mm
+insertion: marker 96 px, still 18.4 mm to go, camera-frame offset (mm) [ -0.8 -15.8   9.2], tool height 121 mm
+insertion: marker 97 px, still 18.8 mm to go, camera-frame offset (mm) [ -0.5 -16.7   8.5], tool height 121 mm
+insertion: marker 97 px, still 18.3 mm to go, camera-frame offset (mm) [ -0.4 -16.6   7.8], tool height 121 mm
+insertion: marker 97 px, still 17.9 mm to go, camera-frame offset (mm) [ -0.4 -16.3   7.5], tool height 122 mm
+insertion: marker 98 px, still 18.5 mm to go, camera-frame offset (mm) [ -0.2 -17.1   7.1], tool height 120 mm
+insertion: marker 98 px, still 18.4 mm to go, camera-frame offset (mm) [  0.  -17.    7.1], tool height 120 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [ -0.1 -16.8   6.8], tool height 120 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.  -17.3   6.8], tool height 120 mm
+insertion: marker 98 px, still 18.8 mm to go, camera-frame offset (mm) [  0.  -17.5   6.8], tool height 120 mm
+insertion: marker 99 px, still 15.9 mm to go, camera-frame offset (mm) [  0.3 -14.8   5.8], tool height 122 mm
+insertion: marker 98 px, still 17.3 mm to go, camera-frame offset (mm) [  0.2 -16.2   6.1], tool height 121 mm
+insertion: marker 99 px, still 19.3 mm to go, camera-frame offset (mm) [  0.3 -18.4   5.8], tool height 119 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.3 -17.6   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.5 mm to go, camera-frame offset (mm) [  0.1 -17.5   6.1], tool height 120 mm
+insertion: marker 99 px, still 17.9 mm to go, camera-frame offset (mm) [  0.3 -16.9   5.8], tool height 121 mm
+insertion: marker 99 px, still 18.5 mm to go, camera-frame offset (mm) [  0.2 -17.6   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.3 -17.6   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.4 mm to go, camera-frame offset (mm) [  0.2 -17.4   6.1], tool height 120 mm
+insertion: marker 99 px, still 17.7 mm to go, camera-frame offset (mm) [  0.1 -16.8   5.4], tool height 121 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [  0.3 -17.    6.1], tool height 120 mm
+insertion: marker 98 px, still 18.9 mm to go, camera-frame offset (mm) [  0.3 -17.7   6.5], tool height 120 mm
+insertion: marker 99 px, still 18.5 mm to go, camera-frame offset (mm) [  0.2 -17.6   5.8], tool height 120 mm
+insertion: marker 99 px, still 18.4 mm to go, camera-frame offset (mm) [  0.2 -17.4   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.7 mm to go, camera-frame offset (mm) [  0.2 -17.7   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.8 mm to go, camera-frame offset (mm) [  0.3 -17.8   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.7 mm to go, camera-frame offset (mm) [  0.2 -17.7   6.1], tool height 120 mm
+insertion: marker 99 px, still 18.4 mm to go, camera-frame offset (mm) [  0.1 -17.5   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.7 mm to go, camera-frame offset (mm) [  0.2 -17.7   6.1], tool height 120 mm
+insertion: marker 99 px, still 18.4 mm to go, camera-frame offset (mm) [  0.3 -17.5   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.3 -17.6   6.1], tool height 120 mm
+insertion: marker 98 px, still 17.5 mm to go, camera-frame offset (mm) [  0.3 -16.4   6.1], tool height 121 mm
+insertion: marker 99 px, still 17.8 mm to go, camera-frame offset (mm) [  0.2 -16.8   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.4 mm to go, camera-frame offset (mm) [  0.2 -17.4   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [  0.2 -17.1   6.1], tool height 120 mm
+insertion: marker 99 px, still 18.7 mm to go, camera-frame offset (mm) [  0.2 -17.7   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.2 -17.5   6.4], tool height 120 mm
+insertion: marker 98 px, still 18.7 mm to go, camera-frame offset (mm) [  0.2 -17.7   6.1], tool height 120 mm
+insertion: marker 99 px, still 18.7 mm to go, camera-frame offset (mm) [  0.2 -17.7   5.8], tool height 120 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.3 -17.6   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.4 mm to go, camera-frame offset (mm) [  0.2 -17.4   6.1], tool height 120 mm
+insertion: marker 98 px, still 17.9 mm to go, camera-frame offset (mm) [  0.2 -16.8   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [  0.3 -17.    6.1], tool height 120 mm
+insertion: marker 99 px, still 17.9 mm to go, camera-frame offset (mm) [  0.2 -17.    5.8], tool height 120 mm
+insertion: marker 98 px, still 18.3 mm to go, camera-frame offset (mm) [  0.3 -17.1   6.5], tool height 120 mm
+insertion: marker 98 px, still 19.0 mm to go, camera-frame offset (mm) [  0.2 -18.    6.1], tool height 120 mm
+insertion: marker 98 px, still 18.6 mm to go, camera-frame offset (mm) [  0.3 -17.6   6.1], tool height 120 mm
+insertion: marker 99 px, still 18.9 mm to go, camera-frame offset (mm) [  0.1 -18.    5.8], tool height 119 mm
+insertion: marker 98 px, still 19.0 mm to go, camera-frame offset (mm) [  0.2 -18.    6.1], tool height 119 mm
+insertion: marker 98 px, still 19.3 mm to go, camera-frame offset (mm) [  0.2 -18.3   6.1], tool height 119 mm
+insertion: marker 99 px, still 19.0 mm to go, camera-frame offset (mm) [  0.2 -18.1   5.8], tool height 119 mm
+insertion: marker 98 px, still 19.0 mm to go, camera-frame offset (mm) [  0.2 -18.    6.1], tool height 119 mm
+insertion: marker 98 px, still 18.9 mm to go, camera-frame offset (mm) [  0.3 -17.7   6.5], tool height 120 mm
+insertion: marker 98 px, still 17.7 mm to go, camera-frame offset (mm) [  0.3 -16.5   6.5], tool height 120 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [  0.3 -17.    6.1], tool height 120 mm
+insertion: marker 99 px, still 17.9 mm to go, camera-frame offset (mm) [  0.1 -16.9   5.8], tool height 120 mm
+insertion: marker 99 px, still 18.2 mm to go, camera-frame offset (mm) [  0.2 -17.3   5.8], tool height 120 mm
+insertion: marker 98 px, still 17.0 mm to go, camera-frame offset (mm) [  0.2 -15.9   6.1], tool height 121 mm
+insertion: marker 98 px, still 18.0 mm to go, camera-frame offset (mm) [  0.3 -16.8   6.5], tool height 120 mm
+insertion: marker 98 px, still 18.4 mm to go, camera-frame offset (mm) [  0.3 -17.3   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [  0.2 -17.1   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.1 mm to go, camera-frame offset (mm) [  0.2 -17.1   6.1], tool height 120 mm
+insertion: marker 98 px, still 18.0 mm to go, camera-frame offset (mm) [  0.2 -16.9   6.1], tool height 120 mm

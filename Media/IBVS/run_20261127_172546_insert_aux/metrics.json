@@ -1,0 +1,7 @@
+{
+  "outcome": "STOPPED",
+  "message": "marker 11 lost: frames arrive but marker 11 is not in them (seen ids: [10])",
+  "duration_s": 12.6,
+  "observations": 130,
+  "final_distance_to_go_mm": 178.4
+}

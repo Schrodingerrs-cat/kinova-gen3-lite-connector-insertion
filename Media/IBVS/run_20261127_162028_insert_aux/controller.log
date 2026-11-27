@@ -1,0 +1,15 @@
+1795814428.975837 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [15.2, -85.6, 100.9, -79.4, 83.1, -93.3] 
+target home deg: [3.0, -3.1, 93.4, -88.5, -87.7, -82.6]
+route: lowest point -40 mm, farthest reach 584 mm, 278 samples, collision-free: True
+duration 34.4 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [2.91, -3.16, 93.52, -88.51, -87.74, -82.59] | max error to target 0.12 deg
+1795814464.745286 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [2.9, -3.2, 93.5, -88.5, -87.6, -82.6] 
+target post_grasp deg: [36.2, -82.0, 134.3, -49.2, 122.4, -66.7]
+route: lowest point 96 mm, farthest reach 467 mm, 365 samples, collision-free: True
+duration 45.5 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [36.19, -82.2, 134.2, -49.22, 122.33, -66.73] | max error to target 0.20 deg
+1795814511.683037 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+recording to /home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_162028_insert_aux
+STOPPED: marker 11 lost: stopping

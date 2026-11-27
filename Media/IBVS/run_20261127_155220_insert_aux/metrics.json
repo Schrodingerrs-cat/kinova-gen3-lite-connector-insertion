@@ -1,0 +1,7 @@
+{
+  "outcome": "STOPPED",
+  "message": "marker 11 lost: stopping",
+  "duration_s": 13.4,
+  "observations": 126,
+  "final_distance_to_go_mm": 31.5
+}

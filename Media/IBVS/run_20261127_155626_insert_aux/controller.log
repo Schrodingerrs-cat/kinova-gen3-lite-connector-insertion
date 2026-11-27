@@ -1,0 +1,5 @@
+1795812987.416216 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+no /joint_states within 10 s: the arm driver is not running or has lost the arm
+restarting the arm driver (the old one is stopped first; nothing moves)
+>> Arm reachable at 192.168.1.10 via enxc62ff2e84f92
+1795813007.257439 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast

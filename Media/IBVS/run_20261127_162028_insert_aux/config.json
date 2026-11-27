@@ -1,0 +1,115 @@
+{
+  "started": "2026-11-27T16:21:51",
+  "command": [
+    "ros2_iface/insert_servo.py",
+    "--wire",
+    "aux",
+    "--out",
+    "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_162028_insert_aux"
+  ],
+  "wire": "aux",
+  "args": {
+    "wire": "aux",
+    "speed": 0.05,
+    "step_m": 0.04,
+    "tol_mm": 2.0,
+    "align_mm": 15.0,
+    "back_off_m": 0.15,
+    "stepwise": false,
+    "out": "/home/aryans-cat/Documents/GitHub/VBRM_insertion/insertion_task/Media/IBVS/run_20261127_162028_insert_aux",
+    "pause": 1.0,
+    "continuous": true
+  },
+  "marker_id": 11,
+  "marker_side_m": 0.03,
+  "pre_goal": {
+    "c": [
+      395,
+      203
+    ],
+    "side": 42
+  },
+  "insertion_goal": {
+    "c": [
+      457.0,
+      272.0
+    ],
+    "side": 103
+  },
+  "nudge_px": [
+    0,
+    20
+  ],
+  "references": {
+    "marker_id": 11,
+    "pre": {
+      "c": [
+        395,
+        203
+      ],
+      "side": 42
+    },
+    "insert": {
+      "c": [
+        457,
+        252
+      ],
+      "side": 103
+    },
+    "nudge_px": [
+      0,
+      20
+    ]
+  },
+  "hand_eye": {
+    "hand_eye_xyz_m": [
+      -0.0080293,
+      -0.0495603,
+      -0.0909769
+    ],
+    "hand_eye_quat_xyzw": [
+      0.0097493,
+      -0.0046708,
+      -0.0127007,
+      0.9998609
+    ]
+  },
+  "post_grasp_joints_deg": [
+    36.1993,
+    -81.9997,
+    134.2784,
+    -49.1608,
+    122.4039,
+    -66.7142
+  ],
+  "start_joints_deg": [
+    36.19,
+    -82.04,
+    134.2,
+    -49.21,
+    122.33,
+    -66.73
+  ],
+  "held_tool_rotation": [
+    [
+      0.0465,
+      0.0527,
+      0.9975
+    ],
+    [
+      -0.9989,
+      0.0115,
+      0.046
+    ],
+    [
+      -0.0091,
+      -0.9985,
+      0.0532
+    ]
+  ],
+  "git": {
+    "commit": "336a66f",
+    "uncommitted_files_in_IBVS": []
+  },
+  "insertion_refs_file": "# Per-wire marker references read off Media/IBVS/poses/ (848x480 camera pixels; centre x, y and side length of the marker).\n# pre = marker as seen at the pre-insertion pose, insert = marker as seen with the plug at the socket entrance.\n# nudge_px moves the insertion target in the image (x right, y down) to fine-tune where the gripper ends up; marker_side_m is the printed size.\nmarker_side_m: 0.030\nwires:\n  aux:   {marker_id: 11, pre: {c: [395, 203], side: 42}, insert: {c: [457, 252], side: 103}, nudge_px: [0, 20]}\n  usb:   {marker_id: 12, pre: {c: [384, 207], side: 43}, insert: {c: [471, 280], side: 100}, nudge_px: [0, 20]}\n  power: {marker_id: 10, pre: {c: [409, 225], side: 38}, insert: {c: [470, 253], side: 102}, nudge_px: [0, 20]}\n"
+}

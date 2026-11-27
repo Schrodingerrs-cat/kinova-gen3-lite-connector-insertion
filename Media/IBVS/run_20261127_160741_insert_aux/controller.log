@@ -1,0 +1,13 @@
+1795813662.213253 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [15.1, -4.4, 154.9, -38.4, 16.1, -97.3] 
+target home deg: [3.0, -3.1, 93.4, -88.5, -87.7, -82.6]
+route: lowest point 51 mm, farthest reach 528 mm, 184 samples, collision-free: True
+duration 22.7 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [2.96, -3.17, 93.53, -88.51, -87.63, -82.64] | max error to target 0.12 deg
+1795813686.242399 [0]    python3: selected interface "lo" is not multicast-capable: disabling multicast
+current joints deg: [2.9, -3.2, 93.5, -88.5, -87.6, -82.7] 
+target post_grasp deg: [36.2, -82.0, 134.3, -49.2, 122.4, -66.7]
+route: lowest point 96 mm, farthest reach 467 mm, 366 samples, collision-free: True
+duration 45.5 s at speed scale 2.0
+result: Goal successfully reached! | final joints deg: [36.13, -3.35, 95.19, -88.3, 33.9, -66.7] | max error to target 88.51 deg
+ARM DID NOT MOVE TO THE TARGET (fault or e-stop?). Reset the fault: ros2 service call /fault_controller/reset_fault std_srvs/srv/Trigger
