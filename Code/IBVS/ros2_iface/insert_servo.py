@@ -13,7 +13,8 @@ import rclpy  # noqa: E402
 from robot_ros import Robot, matrix, JOINTS  # noqa: E402
 from builtin_interfaces.msg import Duration  # noqa: E402
 from control_msgs.action import FollowJointTrajectory  # noqa: E402
-from sensor_msgs.msg import JointState  # noqa: E402
+from rclpy.qos import qos_profile_sensor_data  # noqa: E402
+from sensor_msgs.msg import CameraInfo, Image, JointState  # noqa: E402
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint  # noqa: E402
 from run_record import Recorder, git_state  # noqa: E402
 
@@ -39,20 +40,40 @@ else:                                                   # OpenCV < 4.7
     detect_markers = lambda gray: cv2.aruco.detectMarkers(gray, DICTIONARY, parameters=_params)
 
 
+def watch_camera(r):
+    """Colour image and its intrinsics straight from the colour topics: the servo needs no depth (aligned depth only flows while raw depth is subscribed)."""
+    r._color = r._info = None
+    r.create_subscription(Image, "/camera/camera/color/image_raw", lambda m: setattr(r, "_color", m), qos_profile_sensor_data)
+    r.create_subscription(CameraInfo, "/camera/camera/color/camera_info", lambda m: setattr(r, "_info", m), qos_profile_sensor_data)
+
+
+def grab_color(r, timeout=2.0):
+    """(BGR image, 3x3 intrinsics) of the next colour frame."""
+    r._color = None
+    if not r.spin_until(lambda: r._color is not None and r._info is not None, timeout):
+        raise RuntimeError("no colour frames on /camera/camera/color/image_raw within %.0f s (camera running?)" % timeout)
+    m = r._color
+    img = np.frombuffer(m.data, np.uint8).reshape(m.height, m.step)[:, :m.width * 3].reshape(m.height, m.width, 3)
+    return np.ascontiguousarray(img[:, :, ::-1] if m.encoding == "rgb8" else img), np.array(r._info.k).reshape(3, 3)
+
+
 def observe(r, marker_id, tries=30):
     """Marker corners (4x2 px) from a frame taken after the arm stopped, or raise."""
     r.spin_until(lambda: False, 0.35)
+    why = "no frame"
     for _ in range(tries):
         r.spin_until(lambda: False, 0.05)
         try:
-            color, _, K = r.grab()
-        except Exception:
+            color, K = grab_color(r)
+        except RuntimeError as e:
+            why = str(e)
             continue
         corners, ids, _ = detect_markers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
         if ids is not None and marker_id in ids.ravel():
             c = corners[list(ids.ravel()).index(marker_id)].reshape(4, 2)
             return c, np.asarray(K, float), color
-    raise RuntimeError("marker %d not seen: stopping" % marker_id)
+        why = "frames arrive but marker %d is not in them (seen ids: %s)" % (marker_id, [] if ids is None else sorted(ids.ravel().tolist()))
+    raise RuntimeError("marker %d not found: %s" % (marker_id, why))
 
 
 def offset(c, K, goal, L):
@@ -203,19 +224,19 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, al
     """Keep looking while the arm moves. Every camera frame is recorded, but a new trajectory is sent only every ~half horizon
     (replacing it on every frame never lets the arm get going). Far away: cruise toward the goal, each piece ends at speed and the next
     one starts at the speed the arm has. Within final_m: one smooth move that ends at rest on the goal."""
-    lost, last, next_send, sent, final = 0, 0.0, 0.0, None, False
+    lost, last, next_send, sent, final, why = 0, 0.0, 0.0, None, False, ""
     while True:
         try:
             r.spin_until(lambda: False, 0.02)
-            color, _, K = r.grab()
+            color, K = grab_color(r)
             corners, ids, _ = detect_markers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
             if ids is None or marker_id not in ids.ravel():
-                raise RuntimeError("marker not seen")
+                raise RuntimeError("frames arrive but marker %d is not in them (seen ids: %s)" % (marker_id, [] if ids is None else sorted(ids.ravel().tolist())))
             c, K = corners[list(ids.ravel()).index(marker_id)].reshape(4, 2), np.asarray(K, float)
-        except RuntimeError:
-            lost += 1
+        except RuntimeError as e:
+            lost, why = lost + 1, str(e)
             if lost > 6:
-                raise RuntimeError("marker %d lost: stopping" % marker_id)
+                raise RuntimeError("marker %d lost: %s" % (marker_id, why))
             continue
         lost = 0
         d, side = offset(c, K, goal, L)
@@ -272,6 +293,7 @@ def main():
     r = Robot("insert_servo")
     if not r.wait_ready(15) or not r.ik_srv.wait_for_service(10) or not r.cart_srv.wait_for_service(10):
         sys.exit("arm / MoveIt not ready")
+    watch_camera(r)
     r.qd = np.zeros(6)                                      # joint speeds, for a jerk-free splice between trajectories
 
     def joint_speeds(m):
