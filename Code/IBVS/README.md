@@ -45,6 +45,7 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 | All three wires one after another (aux, usb, power; waits for Enter between wires so you can swap the plug; stops if one fails) | `bash Code/IBVS/run_insert.sh all` |
 | Sideways-first gate during the insertion approach (mm, default 15; 0 = off): forward motion only starts once the sideways error is below this, so the plug is lined up before it goes toward the wall | `--align-mm 15` |
 | Back-off after reaching the socket entrance (m, default 0.15; 0 = stay): straight back out along the camera axis before the arm goes home | `--back-off-m 0.15` |
+| Teach a wire's goal from the real arm (no motion): put the arm by hand where it should be, then run it. It reads the wire's marker for about 1 s and writes centre and size into `config/insertion_refs.yaml` (photo and joints go to `Media/IBVS/poses/taught_*`) | `bash Code/IBVS/teach_insert.sh usb insert` (plug at the socket entrance) or `... usb pre` (standoff) |
 | Slower / faster (m/s, default 0.05) | `--speed 0.03` |
 | Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
 | Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
