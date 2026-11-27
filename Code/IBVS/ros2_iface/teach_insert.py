@@ -2,7 +2,7 @@
 """Teach one wire's goal from the real arm, no motion. Put the arm by hand where it should be (plug at the socket entrance for `insert`,
 the plug fully inserted for `seated`, the standoff for `pre`), then run this: it looks at the wire's marker for ~1 s and writes its centre and size into config/insertion_refs.yaml.
   python3 ros2_iface/teach_insert.py --wire usb --stage insert"""
-import argparse, datetime, json, pathlib, re, sys, time
+import argparse, datetime, json, pathlib, sys, time
 import cv2, numpy as np, yaml
 import rclpy
 from rclpy.node import Node
@@ -12,6 +12,7 @@ from sensor_msgs.msg import Image, JointState
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ibvs.plug import finger_pair_x  # noqa: E402
+from refs_file import save_wire  # noqa: E402
 JOINTS = [f"joint_{i}" for i in range(1, 7)]
 DICTIONARY = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 if hasattr(cv2.aruco, "ArucoDetector"):
@@ -27,8 +28,7 @@ def main():
     ap.add_argument("--stage", required=True, choices=("pre", "insert", "seated"))
     ap.add_argument("--frames", type=int, default=20)
     a = ap.parse_args()
-    path = ROOT / "config" / "insertion_refs.yaml"
-    refs = yaml.safe_load(path.read_text())
+    refs = yaml.safe_load((ROOT / "config" / "insertion_refs.yaml").read_text())
     wire = refs["wires"][a.wire]
 
     rclpy.init(); node = Node("teach_insert"); got = {}
@@ -60,15 +60,7 @@ def main():
         if len(plug) >= a.frames // 2:
             wire["plug_x"] = round(float(np.median(plug)), 1)      # where the plug sat in the grasp when this goal was taught
 
-    # only this wire's line changes, the comments of the file stay
-    line = "  %s: {marker_id: %d, pre: {c: %s, side: %s}, insert: {c: %s, side: %s}, nudge_px: %s%s%s}" % (
-        a.wire, wire["marker_id"], wire["pre"]["c"], wire["pre"]["side"], wire["insert"]["c"], wire["insert"]["side"], wire["nudge_px"],
-        ", plug_x: %s" % wire["plug_x"] if "plug_x" in wire else "",
-        ", seated: {c: %s, side: %s}" % (wire["seated"]["c"], wire["seated"]["side"]) if "seated" in wire else "")
-    text = path.read_text()
-    new, n = re.subn(r"^  %s:.*$" % a.wire, line.replace("\\", "\\\\"), text, flags=re.M)
-    assert n == 1, "wire line not found in insertion_refs.yaml"
-    path.write_text(new)
+    save_wire(a.wire, wire)
 
     out = ROOT.parents[1] / "Media" / "IBVS" / "poses" / ("taught_%s_%s_%s" % (a.wire, a.stage, datetime.datetime.now().strftime("%Y%m%d_%H%M%S")))
     out.mkdir(parents=True)

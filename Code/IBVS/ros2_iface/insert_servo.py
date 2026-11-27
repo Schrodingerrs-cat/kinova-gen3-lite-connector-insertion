@@ -18,6 +18,7 @@ from sensor_msgs.msg import CameraInfo, Image, JointState  # noqa: E402
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint  # noqa: E402
 from run_record import Recorder, git_state  # noqa: E402
 from ibvs.plug import finger_pair_x  # noqa: E402
+from refs_file import save_wire  # noqa: E402
 
 REC = None                                              # run recorder, set in main
 
@@ -278,6 +279,82 @@ def insert_with_search(r, T_EC, hold_R, depth, radius, marker_id, target_side, r
     return best
 
 
+def measure_marker(r, marker_id, frames=15):
+    """Median centre (px, 2) and side (px) of the marker over `frames` frames, or None."""
+    seen = []
+    for _ in range(frames * 2):
+        try:
+            color, _ = grab_color(r)
+        except RuntimeError:
+            continue
+        corners, ids, _ = detect_markers(cv2.cvtColor(color, cv2.COLOR_BGR2GRAY))
+        if ids is not None and marker_id in ids.ravel():
+            seen.append(corners[list(ids.ravel()).index(marker_id)].reshape(4, 2))
+        if len(seen) >= frames:
+            break
+    if len(seen) < frames // 2:
+        return None
+    c = np.median(np.array(seen), axis=0)
+    return c.mean(0), float(np.mean([np.linalg.norm(c[i] - c[(i + 1) % 4]) for i in range(4)]))
+
+
+def interactive_seated(r, T_EC, hold_R, wire_name, w, command_file, folder):
+    """Teach the seated depth with a person in the loop: from the entrance, move as told (the person watches the plug), and when told `seated` record the marker there.
+    Commands, one per line in the command file: more [mm] | back [mm] | left|right|up|down [mm] | seated | stop. Moves are along the camera axes, 2 mm if no number."""
+    origin = r.tool_matrix()[:3, 3].copy()
+    z_hat = (r.tool_matrix() @ T_EC)[:3, :3] @ np.array([0.0, 0.0, 1.0])
+    axes = {"more": (0, 0, 1), "back": (0, 0, -1), "left": (-1, 0, 0), "right": (1, 0, 0), "up": (0, -1, 0), "down": (0, 1, 0)}
+    command_file = pathlib.Path(command_file)
+    n = 0
+    while True:
+        m = measure_marker(r, w["marker_id"], 8)
+        color = None
+        try:
+            color, _ = grab_color(r)
+        except RuntimeError:
+            pass
+        if color is not None:
+            cv2.imwrite(str(folder / "latest.png"), color)
+        advance = float((r.tool_matrix()[:3, 3] - origin) @ z_hat) * 1e3
+        print("STATUS %d: %.1f mm past the entrance, marker %s px, centre %s. Waiting for: more|back|left|right|up|down [mm] | seated | stop" % (
+            n, advance, "-" if m is None else "%.1f" % m[1], "-" if m is None else np.round(m[0], 1).tolist()), flush=True)
+        n += 1
+        while not command_file.exists():
+            r.spin_until(lambda: False, 0.2)
+        words = command_file.read_text().split(); command_file.unlink()
+        if not words:
+            continue
+        cmd, mm = words[0], (float(words[1]) if len(words) > 1 else 2.0)
+        if cmd == "stop":
+            return "TEACH_STOPPED"
+        if cmd == "seated":
+            m = measure_marker(r, w["marker_id"], 15)
+            if m is None:
+                print("marker not seen: cannot record, say seated again or move", flush=True)
+                continue
+            w["seated"] = dict(c=[round(float(m[0][0]), 1), round(float(m[0][1]), 1)], side=round(m[1], 1))
+            save_wire(wire_name, w)
+            f = (r._info.k[0] + r._info.k[4]) / 2
+            depth = 1e3 * f * 0.030 * (1.0 / w["insert"]["side"] - 1.0 / m[1])
+            print("TAUGHT %s seated: marker %.1f px at %s (entrance %.1f px): depth %.1f mm, %.1f mm of travel from the entrance pose. Written to insertion_refs.yaml" % (
+                wire_name, m[1], w["seated"]["c"], w["insert"]["side"], depth, advance), flush=True)
+            return "TAUGHT_SEATED"
+        if cmd in axes:
+            before = r.tool_matrix()[:3, 3].copy()
+            step = np.array(axes[cmd], float) * mm / 1e3
+            try:
+                sent = go(r, T_EC, hold_R, step, 0.005, rest=True)
+            except NoPath:
+                print("no straight path for that move", flush=True)
+                continue
+            r.spin_until(lambda: False, sent["T"] + 0.4)
+            moved = float(np.linalg.norm(r.tool_matrix()[:3, 3] - before)) * 1e3
+            if moved < 0.5 * mm:
+                print("BLOCKED: moved %.1f of %.1f mm (contact, jam, or fully seated?)" % (moved, mm), flush=True)
+        else:
+            print("unknown command %r" % cmd, flush=True)
+
+
 def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol, name, align_m=None):
     """Stop-and-observe: quintic chunks of at most step_m, each ending at rest."""
     while True:
@@ -367,6 +444,8 @@ def main():
     ap.add_argument("--align-mm", type=float, default=15.0, help="insertion approach: forward motion starts only once the sideways error is below this (0 = no gate)")
     ap.add_argument("--push-mm", type=float, help="push this far past the entrance (overrides the depth taught with teach_insert.sh <wire> seated)")
     ap.add_argument("--search-mm", type=float, default=4.0, help="if the push stops early, try sideways offsets up to this radius (0 = no search)")
+    ap.add_argument("--teach-seated", action="store_true", help="at the entrance, wait for commands from a person (more/back/left/right/up/down/seated/stop) and record the seated pose")
+    ap.add_argument("--command-file", type=pathlib.Path, default=pathlib.Path("/tmp/insert_command"), help="where --teach-seated reads its commands")
     ap.add_argument("--no-release", action="store_true", help="after a successful push keep holding the plug (the back-off would pull it out again)")
     ap.add_argument("--back-off-m", type=float, default=0.15, help="after reaching the socket entrance, back straight out this far before anything else (0 = stay)")
     ap.add_argument("--stepwise", action="store_true", help="stop after every chunk to look again (default: continuous, re-plans on every frame while moving)")
@@ -424,6 +503,15 @@ def main():
                 time.sleep(a.pause)
         print("at the socket entrance (%s)" % a.wire, flush=True)
         outcome, note = "COMPLETED_AT_ENTRANCE", ""
+        if a.teach_seated:
+            outcome = interactive_seated(r, T_EC, hold_R, a.wire, w, a.command_file, REC.dir)
+            if outcome == "TAUGHT_SEATED":
+                print("opening the gripper", flush=True)
+                r.gripper(0.0); time.sleep(0.8)
+            if a.back_off_m > 0:
+                back_off(r, T_EC, hold_R, a.back_off_m, a.speed)
+            REC.close(outcome, "taught with a person in the loop")
+            return
         f = (r._info.k[0] + r._info.k[4]) / 2
         target_side = None
         if a.push_mm is not None:
