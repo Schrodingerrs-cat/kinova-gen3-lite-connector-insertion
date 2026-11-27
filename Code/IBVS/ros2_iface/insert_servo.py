@@ -214,6 +214,47 @@ def back_off(r, T_EC, hold_R, distance, speed):
     r.send_line(pts, max(1.0, distance / speed))
 
 
+def push_depth(r, T_EC, hold_R, origin, z_hat, depth, step=0.002, speed=0.005):
+    """Guarded push along the camera axis in short pieces until `depth` past `origin` or the arm stops following a piece (contact, jam, or full
+    seating: no force sensor, so these cannot be told apart). Returns how far past the origin the tool is (m)."""
+    here = lambda: float((r.tool_matrix()[:3, 3] - origin) @ z_hat)
+    while here() < depth - 0.0005:
+        piece = min(step, depth - here())
+        before = r.tool_matrix()[:3, 3].copy()
+        try:
+            sent = go(r, T_EC, hold_R, np.array([0.0, 0.0, piece]), speed, rest=True)
+        except NoPath:
+            break
+        r.spin_until(lambda: False, sent["T"] + 0.25)
+        if np.linalg.norm(r.tool_matrix()[:3, 3] - before) < 0.5 * piece:
+            break
+    return here()
+
+
+def insert_with_search(r, T_EC, hold_R, depth, radius, retreat=0.003, ring=0.002):
+    """Push `depth` past the entrance pose. If the plug stops early (sitting on the rim: the grasp offset is not known to the camera), back out a little,
+    shift sideways to a point on rings of growing radius (up to `radius`, 8 points each) and push again. Returns the best advance (m)."""
+    T0 = r.tool_matrix()
+    origin, R_cam = T0[:3, 3].copy(), (T0 @ T_EC)[:3, :3]
+    z_hat = R_cam @ np.array([0.0, 0.0, 1.0])
+    offsets = [(0.0, 0.0)] + [(k * ring * np.cos(t), k * ring * np.sin(t)) for k in range(1, int(round(radius / ring)) + 1) for t in np.radians(np.arange(0, 360, 45))]
+    best = 0.0
+    for i, (dx, dy) in enumerate(offsets):
+        if i:
+            step = R_cam.T @ (origin + R_cam @ np.array([dx, dy, -retreat]) - r.tool_matrix()[:3, 3])
+            try:
+                sent = go(r, T_EC, hold_R, step, 0.01, rest=True)
+            except NoPath:
+                continue
+            r.spin_until(lambda: False, sent["T"] + 0.25)
+        advance = push_depth(r, T_EC, hold_R, origin, z_hat, depth)
+        print("push %d: offset (%+.1f, %+.1f) mm, advanced %.1f of %.1f mm" % (i, dx * 1e3, dy * 1e3, advance * 1e3, depth * 1e3), flush=True)
+        best = max(best, advance)
+        if advance >= 0.8 * depth:
+            return advance
+    return best
+
+
 def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol, name, align_m=None):
     """Stop-and-observe: quintic chunks of at most step_m, each ending at rest."""
     while True:
@@ -301,6 +342,9 @@ def main():
     ap.add_argument("--tol-side-px", type=float, default=4.0, help="... and its side length within this many pixels of the goal's")
     ap.add_argument("--plug-gain", type=float, default=1.0, help="move the insertion goal by this times how far the plug sits from where it sat when the goal was taught (0 = off)")
     ap.add_argument("--align-mm", type=float, default=15.0, help="insertion approach: forward motion starts only once the sideways error is below this (0 = no gate)")
+    ap.add_argument("--push-mm", type=float, help="after the entrance, push this far in (the connector's insertion depth, to be measured: none by default)")
+    ap.add_argument("--search-mm", type=float, default=4.0, help="if the push stops early, try sideways offsets up to this radius (0 = no search)")
+    ap.add_argument("--no-release", action="store_true", help="after a successful push keep holding the plug (the back-off would pull it out again)")
     ap.add_argument("--back-off-m", type=float, default=0.15, help="after reaching the socket entrance, back straight out this far before anything else (0 = stay)")
     ap.add_argument("--stepwise", action="store_true", help="stop after every chunk to look again (default: continuous, re-plans on every frame while moving)")
     ap.add_argument("--out", type=pathlib.Path, help="run folder (default: Media/IBVS/run_<time>_insert_<wire>)")
@@ -329,6 +373,9 @@ def main():
         xs = [x for x in (_finger_x(r) for _ in range(15)) if x is not None]
         if len(xs) >= 8:
             plug_now = float(np.median(xs)); plug_shift = (plug_now - w["plug_x"]) * a.plug_gain
+            if abs(plug_shift) > 25:
+                print("WARNING: plug shift %+.1f px is implausible (fingertips mis-detected or a very different grasp): not used" % plug_shift, flush=True)
+                plug_shift = 0.0
             print("plug between the fingers at x = %.1f px (goal taught at %.1f): insertion goal moved %+.1f px sideways" % (plug_now, w["plug_x"], plug_shift), flush=True)
         else:
             print("WARNING: fingertips not found (%d of 15 frames): insertion goal not adjusted for the plug position" % len(xs), flush=True)
@@ -353,9 +400,20 @@ def main():
             if name == "pre-insertion":
                 time.sleep(a.pause)
         print("at the socket entrance (%s)" % a.wire, flush=True)
+        outcome, note = "COMPLETED_AT_ENTRANCE", ""
+        push = a.push_mm if a.push_mm is not None else w.get("push_mm")
+        if push:
+            advance = insert_with_search(r, T_EC, hold_R, push / 1e3, a.search_mm / 1e3)
+            engaged = advance >= 0.8 * push / 1e3
+            outcome = "ADVANCED_TO_DEPTH" if engaged else "NOT_ENGAGED"
+            note = "advanced %.1f mm of %.1f mm (no seating sensor: this is not a verified insertion)" % (advance * 1e3, push)
+            print("%s: %s" % (outcome, note), flush=True)
+            if engaged and not a.no_release:
+                print("opening the gripper", flush=True)
+                r.gripper(0.0); time.sleep(0.8)
         if a.back_off_m > 0:
             back_off(r, T_EC, hold_R, a.back_off_m, a.speed)
-        REC.close("COMPLETED_AT_ENTRANCE")
+        REC.close(outcome, note)
     except BaseException as e:
         try:
             r.stop()
