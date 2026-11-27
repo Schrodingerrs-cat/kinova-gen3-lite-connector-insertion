@@ -495,10 +495,16 @@ def main():
     try:
         for name, goal in (("pre-insertion", w["pre"]), ("insertion", ins)):
             align = a.align_mm / 1e3 if name == "insertion" and a.align_mm > 0 else None      # align sideways first, then go toward the wall
-            if a.continuous:
-                stage_continuous(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, (a.tol_px, a.tol_side_px), name, align)
-            else:
-                stage(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, a.step_m, (a.tol_px, a.tol_side_px), name, align)
+            try:
+                if a.continuous:
+                    stage_continuous(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, (a.tol_px, a.tol_side_px), name, align)
+                else:
+                    stage(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, a.step_m, (a.tol_px, a.tol_side_px), name, align)
+            except Blocked as e:
+                if name == "insertion" and REC.last_to_go is not None and REC.last_to_go <= 15:      # stopped by contact within 15 mm of the goal: the plug is at the socket
+                    print("contact at the socket entrance (%.1f mm from the goal): %s" % (REC.last_to_go, e), flush=True)
+                    break
+                raise
             if name == "pre-insertion":
                 time.sleep(a.pause)
         print("at the socket entrance (%s)" % a.wire, flush=True)
