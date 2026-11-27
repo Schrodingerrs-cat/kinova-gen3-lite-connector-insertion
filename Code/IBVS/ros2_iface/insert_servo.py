@@ -325,6 +325,8 @@ def interactive_seated(r, T_EC, hold_R, wire_name, w, command_file, folder):
         if not words:
             continue
         cmd, mm = words[0], (float(words[1]) if len(words) > 1 else 2.0)
+        if cmd in axes and mm > 3.0:                            # a person answers slower than the arm pushes: no long blind moves
+            print("limited to 3 mm per command (asked %.0f): say it again for more" % mm, flush=True); mm = 3.0
         if cmd == "stop":
             return "TEACH_STOPPED"
         if cmd == "seated":
