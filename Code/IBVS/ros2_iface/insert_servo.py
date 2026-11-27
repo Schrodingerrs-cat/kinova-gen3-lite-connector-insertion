@@ -245,7 +245,7 @@ def push_depth(r, T_EC, hold_R, origin, z_hat, limit, marker_id, target_side, st
         r.spin_until(lambda: False, sent["T"] + 0.25)
         stalled = np.linalg.norm(r.tool_matrix()[:3, 3] - before) < 0.5 * piece
         side = marker_side(r, marker_id) if target_side else None
-        if (target_side and side is not None and side >= target_side - 1.0) or stalled:
+        if (target_side and side is not None and side >= target_side - 0.2) or stalled:
             break
     return here(), side
 
@@ -271,7 +271,7 @@ def insert_with_search(r, T_EC, hold_R, depth, radius, marker_id, target_side, r
         advance, side = push_depth(r, T_EC, hold_R, origin, z_hat, limit, marker_id, target_side)
         print("push %d: offset (%+.1f, %+.1f) mm, advanced %.1f mm (taught depth %.1f mm), marker %s px (seated %s px)" % (
             i, dx * 1e3, dy * 1e3, advance * 1e3, depth * 1e3, "-" if side is None else "%.1f" % side, target_side or "-"), flush=True)
-        done = (side is not None and side >= target_side - 1.0) if target_side else advance >= 0.8 * depth
+        done = (side is not None and side >= target_side - 0.2) if target_side else advance >= 0.8 * depth
         if advance > best[0]:
             best = (advance, side)
         if done:
@@ -518,14 +518,15 @@ def main():
             push = a.push_mm
         elif "seated" in w:                                     # depth taught, not predefined: marker sizes at the entrance and fully inserted
             target_side = w["seated"]["side"]
-            push = 1e3 * f * L * (1.0 / w["insert"]["side"] - 1.0 / target_side)
-            print("taught insertion depth for %s: %.1f mm (marker %.1f px at the entrance, %.1f px seated)" % (a.wire, push, w["insert"]["side"], target_side), flush=True)
+            here = measure_marker(r, w["marker_id"], 10)         # the entrance pose differs by a few mm between runs: depth is measured from where the arm is now
+            push = 1e3 * f * L * (1.0 / (here[1] if here else w["insert"]["side"]) - 1.0 / target_side)
+            print("taught seated size for %s: marker %.1f px; now %s px, so %.1f mm to go" % (a.wire, target_side, "-" if not here else "%.1f" % here[1], push), flush=True)
         else:
             push = None
             print("no insertion depth: teach it with  bash Code/IBVS/teach_insert.sh %s seated  (plug fully inserted by hand), or pass --push-mm" % a.wire, flush=True)
         if push and push > 0:
             advance, side = insert_with_search(r, T_EC, hold_R, push / 1e3, a.search_mm / 1e3, w["marker_id"], target_side)
-            engaged = (side is not None and side >= target_side - 1.0) if target_side else advance >= 0.8 * push / 1e3
+            engaged = (side is not None and side >= target_side - 0.2) if target_side else advance >= 0.8 * push / 1e3
             outcome = "ADVANCED_TO_DEPTH" if engaged else "NOT_ENGAGED"
             note = "advanced %.1f mm, taught depth %.1f mm (no seating sensor: this is not a verified insertion)" % (advance * 1e3, push)
             print("%s: %s" % (outcome, note), flush=True)
