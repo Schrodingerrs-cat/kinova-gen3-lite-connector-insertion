@@ -134,9 +134,11 @@ def stream(r, pts, h, v):
     r.arm.send_goal_async(goal).add_done_callback(lambda f: setattr(r, "_goal", f.result()))
 
 
-def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, horizon=1.0):
-    """Re-plan on every camera frame while moving: speed follows the remaining distance (cruise at `speed`, slowing into the goal)."""
-    lost, last = 0, 0.0
+def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, horizon=1.2, final_m=0.015):
+    """Keep looking while the arm moves. Every camera frame is recorded, but a new trajectory is sent only every ~half horizon:
+    replacing it on every frame (15 Hz) never lets the arm get going. Far away: cruise toward the goal, trajectory ends at speed.
+    Within final_m: one smooth quintic move that ends at rest on the goal."""
+    lost, last, next_send = 0, 0.0, 0.0
     while True:
         try:
             r.spin_until(lambda: False, 0.02)
@@ -155,16 +157,26 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, ho
         n = float(np.linalg.norm(d))
         if time.time() - last > 0.5:
             print("%s: marker %.0f px, still %.1f mm to go, camera-frame offset (mm) %s, tool height %.0f mm" % (name, side, n * 1e3, np.round(d * 1e3, 1), r.tool_matrix()[2, 3] * 1e3), flush=True); last = time.time()
-        if n < tol_m:
+        if n < tol_m and time.time() >= next_send:
             record(r, name, color, c, goal, d, side)
             r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
             return
-        v = min(speed, max(0.01, 2.0 * n))
-        h = min(n, v * horizon)
+        if time.time() < next_send:
+            record(r, name, color, c, goal, d, side)
+            continue
         try:
-            T_goal = goal_pose(r, T_EC, hold_R, d * (h / n))
-            record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
-            stream(r, line(r, T_goal), h, v)
+            if n <= final_m:                                    # last bit: smooth move that stops on the goal
+                T_goal = goal_pose(r, T_EC, hold_R, d)
+                record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
+                r.send_line(line(r, T_goal), max(0.6, n / speed))
+                next_send = time.time() + 0.3                   # let the frame after the stop be a fresh one
+            else:
+                v = min(speed, max(0.01, 2.0 * n))
+                h = min(v * horizon, n - final_m)
+                T_goal = goal_pose(r, T_EC, hold_R, d * (h / n))
+                record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
+                stream(r, line(r, T_goal), h, v)
+                next_send = time.time() + 0.5 * h / v
         except NoPath as e:
             recover(r, e.T_goal, speed)
 
