@@ -1,5 +1,29 @@
 # IBVS
 
+
+
+
+  Do this, in order:
+  1. Physical check: make sure the arm is powered, the e-stop is released, and the
+     USB cable to the PC is seated. If the arm's light shows a fault, clear it in the
+     Kinova web app or power-cycle the arm. Wait about a minute for it to boot.
+  2. Stop everything stale:
+  cd ~/Documents/GitHub/VBRM_insertion/insertion_task
+  bash Code/IBVS/kill_all.sh
+  3. Bring the link and driver back up. run_ros.sh runs arm_link.sh, which will ask
+     for your sudo password:
+  cd ~/Documents/GitHub/VBRM_insertion/insertion_task/Code/Grasp
+  ./run_ros.sh
+  Wait for ">> arm, camera and MoveIt are up", and make sure there is no "driver ...
+  not seen" line before it.
+  4. Confirm it answers before moving anything, in a second terminal:
+  ping -c 2 192.168.1.10
+  source ~/Documents/GitHub/VBRM_insertion/insertion_task/Code/IBVS/ros_env.sh
+  ros2 topic echo /joint_states --once
+  5. Then run the servo:
+  bash Code/IBVS/run_insert.sh aux --speed 0.03
+
+  
 Image-based visual servoing for the Kinova Gen3 Lite and the wrist-mounted RealSense D405 against ArUco markers on the wall. Nothing is taught or remembered: at the post-grasp pose the camera detects every marker in view, **chooses one live** (the one closest to the image centre) and builds the goal from the live image (that marker centred, upright, at the size it has when chosen). The controller then makes small joint corrections until the four marker corners match the goal, and the arm moves forward along the measured wall normal (`--advance-m`).
 
 The current system tests free-space alignment with the gripper only (no insertion, no seating check yet). Grasping is handled separately in [`../Grasp`](../Grasp/README.md). Tilt of the tool against the wall is not controlled separately yet (the simple approach is tried first; see "Known limits").
@@ -19,11 +43,15 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 | Continuous (default): re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`, `all`) |
 | Stepwise: quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux --stepwise` |
 | All three wires one after another (aux, usb, power; waits for Enter between wires so you can swap the plug; stops if one fails) | `bash Code/IBVS/run_insert.sh all` |
+| Sideways-first gate during the insertion approach (mm, default 15; 0 = off): forward motion only starts once the sideways error is below this, so the plug is lined up before it goes toward the wall | `--align-mm 15` |
+| Back-off after reaching the socket entrance (m, default 0.15; 0 = stay): straight back out along the camera axis before the arm goes home | `--back-off-m 0.15` |
 | Slower / faster (m/s, default 0.05) | `--speed 0.03` |
 | Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
 | Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
 
 Every run is recorded in `Media/IBVS/run_<time>_insert_<wire>/` (layout of `Media/RULES.md`): `config.json` (exactly what was run: command, arguments, wire references and nudge, hand-eye, start joints, git commit), `controller.log` (console), `trajectory.csv` (every observation: marker pixels, offsets, commanded step, tool pose, joints), `metrics.json`, `screenshots/`, `videos/servo.mp4` (green marker, red goal) and `plots/` (offset to goal, distance to go, marker size, marker path in the image, tool position, joints, commanded step). Redraw the plots: `python3 Code/IBVS/ros2_iface/run_record.py <run folder>`. If a run fails, add `failure_analysis.md` and move the folder to `Media/IBVS/Failed_runs/`.
+
+Contact: there is no force sensor, so the servo stops (and holds) when the arm does not follow a command, i.e. it moved less than half of a final move, or under 12% of a cruise piece. Motion is a quintic time law along each straight line, started at the speed the arm has, so replacing a trajectory does not jerk.
 
 If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (after 6 frames in a row in the default mode). Do not edit files while it runs. 
 
