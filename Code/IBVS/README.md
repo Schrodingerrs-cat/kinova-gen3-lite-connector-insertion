@@ -18,6 +18,7 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 | --- | --- |
 | Stop-and-observe (default): quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`) |
 | Continuous: re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux --continuous` |
+| All three wires one after another (aux, usb, power; waits for Enter between wires so you can swap the plug; stops if one fails) | `bash Code/IBVS/run_insert.sh all` |
 | Slower / faster (m/s, default 0.05) | `--speed 0.03` |
 | Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
 | Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
