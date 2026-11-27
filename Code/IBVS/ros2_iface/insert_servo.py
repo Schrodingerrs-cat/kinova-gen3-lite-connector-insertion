@@ -112,22 +112,29 @@ def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol_m, name):
             recover(r, e.T_goal, speed)
 
 
-def stream(r, pts, T):
-    """Send a short trajectory along the joint waypoints of a line, ending at cruise speed (not at rest), without waiting: the next frame replaces it."""
+def stream(r, pts, h, v):
+    """Send the next h metres of a line at speed v, ending at cruise speed (not at rest), without waiting: the next frame replaces it.
+    The path was planned a moment ago, so the arm is already past its first points: start from the joints now and drop the points behind."""
     P = np.array(pts)
-    if len(P) < 2:
+    joint_len = np.linalg.norm(np.diff(P, axis=0), axis=1)
+    q_now = r.q.copy()
+    ahead = P[int(np.argmin(np.linalg.norm(P - q_now, axis=1))) + 1:]
+    if len(ahead) == 0:
         return
-    t = np.linspace(0.0, T, len(P))
+    P = np.vstack([q_now, ahead])
+    seg = np.linalg.norm(np.diff(P, axis=0), axis=1)
+    T = max(0.15, h * seg.sum() / max(joint_len.sum(), 1e-9) / v)          # time for the part still ahead
+    t = np.r_[0.0, np.cumsum(seg)] / max(seg.sum(), 1e-9) * T
     V = np.gradient(P, t, axis=0)
     traj = JointTrajectory(); traj.joint_names = JOINTS
-    for q, v, ti in zip(P, V, t + 0.05):
-        pt = JointTrajectoryPoint(); pt.positions = [float(x) for x in q]; pt.velocities = [float(x) for x in v]
+    for q, vel, ti in zip(P, V, t + 0.02):
+        pt = JointTrajectoryPoint(); pt.positions = [float(x) for x in q]; pt.velocities = [float(x) for x in vel]
         pt.time_from_start = Duration(sec=int(ti), nanosec=int((ti % 1) * 1e9)); traj.points.append(pt)
     goal = FollowJointTrajectory.Goal(); goal.trajectory = traj
     r.arm.send_goal_async(goal).add_done_callback(lambda f: setattr(r, "_goal", f.result()))
 
 
-def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, horizon=0.6):
+def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, horizon=1.0):
     """Re-plan on every camera frame while moving: speed follows the remaining distance (cruise at `speed`, slowing into the goal)."""
     lost, last = 0, 0.0
     while True:
@@ -157,7 +164,7 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, ho
         try:
             T_goal = goal_pose(r, T_EC, hold_R, d * (h / n))
             record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
-            stream(r, line(r, T_goal), h / v)
+            stream(r, line(r, T_goal), h, v)
         except NoPath as e:
             recover(r, e.T_goal, speed)
 
@@ -168,10 +175,11 @@ def main():
     ap.add_argument("--speed", type=float, default=0.05, help="average tool speed, m/s (grasp pipeline line speed)")
     ap.add_argument("--step-m", type=float, default=0.04, help="re-observe the marker after at most this much travel")
     ap.add_argument("--tol-mm", type=float, default=2.0)
-    ap.add_argument("--continuous", action="store_true", help="re-plan on every frame while moving instead of stopping to look")
+    ap.add_argument("--stepwise", action="store_true", help="stop after every chunk to look again (default: continuous, re-plans on every frame while moving)")
     ap.add_argument("--out", type=pathlib.Path, help="run folder (default: Media/IBVS/run_<time>_insert_<wire>)")
     ap.add_argument("--pause", type=float, default=1.0, help="stop at the pre-insertion pose, s")
     a = ap.parse_args()
+    a.continuous = not a.stepwise
     refs = yaml.safe_load((ROOT / "config" / "insertion_refs.yaml").read_text())
     w, L = refs["wires"][a.wire], refs["marker_side_m"]
     grasp = yaml.safe_load((ROOT.parent / "Grasp" / "config" / "grasp.yaml").read_text())

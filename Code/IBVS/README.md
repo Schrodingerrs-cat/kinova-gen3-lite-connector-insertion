@@ -16,8 +16,8 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 
 | Mode | Command |
 | --- | --- |
-| Stop-and-observe (default): quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`) |
-| Continuous: re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux --continuous` |
+| Continuous (default): re-plans on every camera frame while moving, slows into the goal, never stops to look | `bash Code/IBVS/run_insert.sh aux` (or `usb`, `power`, `all`) |
+| Stepwise: quintic chunks of at most 4 cm, each ending at rest, marker re-checked between chunks | `bash Code/IBVS/run_insert.sh aux --stepwise` |
 | All three wires one after another (aux, usb, power; waits for Enter between wires so you can swap the plug; stops if one fails) | `bash Code/IBVS/run_insert.sh all` |
 | Slower / faster (m/s, default 0.05) | `--speed 0.03` |
 | Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
@@ -25,7 +25,7 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 
 Every run is recorded in `Media/IBVS/run_<time>_insert_<wire>/` (layout of `Media/RULES.md`): `config.json` (exactly what was run: command, arguments, wire references and nudge, hand-eye, start joints, git commit), `controller.log` (console), `trajectory.csv` (every observation: marker pixels, offsets, commanded step, tool pose, joints), `metrics.json`, `screenshots/`, `videos/servo.mp4` (green marker, red goal) and `plots/` (offset to goal, distance to go, marker size, marker path in the image, tool position, joints, commanded step). Redraw the plots: `python3 Code/IBVS/ros2_iface/run_record.py <run folder>`. If a run fails, add `failure_analysis.md` and move the folder to `Media/IBVS/Failed_runs/`.
 
-If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (continuous: after 6 frames in a row). Do not edit files while it runs. Start with the default mode, then `--continuous`.
+If MoveIt has no straight path for a step, the arm goes home by the safe route and runs the same line from there. If the marker is lost it stops (after 6 frames in a row in the default mode). Do not edit files while it runs. 
 
 Camera: `insert_servo.py` reads the grasp stack's `/camera/camera/...` topics (check with `ros2 topic list | grep image_raw`). The old scripts expect `/eih_cam/...`.
 
