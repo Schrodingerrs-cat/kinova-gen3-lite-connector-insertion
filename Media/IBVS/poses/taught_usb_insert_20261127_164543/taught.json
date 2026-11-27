@@ -1,0 +1,19 @@
+{
+  "wire": "usb",
+  "stage": "insert",
+  "centre_px": [
+    474.0,
+    292.0
+  ],
+  "side_px": 98.0,
+  "frames": 20,
+  "pixel_spread": 0.49,
+  "joints_deg": [
+    6.55,
+    -60.95,
+    111.19,
+    -85.95,
+    84.62,
+    -90.01
+  ]
+}
