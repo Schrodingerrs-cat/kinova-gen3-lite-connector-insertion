@@ -117,6 +117,11 @@ def recover(r, T_goal, speed):
     r.send_line(pts, max(1.5, float(np.linalg.norm(r.tool_matrix()[:3, 3] - T_goal[:3, 3])) / (2 * speed)))
 
 
+def arrived(c, side, goal, tol):
+    """Done when the marker is close enough to the goal in the image: centre within tol[0] px in x and in y, size within tol[1] px (no need to hit zero)."""
+    return bool(np.abs(c.mean(0) - np.asarray(goal["c"])).max() <= tol[0] and abs(side - goal["side"]) <= tol[1])
+
+
 def gate(d, align_m):
     """Alignment before approach: the move toward the wall (camera z) is scaled by how well sideways (x, y) is already aligned,
     0 when the sideways error is align_m or more, 1 when it is zero. None = no gate."""
@@ -201,14 +206,14 @@ def back_off(r, T_EC, hold_R, distance, speed):
     r.send_line(pts, max(1.0, distance / speed))
 
 
-def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol_m, name, align_m=None):
+def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol, name, align_m=None):
     """Stop-and-observe: quintic chunks of at most step_m, each ending at rest."""
     while True:
         c, K, color = observe(r, marker_id)
         d, side = offset(c, K, goal, L)
         n = float(np.linalg.norm(d))
         print("%s: marker %.0f px, still %.1f mm to go (x %+.1f y %+.1f z %+.1f)" % (name, side, n * 1e3, *(d * 1e3)), flush=True)
-        if n < tol_m:
+        if arrived(c, side, goal, tol):
             record(r, name, color, c, goal, d, side)
             return
         d_go = gate(d, align_m)
@@ -227,7 +232,7 @@ def stage(r, T_EC, hold_R, marker_id, goal, L, speed, step_m, tol_m, name, align
         check_moved(r, dict(start=start, Lr=float(np.linalg.norm(cmd))), 0.5)
 
 
-def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, align_m=None, horizon=1.2, final_m=0.015):
+def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol, name, align_m=None, horizon=1.2, final_m=0.015):
     """Keep looking while the arm moves. Every camera frame is recorded, but a new trajectory is sent only every ~half horizon
     (replacing it on every frame never lets the arm get going). Far away: cruise toward the goal, each piece ends at speed and the next
     one starts at the speed the arm has. Within final_m: one smooth move that ends at rest on the goal."""
@@ -255,7 +260,7 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, al
             continue
         if sent is not None:
             check_moved(r, sent, 0.5 if final else 0.3)                # was the last command followed?
-        if n < tol_m:
+        if arrived(c, side, goal, tol):
             record(r, name, color, c, goal, d, side)
             r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
             return
@@ -284,7 +289,8 @@ def main():
     ap.add_argument("--wire", required=True, choices=("aux", "usb", "power"))
     ap.add_argument("--speed", type=float, default=0.05, help="average tool speed, m/s (grasp pipeline line speed)")
     ap.add_argument("--step-m", type=float, default=0.04, help="re-observe the marker after at most this much travel")
-    ap.add_argument("--tol-mm", type=float, default=2.0)
+    ap.add_argument("--tol-px", type=float, default=9.0, help="done when the marker centre is within this many pixels of the goal, in x and in y")
+    ap.add_argument("--tol-side-px", type=float, default=4.0, help="... and its side length within this many pixels of the goal's")
     ap.add_argument("--align-mm", type=float, default=15.0, help="insertion approach: forward motion starts only once the sideways error is below this (0 = no gate)")
     ap.add_argument("--back-off-m", type=float, default=0.15, help="after reaching the socket entrance, back straight out this far before anything else (0 = stay)")
     ap.add_argument("--stepwise", action="store_true", help="stop after every chunk to look again (default: continuous, re-plans on every frame while moving)")
@@ -324,9 +330,9 @@ def main():
         for name, goal in (("pre-insertion", w["pre"]), ("insertion", ins)):
             align = a.align_mm / 1e3 if name == "insertion" and a.align_mm > 0 else None      # align sideways first, then go toward the wall
             if a.continuous:
-                stage_continuous(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, a.tol_mm / 1e3, name, align)
+                stage_continuous(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, (a.tol_px, a.tol_side_px), name, align)
             else:
-                stage(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, a.step_m, a.tol_mm / 1e3, name, align)
+                stage(r, T_EC, hold_R, w["marker_id"], goal, L, a.speed, a.step_m, (a.tol_px, a.tol_side_px), name, align)
             if name == "pre-insertion":
                 time.sleep(a.pause)
         print("at the socket entrance (%s)" % a.wire, flush=True)

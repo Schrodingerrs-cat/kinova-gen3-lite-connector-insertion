@@ -48,7 +48,7 @@ Terminal by terminal (every terminal: `cd .../insertion_task && source Code/IBVS
 | Teach a wire's goal from the real arm (no motion): put the arm by hand where it should be, then run it. It reads the wire's marker for about 1 s and writes centre and size into `config/insertion_refs.yaml` (photo and joints go to `Media/IBVS/poses/taught_*`) | `bash Code/IBVS/teach_insert.sh usb insert` (plug at the socket entrance) or `... usb pre` (standoff) |
 | Slower / faster (m/s, default 0.05) | `--speed 0.03` |
 | Chunk length in default mode (m, default 0.04) | `--step-m 0.02` |
-| Finish tolerance (mm, default 2) and stop at pre-insertion (s, default 1) | `--tol-mm 1.5 --pause 2` |
+| Finish tolerance in the image (default: marker centre within 9 px in x and y and side within 4 px of the goal) and stop at pre-insertion (s, default 1) | `--tol-px 9 --tol-side-px 4 --pause 2` |
 
 Every run is recorded in `Media/IBVS/run_<time>_insert_<wire>/` (layout of `Media/RULES.md`): `config.json` (exactly what was run: command, arguments, wire references and nudge, hand-eye, start joints, git commit), `controller.log` (console), `trajectory.csv` (every observation: marker pixels, offsets, commanded step, tool pose, joints), `metrics.json`, `screenshots/`, `videos/servo.mp4` (green marker, red goal) and `plots/` (offset to goal, distance to go, marker size, marker path in the image, tool position, joints, commanded step). Redraw the plots: `python3 Code/IBVS/ros2_iface/run_record.py <run folder>`. If a run fails, add `failure_analysis.md` and move the folder to `Media/IBVS/Failed_runs/`.
 
