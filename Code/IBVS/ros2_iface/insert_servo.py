@@ -165,14 +165,14 @@ def stage_continuous(r, T_EC, hold_R, marker_id, goal, L, speed, tol_m, name, ho
             record(r, name, color, c, goal, d, side)
             continue
         try:
-            if n <= final_m:                                    # last bit: smooth move that stops on the goal
+            v = min(speed, max(0.01, 2.0 * n))
+            h = min(v * horizon, n - final_m)
+            if n <= final_m or h < 0.01:                        # last bit (a cruise piece under 1 cm would not move the arm): smooth move that stops on the goal
                 T_goal = goal_pose(r, T_EC, hold_R, d)
                 record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
                 r.send_line(line(r, T_goal), max(0.6, n / speed))
                 next_send = time.time() + 0.3                   # let the frame after the stop be a fresh one
             else:
-                v = min(speed, max(0.01, 2.0 * n))
-                h = min(v * horizon, n - final_m)
                 T_goal = goal_pose(r, T_EC, hold_R, d * (h / n))
                 record(r, name, color, c, goal, d, side, T_goal[:3, 3] - r.tool_matrix()[:3, 3])
                 stream(r, line(r, T_goal), h, v)
