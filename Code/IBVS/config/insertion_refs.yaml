@@ -5,4 +5,4 @@ marker_side_m: 0.030
 wires:
   aux:   {marker_id: 11, pre: {c: [395, 203], side: 42}, insert: {c: [457, 252], side: 103}, nudge_px: [0, 20]}
   usb: {marker_id: 12, pre: {c: [384, 207], side: 43}, insert: {c: [474.0, 292.0], side: 98.0}, nudge_px: [0, 0]}
-  power: {marker_id: 10, pre: {c: [409, 225], side: 38}, insert: {c: [470, 253], side: 102}, nudge_px: [0, 20]}
+  power: {marker_id: 10, pre: {c: [409, 225], side: 38}, insert: {c: [452.8, 253.0], side: 95.3}, nudge_px: [0, 0]}

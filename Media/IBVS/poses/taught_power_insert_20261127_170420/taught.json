@@ -1,0 +1,19 @@
+{
+  "wire": "power",
+  "stage": "insert",
+  "centre_px": [
+    452.8,
+    253.0
+  ],
+  "side_px": 95.3,
+  "frames": 20,
+  "pixel_spread": 0.4,
+  "joints_deg": [
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN,
+    NaN
+  ]
+}
