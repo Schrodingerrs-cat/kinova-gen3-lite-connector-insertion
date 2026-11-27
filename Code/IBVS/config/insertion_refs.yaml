@@ -4,5 +4,5 @@
 marker_side_m: 0.030
 wires:
   aux:   {marker_id: 11, pre: {c: [395, 203], side: 42}, insert: {c: [457, 252], side: 103}, nudge_px: [0, 20]}
-  usb:   {marker_id: 12, pre: {c: [384, 207], side: 43}, insert: {c: [471, 280], side: 100}, nudge_px: [0, 20]}
+  usb:   {marker_id: 12, pre: {c: [384, 207], side: 43}, insert: {c: [471, 280], side: 100}, nudge_px: [-18, 10]}   # run 20261127_163529: plug sat on the socket with the marker 18 px left, 10 px up of the old goal
   power: {marker_id: 10, pre: {c: [409, 225], side: 38}, insert: {c: [470, 253], side: 102}, nudge_px: [0, 20]}

@@ -26,6 +26,10 @@ def record(r, stage, color, c, goal, d, side, cmd=None):
         REC.step(stage, color, c, goal, d, side, cmd, r.tool_matrix()[:3, 3] * 1e3, np.degrees(r.q))
 
 
+class Blocked(RuntimeError):
+    pass
+
+
 class NoPath(Exception):
     def __init__(self, T_goal):
         super().__init__("no Cartesian path for this step")
@@ -180,7 +184,7 @@ def check_moved(r, sent, fraction):
     moved = float(np.linalg.norm(r.tool_matrix()[:3, 3] - sent["start"]))
     if sent["Lr"] > 0.004 and moved < fraction * sent["Lr"]:
         r.stop(); r.send_joint_path([r.q.copy()], [0.4], [np.zeros(6)])
-        raise RuntimeError("arm blocked: moved %.1f mm of %.1f mm commanded (wall or plug contact?): stopped" % (moved * 1e3, sent["Lr"] * 1e3))
+        raise Blocked("arm blocked: moved %.1f mm of %.1f mm commanded (wall or plug contact?): stopped" % (moved * 1e3, sent["Lr"] * 1e3))
 
 
 def back_off(r, T_EC, hold_R, distance, speed):
@@ -332,6 +336,11 @@ def main():
         except Exception:
             pass
         print("STOPPED: %s" % e, flush=True)
+        if isinstance(e, Blocked) and a.back_off_m > 0:             # pressing on the plate: get out of contact before anything else moves
+            try:
+                back_off(r, T_EC, hold_R, a.back_off_m, a.speed)
+            except Exception as err:
+                print("back-off failed: %s" % err, flush=True)
         REC.close("STOPPED", str(e) or type(e).__name__); raise SystemExit(1)
 
 
